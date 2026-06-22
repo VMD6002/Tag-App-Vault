@@ -1,0 +1,44 @@
+:5000 {
+    root * .
+    encode zstd gzip
+
+    # Open to all
+    header {
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "*"
+    }
+
+    handle /media/* {
+
+        # Rule for Images sub .covers
+        handle /media/Images/.covers/* {
+            header Cache-Control "no-store, no-cache, must-revalidate"
+            try_files {path}.avif {path}.jpg {path}.jpeg {path}.png {path}.webp {path} =404 
+            file_server
+        }
+
+        handle /media/Images/* {
+            try_files {path}.avif {path}.jpg {path}.jpeg {path}.png {path}.webp {path} =404 
+            file_server
+        }
+
+        # Rule for Videos .covers
+        handle /media/Videos/.covers/* {
+            header Cache-Control "no-store, no-cache, must-revalidate"
+            try_files {path}.avif {path}.jpg {path}.jpeg {path}.png {path}.webp {path} =404
+            file_server
+        }
+
+        handle /media/Videos/* {
+            try_files {path} {path}.mp4 {path}.webm =404
+            file_server
+        }
+
+        file_server
+    }
+
+    handle {
+        reverse_proxy localhost:5001
+    }
+}

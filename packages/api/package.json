@@ -1,0 +1,22 @@
+{
+  "name": "@tagapp/api",
+  "version": "0.0.0",
+  "dependencies": {
+    "@orpc/server": "^1.14.4",
+    "@orpc/zod": "^1.14.4",
+    "@tagapp/utils": "workspace:*",
+    "@types/fs-extra": "^11.0.4",
+    "fs-extra": "^11.3.5",
+    "fuse.js": "^7.4.1",
+    "lowdb": "^7.0.1",
+    "nanoid": "^5.1.11",
+    "zod": "^4.4.3"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "type:check": "tsc -b"
+  },
+  "type": "module"
+}

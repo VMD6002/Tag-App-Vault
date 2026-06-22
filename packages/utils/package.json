@@ -1,0 +1,17 @@
+{
+  "name": "@tagapp/utils",
+  "type": "module",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts"
+  },
+  "scripts": {
+    "type:check": "tsc -b"
+  },
+  "dependencies": {
+    "filenamify": "^7.0.2",
+    "fuse.js": "^7.4.1",
+    "zod": "^4.4.3"
+  }
+}
