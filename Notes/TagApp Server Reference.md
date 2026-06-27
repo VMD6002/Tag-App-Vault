@@ -142,3 +142,9 @@ Sync
 ├── <image / video name>.<ext>
 └── ...image/video files
 ```
+
+### Download & Sync stuff
+
+- Add in meta:cc tag to video if caption file exist
+- Addd in meta:yt-cookie if cookies are used for download
+- Remove Util:Cookies tag from cookies

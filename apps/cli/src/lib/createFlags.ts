@@ -18,7 +18,7 @@ export async function createFlag(item: ContentWebType): Promise<string[]> {
     const preset = item.download.flags as preset;
     flags.push(...preset.value.replace(/"|' /g, "").split(" "));
 
-    if (item.tags.includes("Util:Cookies")) {
+    if (item.tags.includes("meta:yt-cookie")) {
       const siteTag = item.tags.find((tag) => tag.startsWith("Site:"));
       if (!siteTag) {
         throw new Error("No site tag found for cookies");
