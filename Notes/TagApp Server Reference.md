@@ -145,6 +145,8 @@ Sync
 
 ### Download & Sync stuff
 
-- Add in meta:captions tag to video if caption file exist
-- Addd in meta:yt-cookie if cookies are used for download
-- Remove Util:Cookies tag from cookies
+| Meta Tag             | Description                                                     |
+| -------------------- | --------------------------------------------------------------- |
+| meta:captions        | If caption file is included ( checks when running server sync ) |
+| meta:yt‑cookie       | Use Cookies when downloading                                    |
+| meta:different-cover | To download the specfied cover with curl                        |
