@@ -32,7 +32,7 @@ export async function createFlag(item: ContentWebType): Promise<string[]> {
     }
   }
 
-  if (!item.tags.includes("Util:Different_Cover")) {
+  if (!item.tags.includes("meta:different-cover")) {
     flags.push(
       "--write-thumbnail",
       "-o",

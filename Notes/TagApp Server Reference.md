@@ -145,6 +145,6 @@ Sync
 
 ### Download & Sync stuff
 
-- Add in meta:cc tag to video if caption file exist
+- Add in meta:captions tag to video if caption file exist
 - Addd in meta:yt-cookie if cookies are used for download
 - Remove Util:Cookies tag from cookies

@@ -34,7 +34,7 @@ export async function setDoc(input: DocType) {
           },
         ];
 
-        if (OldData.type === "video" && OldData.tags.includes("meta:cc"))
+        if (OldData.type === "video" && OldData.tags.includes("meta:captions"))
           mvOperationData.push({
             baseDir: `./media/${CTypeDir[OldData.type]}/.captions`,
             oldPath: `caption.${OldData.title}.${OldData.id}.vtt`,

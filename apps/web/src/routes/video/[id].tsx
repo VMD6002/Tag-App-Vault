@@ -13,7 +13,7 @@ export default function VideoPage() {
   const videoUrl = `/media/Videos/${encodedTitle}`;
   const posterUrl = `/media/Videos/.covers/cover.${encodedTitle}`;
   const captionUrl =
-    doc.tags.includes("meta:cc") &&
+    doc.tags.includes("meta:captions") &&
     `/media/Videos/.captions/caption.${encodedTitle}.vtt`;
 
   const videoRef = useRef<HTMLVideoElement>(null);

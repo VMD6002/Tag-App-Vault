@@ -36,7 +36,7 @@ export async function syncContent() {
             `./Sync/${file}`,
             `./media/${CTypeDir[content.type]}/${file}`,
           );
-          if (content.tags.includes("meta:cc")) {
+          if (content.tags.includes("meta:captions")) {
             const captionFile = `caption.${content.title}.${content.id}.vtt`;
             await safeRename(
               `./Sync/${captionFile}`,
