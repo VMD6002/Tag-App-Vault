@@ -9,6 +9,11 @@ import { RPCHandler } from "@orpc/server/fetch";
 import createAppDirs from "./lib/createAppDirs.js";
 import { router, settings } from "@tagapp/api";
 import { parseArgs } from "node:util";
+import {
+  contentWebSchema,
+  type ContentWebType,
+} from "../../../packages/utils/src/types/web.js";
+import { writeFile } from "node:fs/promises";
 
 const schema = {
   port: { type: "string" },
@@ -42,6 +47,17 @@ app.use(
     maxAge: 3600,
   }),
 );
+
+app.post("/downloads/set", async (c) => {
+  const body = (await c.req.json()) as ContentWebType[];
+
+  // const res = contentWebSchema.array().safeParse(body);
+  const res = contentWebSchema.array().parse(body);
+
+  await writeFile("./Download/tmp.json", JSON.stringify(res, null, 2), "utf-8");
+
+  return c.json(res);
+});
 
 const handler = new RPCHandler(router);
 app.use("/rpc/*", async (c, next) => {

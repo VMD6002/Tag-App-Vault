@@ -1,4 +1,3 @@
-import * as download from "./routers/download.js";
 import * as fix from "./routers/fix.js";
 import * as main from "./routers/main.js";
 import * as gallery from "./routers/gallery.js";
@@ -8,7 +7,6 @@ import * as video from "./routers/video.js";
 import { settingsDB } from "./db/settings.js";
 
 export const router = {
-  download,
   fix,
   main,
   video,
