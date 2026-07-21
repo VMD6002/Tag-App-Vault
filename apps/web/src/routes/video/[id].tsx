@@ -27,6 +27,7 @@ export default function VideoPage() {
   );
 
   const setCover = useCallback(async () => {
+    if (!confirm("U sure u want to set new cover ??")) return;
     const file = await captureFrame(`cover.${doc.title}.${doc.id}`);
     if (!file) return;
     setCoverGivenFileMuation.mutate({
