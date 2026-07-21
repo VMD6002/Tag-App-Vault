@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { TMP_DIR } from "./constants";
 import { downloadContent } from "./downloadContent";
 import { getImageExtensionFromURL } from "./getImageExtensionFromURL";
-import type { ContentWebType, preset } from "@tagapp/utils/types";
+import type { ContentWebType } from "@tagapp/utils/types";
 
 const DEFAULT_FLAGS = ["--embed-thumbnail", "-R", "3"];
 
@@ -15,21 +15,25 @@ export async function createFlag(item: ContentWebType): Promise<string[]> {
   ];
 
   if (item.download?.flags) {
-    const preset = item.download.flags as preset;
-    flags.push(...preset.value.replace(/"|' /g, "").split(" "));
+    flags.push(
+      ...item.download.flags.value
+        .replace(/"|'/g, "")
+        .split(" ")
+        .filter(Boolean),
+    );
+  }
 
-    if (item.tags.includes("meta:yt-cookie")) {
-      const siteTag = item.tags.find((tag) => tag.startsWith("Site:"));
-      if (!siteTag) {
-        throw new Error("No site tag found for cookies");
-      }
-
-      const siteName = siteTag.split(":")[1];
-      if (!existsSync(`./cookies/${siteName}.txt`)) {
-        throw new Error(`No cookies file found for site ${siteName}`);
-      }
-      flags.push("--cookies", `./cookies/${siteName}.txt`);
+  if (item.tags.includes("meta:yt-cookie")) {
+    const siteTag = item.tags.find((tag) => tag.startsWith("Site:"));
+    if (!siteTag) {
+      throw new Error("No site tag found for cookies");
     }
+
+    const siteName = siteTag.split(":")[1];
+    if (!siteName || !existsSync(`./cookies/${siteName}.txt`)) {
+      throw new Error(`No cookies file found for site ${siteName ?? "unknown"}`);
+    }
+    flags.push("--cookies", `./cookies/${siteName}.txt`);
   }
 
   if (!item.tags.includes("meta:different-cover")) {

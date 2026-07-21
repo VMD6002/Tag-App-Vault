@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { render, Box, Text } from "ink";
-import { readdirSync, renameSync, writeFileSync, readFileSync } from "node:fs";
+import {
+  readdirSync,
+  renameSync,
+  writeFileSync,
+  readFileSync,
+  mkdirSync,
+} from "node:fs";
 import PQueue from "p-queue";
 
 import type YTDlpWrap from "yt-dlp-wrap-plus";
@@ -11,6 +17,9 @@ import { createFlag } from "./lib/createFlags";
 import { downloadContent } from "./lib/downloadContent";
 import { getImageExtensionFromURL } from "./lib/getImageExtensionFromURL";
 import type { ContentWebType } from "@tagapp/utils/types";
+
+mkdirSync("tmp", { recursive: true });
+mkdirSync("../Sync", { recursive: true });
 
 // 1. Initial Data & Wrapper Setup
 const downloadData: ContentWebType[] = JSON.parse(
@@ -68,24 +77,22 @@ function App() {
     itemTitle: string,
     originalItem: ContentWebType,
   ) => {
-    try {
-      const files = readdirSync(TMP_DIR);
-      for (const file of files) {
-        if (file.includes(itemId)) {
-          renameSync(`${TMP_DIR}/${file}`, `${COMPLETED_DIR}/${file}`);
-        }
+    const files = readdirSync(TMP_DIR);
+    for (const file of files) {
+      if (file.includes(itemId)) {
+        renameSync(`${TMP_DIR}/${file}`, `${COMPLETED_DIR}/${file}`);
       }
-      writeFileSync(
-        `${COMPLETED_DIR}/${itemTitle}.${itemId}.json`,
-        JSON.stringify(originalItem, null, 2),
-      );
+    }
+    writeFileSync(
+      `${COMPLETED_DIR}/${itemTitle}.${itemId}.json`,
+      JSON.stringify(originalItem, null, 2),
+    );
 
-      const currentJson = JSON.parse(
-        readFileSync("tmp.json", "utf-8"),
-      ) as ContentWebType[];
-      const nextJson = currentJson.filter((i) => i.id !== itemId);
-      writeFileSync("tmp.json", JSON.stringify(nextJson, null, 2));
-    } catch {}
+    const currentJson = JSON.parse(
+      readFileSync("tmp.json", "utf-8"),
+    ) as ContentWebType[];
+    const nextJson = currentJson.filter((i) => i.id !== itemId);
+    writeFileSync("tmp.json", JSON.stringify(nextJson, null, 2));
   };
 
   async function processTask(item: ContentWebType, index: number) {
@@ -138,8 +145,8 @@ function App() {
     } catch (error: any) {
       updateTask(index, { status: "failed" });
       writeFileSync(
-        "./error.log",
-        `[${item.title}]: ${error.message || "Unknown error"}\n`,
+        `./error.log`,
+        `[${item.title}]: ${error.message || "Unknown error"}\n${error.stack || ""}\n`,
         {
           flag: "a",
         },

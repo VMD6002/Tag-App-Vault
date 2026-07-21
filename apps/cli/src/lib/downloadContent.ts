@@ -7,6 +7,9 @@ export async function downloadContent(url: string, filePath: string) {
       "User-Agent": USER_AGENT,
     },
   });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText} for ${url}`);
+  }
   const buffer = Buffer.from(await response.arrayBuffer());
   writeFileSync(filePath, buffer);
 }
