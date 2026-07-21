@@ -133,7 +133,7 @@ export default function GenerateJSONPage() {
 
         <Label className="mb-2">Tags</Label>
         <MultipleSelector
-          options={Object.keys(globalTags).map((o) => ({
+          options={globalTags.map((o) => ({
             label: o,
             value: o,
           }))}

@@ -23,15 +23,15 @@ type ServerTagType = Record<string, number>;
 const TagGroup = ({
   tags,
   parent,
-  taags,
+  tagsArray,
 }: {
   tags: ServerTagType;
   parent: string;
-  taags: string[];
+  tagsArray: string[];
 }) => {
   const Children = useMemo(
-    () => taags.filter((k) => k.startsWith(parent)).sort(),
-    [parent, taags],
+    () => tagsArray.filter((k) => k.startsWith(parent)).sort(),
+    [parent, tagsArray],
   );
   return (
     <div key={`Section-${parent}`} className="mb-3">
@@ -84,7 +84,7 @@ function Child() {
     GetTagsFromServerMutation.mutate({});
   }, []);
 
-  const taags = useMemo(() => Object.keys(tags), [tags]);
+  const tagsArray = useMemo(() => Object.keys(tags), [tags]);
 
   return (
     <>
@@ -105,11 +105,18 @@ function Child() {
         </Button>
       </div>
       <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 mb-10 rounded">
-        <h1 className="text-3xl mb-5 text-foreground">Tags ({taags.length})</h1>
-        {[...new Set(taags.map((tag) => tag.split(":")[0]))]
+        <h1 className="text-3xl mb-5 text-foreground">
+          Tags ({tagsArray.length})
+        </h1>
+        {[...new Set(tagsArray.map((tag) => tag.split(":")[0]))]
           .sort()
           .map((parent: string) => (
-            <TagGroup key={parent} parent={parent} tags={tags} taags={taags} />
+            <TagGroup
+              key={parent}
+              parent={parent}
+              tags={tags}
+              tagsArray={tagsArray}
+            />
           ))}
       </div>
     </>

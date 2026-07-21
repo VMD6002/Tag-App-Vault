@@ -1,7 +1,7 @@
 const HOST_NAME_ELEMENT_ID = "TagAppHostNames";
 
 export default function GetTagsFromTagAppScriptEle() {
-  let tags: Record<string, string> | undefined;
+  let tags: string[] | undefined;
   try {
     const contentDetailsScriptEle = document.getElementById(
       HOST_NAME_ELEMENT_ID,

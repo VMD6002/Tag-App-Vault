@@ -33,7 +33,7 @@ export default function BlukUpdateModal({
       <div className="max-w-md absolute w-full grid bg-secondary rounded shadow px-8 py-10">
         <Label className="mb-2">Tags</Label>
         <MultipleSelector
-          options={Object.keys(tags).map((o) => ({
+          options={tags.map((o) => ({
             label: o,
             value: o,
           }))}

@@ -90,7 +90,7 @@ export default function UpdateModal({
           )}
         </div>
         <MultipleSelector
-          options={Object.keys(tags).map((o) => ({
+          options={tags.map((o) => ({
             label: o,
             value: o,
           }))}

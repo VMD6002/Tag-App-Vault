@@ -99,4 +99,4 @@ export const resetFilterAtom = atom(null, (_, set) => {
   set(orderByLatestAtom, true);
 });
 
-export const tagsAtom = atom<Record<string, string> | null>(null);
+export const tagsAtom = atom<string[] | null>(null);
