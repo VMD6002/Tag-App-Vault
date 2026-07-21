@@ -69,7 +69,7 @@ function App() {
               <Route path="/tags">
                 <TagPage />
               </Route>
-              <Route path="/generateJsonPagetags">
+              <Route path="/generateContentJson">
                 <GenerateJSONPage />
               </Route>
               <DocProvider>

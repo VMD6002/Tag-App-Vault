@@ -14,7 +14,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 const Links = [
   { Name: "Library", Path: "/" },
   { Name: "Tags", Path: "/tags" },
-  { Name: "Generate JSON", Path: "/generateJsonPage" },
+  { Name: "Generate JSON", Path: "/generateContentJson" },
 ];
 
 export default function NavBarLinks() {
