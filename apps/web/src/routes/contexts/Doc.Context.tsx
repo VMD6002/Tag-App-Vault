@@ -1,8 +1,4 @@
-import {
-  QueryClient,
-  QueryClientProvider,
-  useMutation,
-} from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { navigate } from "wouter/use-hash-location";
 import { sanitizeStringForFileName } from "@tagapp/utils";
@@ -23,16 +19,6 @@ import { orpc } from "@/lib/orpc";
 import type { ContentServerType } from "@tagapp/utils/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { tagsAtom } from "@/atom";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      retry: 1,
-    },
-  },
-});
 
 const docPlaceholderData: ContentServerType = {
   id: "",
@@ -179,10 +165,8 @@ export default function DocProvider({
   children: React.ReactNode;
 }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Provider>
-        <Child>{children}</Child>
-      </Provider>
-    </QueryClientProvider>
+    <Provider>
+      <Child>{children}</Child>
+    </Provider>
   );
 }

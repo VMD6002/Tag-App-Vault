@@ -3,23 +3,12 @@ import Filters from "./components/Filters";
 import ExtendedCard from "./components/ExtendedCard";
 import UpdateModal from "@/components/craft/UpdateModal";
 import BulkUpdateModal from "@/components/craft/BulkUpdateModal";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ServerProvider, useServerActions } from "./contexts/Server.Context";
 import { useAtomValue, useSetAtom } from "jotai";
 import { filteredAtom } from "./atom";
 import TIMEOUTS from "@/lib/TIMEOUTS";
 import { initializeFilterDataFromURLAtom, resetFilterAtom } from "@/atom";
 import { useEffect } from "react";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      retry: 1,
-    },
-  },
-});
 
 function Child() {
   const { updateContentFunc, bulkUpdateContentFunc, filterData } =
@@ -63,10 +52,8 @@ function Child() {
 
 export default function Library() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ServerProvider>
-        <Child />
-      </ServerProvider>
-    </QueryClientProvider>
+    <ServerProvider>
+      <Child />
+    </ServerProvider>
   );
 }

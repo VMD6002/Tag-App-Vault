@@ -1,22 +1,8 @@
 import TitleHeader from "@/components/craft/TitleHeader";
 import { Button } from "@/components/ui/button";
 import { orpc } from "@/lib/orpc";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useMutation,
-} from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      retry: 1,
-    },
-  },
-});
 
 type ServerTagType = Record<string, number>;
 
@@ -53,7 +39,7 @@ const TagGroup = ({
   );
 };
 
-function Child() {
+export default function ServerTags() {
   const [tags, setTags] = useState<ServerTagType>({});
 
   const GetTagsFromServerMutation = useMutation(
@@ -120,13 +106,5 @@ function Child() {
           ))}
       </div>
     </>
-  );
-}
-
-export default function ServerTags() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <Child />
-    </QueryClientProvider>
   );
 }

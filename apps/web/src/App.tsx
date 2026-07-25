@@ -8,6 +8,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 import { tagsAtom } from "./atom";
 import { useSetAtom } from "jotai";
 import GetTagsFromTagAppScriptEle from "./lib/GetTagsFromTagAppScriptEle";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const PageNotFound = lazy(() => import("./404"));
 const Library = lazy(() => import("./routes/"));
@@ -18,6 +19,16 @@ const GalleryPage = lazy(() => import("./routes/gallery/[id]"));
 const TextPage = lazy(() => import("./routes/txt/[id]"));
 const AudioPage = lazy(() => import("./routes/audio/[id]"));
 const GenerateJSONPage = lazy(() => import("./routes/generateJSON"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   const setTags = useSetAtom(tagsAtom);
@@ -60,42 +71,43 @@ function App() {
     <Router hook={useHashLocation}>
       <ThemeProvider>
         <NavBar />
-        <main className="max-w-5xl w-[calc(100%-4rem)] mx-auto">
-          <Suspense fallback={<Spinner />}>
-            <Switch>
-              <Route path="/">
-                <Library />
-              </Route>
-              <Route path="/tags">
-                <TagPage />
-              </Route>
-              <Route path="/generateContentJson">
-                <GenerateJSONPage />
-              </Route>
-              <DocProvider>
-                <Route path="/img/:id">
-                  <ImagePage />
+        <QueryClientProvider client={queryClient}>
+          <main className="max-w-5xl w-[calc(100%-4rem)] mx-auto">
+            <Suspense fallback={<Spinner />}>
+              <Switch>
+                <Route path="/">
+                  <Library />
                 </Route>
-                <Route path="/video/:id">
-                  <VideoPage />
+                <Route path="/tags">
+                  <TagPage />
                 </Route>
-                <Route path="/gallery/:id">
-                  <GalleryPage />
+                <Route path="/generateContentJson">
+                  <GenerateJSONPage />
                 </Route>
-                <Route path="/txt/:id">
-                  <TextPage />
+                <DocProvider>
+                  <Route path="/img/:id">
+                    <ImagePage />
+                  </Route>
+                  <Route path="/video/:id">
+                    <VideoPage />
+                  </Route>
+                  <Route path="/gallery/:id">
+                    <GalleryPage />
+                  </Route>
+                  <Route path="/txt/:id">
+                    <TextPage />
+                  </Route>
+                  <Route path="/audio/:id">
+                    <AudioPage />
+                  </Route>
+                </DocProvider>
+                <Route>
+                  <PageNotFound />
                 </Route>
-                <Route path="/audio/:id">
-                  <AudioPage />
-                </Route>
-              </DocProvider>
-              <Route>
-                <PageNotFound />
-              </Route>
-            </Switch>
-          </Suspense>
-        </main>
-
+              </Switch>
+            </Suspense>
+          </main>
+        </QueryClientProvider>
         <div className="h-12" />
       </ThemeProvider>
     </Router>
