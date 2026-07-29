@@ -2,6 +2,7 @@ import { JSONFilePreset } from "lowdb/node";
 
 const settings_default = {
   port: 5001,
+  prefix: "/",
 };
 
 export const settingsDB = await JSONFilePreset(

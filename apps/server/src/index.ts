@@ -29,8 +29,10 @@ function getLocalIP(): string {
   return "127.0.0.1";
 }
 
+// 1. Add prefix to your schema
 const schema = {
   port: { type: "string" },
+  prefix: { type: "string" },
 } as const;
 
 const { values } = parseArgs({
@@ -39,13 +41,29 @@ const { values } = parseArgs({
   strict: true,
 });
 
-const { port } = values;
+const { port, prefix } = values;
+
+// --- Port Settings Logic ---
 let activePort: number;
 if (port && !settingsDB.data.port) {
   settingsDB.data.port = Number(port);
   settingsDB.write();
 }
-activePort = settingsDB.data.port;
+activePort = settingsDB.data.port || 5000;
+
+// --- Prefix Settings Logic ---
+if (prefix) {
+  // Sanitize the flag input: ensure it starts with "/" and has no trailing "/"
+  let cleanPrefix = prefix.startsWith("/") ? prefix : `/${prefix}`;
+  cleanPrefix = cleanPrefix.replace(/\/$/, "");
+
+  // Update DB if the flag was provided
+  settingsDB.data.prefix = cleanPrefix;
+  settingsDB.write();
+}
+
+// Read the active prefix from the DB, fallback to "/app" if never set
+const activePrefix = settingsDB.data.prefix || "/app";
 
 createAppDirs();
 
@@ -93,21 +111,42 @@ app.use("/rpc/*", async (c, next) => {
   await next();
 });
 
+// 2. Catch Vite's static assets requested at the root
 app.use(
-  "/*",
+  "/assets/*",
   serveStatic({
     root: "./",
-    rewriteRequestPath: (path) => `/WebUI/${path}`,
+    rewriteRequestPath: (path) => `/WebUI${path}`,
   }),
 );
 
-// 4. The SPA Fallback (The very last thing)
-app.get("*", serveStatic({ path: "./WebUI/index.html" }));
+// 3. Catch the favicon
+app.use(
+  "/favicon.ico",
+  serveStatic({
+    path: "./WebUI/favicon.ico",
+  }),
+);
+
+// 4. Map static files to the dynamically configured prefix
+app.use(
+  `${activePrefix}/*`,
+  serveStatic({
+    root: "./",
+    rewriteRequestPath: (path) =>
+      path.replace(new RegExp(`^${activePrefix}`), "/WebUI"),
+  }),
+);
+
+// 5. The SPA Fallback (bound to the active prefix)
+app.get(`${activePrefix}`, serveStatic({ path: "./WebUI/index.html" }));
+app.get(`${activePrefix}/*`, serveStatic({ path: "./WebUI/index.html" }));
 
 const localIP = getLocalIP();
 console.log(`Server active on:`);
-console.log(`  - Local:   http://localhost:${activePort}`);
-console.log(`  - Network: http://${localIP}:${activePort}`);
+console.log(`  - Local:   http://localhost:${activePort}${activePrefix}`);
+console.log(`  - Network: http://${localIP}:${activePort}${activePrefix}`);
+console.log(`  - RPC API: http://localhost:${activePort}/rpc`);
 
 export default {
   port: activePort,
