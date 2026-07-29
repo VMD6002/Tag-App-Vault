@@ -7,13 +7,27 @@ import { logger } from "hono/logger";
 import { RPCHandler } from "@orpc/server/fetch";
 
 import createAppDirs from "./lib/createAppDirs.js";
-import { router, settings } from "@tagapp/api";
+import { router, settingsDB } from "@tagapp/api";
 import { parseArgs } from "node:util";
 import {
   contentWebSchema,
   type ContentWebType,
 } from "../../../packages/utils/src/types/web.js";
 import { writeFile } from "node:fs/promises";
+import { networkInterfaces } from "node:os";
+
+function getLocalIP(): string {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] ?? []) {
+      // Skip loopback (127.0.0.1) and non-IPv4 addresses
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return "127.0.0.1";
+}
 
 const schema = {
   port: { type: "string" },
@@ -26,6 +40,12 @@ const { values } = parseArgs({
 });
 
 const { port } = values;
+let activePort: number;
+if (port && !settingsDB.data.port) {
+  settingsDB.data.port = Number(port);
+  settingsDB.write();
+}
+activePort = settingsDB.data.port;
 
 createAppDirs();
 
@@ -84,10 +104,13 @@ app.use(
 // 4. The SPA Fallback (The very last thing)
 app.get("*", serveStatic({ path: "./WebUI/index.html" }));
 
-console.log(`Server active on http://0.0.0.0:${settings.port}`);
+const localIP = getLocalIP();
+console.log(`Server active on:`);
+console.log(`  - Local:   http://localhost:${activePort}`);
+console.log(`  - Network: http://${localIP}:${activePort}`);
 
 export default {
-  port: port ?? settings.port,
+  port: activePort,
   fetch: app.fetch,
   hostname: "0.0.0.0",
 };
