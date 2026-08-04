@@ -44,7 +44,7 @@ function getCoverUrl(Content: ContentServerType) {
   }
 }
 
-const getUrl = (id: string, Type: string) => `/#/${Type}/${id}`;
+const getUrl = (id: string, Type: string) => `#/${Type}/${id}`;
 
 const contentTypeIconsClassName =
   "absolute bg-background p-1.5 -top-5 right-2 rounded";
