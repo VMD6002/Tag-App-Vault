@@ -7,12 +7,18 @@ import { ServerProvider, useServerActions } from "./contexts/Server.Context";
 import { useAtomValue, useSetAtom } from "jotai";
 import { filteredAtom } from "./atom";
 import TIMEOUTS from "@/lib/TIMEOUTS";
-import { initializeFilterDataFromURLAtom, resetFilterAtom } from "@/atom";
+import {
+  initializeFilterDataFromURLAtom,
+  resetFilterAtom,
+  tagsAtom,
+} from "@/atom";
 import { useEffect } from "react";
 
 function Child() {
   const { updateContentFunc, bulkUpdateContentFunc, filterData } =
     useServerActions();
+
+  const tags = useAtomValue(tagsAtom);
 
   const filtered = useAtomValue(filteredAtom);
 
@@ -29,8 +35,12 @@ function Child() {
 
   return (
     <>
-      <UpdateModal updateContentFunc={updateContentFunc} />
-      <BulkUpdateModal bulkUpdateContentFunc={bulkUpdateContentFunc} />
+      {!!tags && (
+        <>
+          <UpdateModal updateContentFunc={updateContentFunc} />
+          <BulkUpdateModal bulkUpdateContentFunc={bulkUpdateContentFunc} />
+        </>
+      )}
       <button
         className="w-full hover:cursor-pointer"
         onClick={() => {

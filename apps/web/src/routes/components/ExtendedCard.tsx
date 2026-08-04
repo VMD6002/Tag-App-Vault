@@ -22,6 +22,7 @@ import { CTypeDir } from "@tagapp/utils";
 import { useServerActions } from "../contexts/Server.Context";
 import { cn } from "@/lib/utils";
 import { TagParentChildList } from "./DocInfoSection";
+import { tagsAtom } from "@/atom";
 
 function getCoverUrl(Content: ContentServerType) {
   const pathPrefix = `media/${CTypeDir[Content.type]}`;
@@ -59,6 +60,8 @@ const contentTypeColor: Record<CType, ReturnType<typeof Image>> = {
 
 const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
   const { removeContents, isSelected } = useServerActions();
+
+  const tags = useAtomValue(tagsAtom);
 
   const setUpdateModalOpen = useSetAtom(updateModalOpenAtom);
   const setUpdateId = useSetAtom(updateIdAtom);
@@ -112,24 +115,26 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
         </>
       )}
       <div className="w-[95%] ml-[2.5%] break-all">
-        <div className="mb-3">
-          <Button
-            disabled={selectionOn}
-            onClick={updateSetupFunc}
-            className="w-1/2 rounded-r-none hover:bg-neutral-300/20 bg-neutral-300/10 dark:bg-neutral-800/30! dark:hover:bg-neutral-700/30!"
-            variant="outline"
-          >
-            Edit
-          </Button>
-          <Button
-            disabled={selectionOn}
-            onClick={removeContent}
-            className="w-1/2 rounded-l-none text-red-500 bg-red-600/10! dark:bg-red-950/20!"
-            variant="outline"
-          >
-            Remove
-          </Button>
-        </div>
+        {!!tags && (
+          <div className="mb-3">
+            <Button
+              disabled={selectionOn}
+              onClick={updateSetupFunc}
+              className="w-1/2 rounded-r-none hover:bg-neutral-300/20 bg-neutral-300/10 dark:bg-neutral-800/30! dark:hover:bg-neutral-700/30!"
+              variant="outline"
+            >
+              Edit
+            </Button>
+            <Button
+              disabled={selectionOn}
+              onClick={removeContent}
+              className="w-1/2 rounded-l-none text-red-500 bg-red-600/10! dark:bg-red-950/20!"
+              variant="outline"
+            >
+              Remove
+            </Button>
+          </div>
+        )}
         <a href={getUrl(Content.id, Content.type)} target="_blank">
           <h1 className="mb-1 text-lg font-semibold font-stretch-condensed">
             {Content.title}
