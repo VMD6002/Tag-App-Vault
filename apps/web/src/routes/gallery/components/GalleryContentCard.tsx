@@ -15,6 +15,7 @@ import LazyVideo from "@/components/LazyVideo";
 import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const getMediaUrl = (encodedTitle: string, contentPath: string) =>
   `/media/Galleries/${encodedTitle}/${encodeURIComponent(contentPath)}`;
@@ -85,7 +86,7 @@ export default function GalleryContentCard({
         if (data.type === "img") updateCover(data.name);
         else if (data.type === "video" && data.cover)
           updateCover(".gallery-covers/" + data.cover);
-        else alert("Invalid cover selection (its a video file)");
+        else toast.warning("Invalid Option. Choose a valid cover image");
         break;
       default:
         break;

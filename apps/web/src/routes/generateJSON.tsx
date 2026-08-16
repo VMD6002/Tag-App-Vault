@@ -12,6 +12,7 @@ import { customAlphabet } from "nanoid";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { tagsAtom } from "@/atom";
 import { useTheme } from "@/components/theme-provider";
+import { toast } from "sonner";
 
 const capitalLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const smallLetter = "abcdefghijklmnopqrstuvwxyz";
@@ -77,7 +78,7 @@ export default function GenerateJSONPage() {
       saveJsonFile(parsedData, `${parsedData.title}.${parsedData.id}`);
     } catch (error) {
       console.error("Validation Error:", error);
-      alert("Please check your inputs, validation failed.");
+      toast.error("Please check your inputs, validation failed.");
     }
   };
 

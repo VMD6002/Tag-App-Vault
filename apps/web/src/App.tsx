@@ -5,10 +5,11 @@ import NavBar from "@/components/NavBar";
 import Spinner from "@/components/craft/Spinner";
 import DocProvider from "./routes/contexts/Doc.Context";
 import { useHashLocation } from "wouter/use-hash-location";
-import { tagsAtom } from "./atom";
-import { useSetAtom } from "jotai";
+import { tagsAtom, themeAtom } from "./atom";
+import { useAtomValue, useSetAtom } from "jotai";
 import GetTagsFromTagAppScriptEle from "./lib/GetTagsFromTagAppScriptEle";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 
 const PageNotFound = lazy(() => import("./404"));
 const Library = lazy(() => import("./routes/"));
@@ -31,6 +32,7 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const theme = useAtomValue(themeAtom);
   const setTags = useSetAtom(tagsAtom);
   const countRef = useRef(0);
 
@@ -109,6 +111,7 @@ function App() {
           </main>
         </QueryClientProvider>
         <div className="h-12" />
+        <Toaster theme={theme} />
       </ThemeProvider>
     </Router>
   );

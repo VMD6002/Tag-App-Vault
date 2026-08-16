@@ -4,6 +4,7 @@ import { useAtom } from "jotai";
 import { Grid2X2Check, Image, Trash } from "lucide-react";
 import { useDoc } from "../../contexts/Doc.Context";
 import { currentModeAtom, galleryDataAtom, selectedContentAtom } from "./atom";
+import { toast } from "sonner";
 
 export default function FloatingButtons() {
   const { orpc, doc } = useDoc();
@@ -22,7 +23,7 @@ export default function FloatingButtons() {
 
   const removeGalleryContents = () => {
     if (!selected.length) {
-      alert("No items selected");
+      toast.warning("No items selected");
       return;
     }
     if (!confirm(`Confirm ${selected.length} items deletion`)) return;

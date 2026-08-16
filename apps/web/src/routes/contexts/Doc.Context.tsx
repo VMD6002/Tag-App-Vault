@@ -19,6 +19,7 @@ import { orpc } from "@/lib/orpc";
 import type { ContentServerType } from "@tagapp/utils/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { tagsAtom } from "@/atom";
+import { toast } from "sonner";
 
 const docPlaceholderData: ContentServerType = {
   id: "",
@@ -72,7 +73,7 @@ function useDocContext() {
         setInputDisabled(false);
       },
       onError: () => {
-        alert("Couldn't update, check console for error");
+        toast.error("Couldn't update, check console for error");
         setInputDisabled(false);
       },
     }),
@@ -82,7 +83,7 @@ function useDocContext() {
   const updateContentFunc = useCallback(() => {
     const sanitizedTitle = sanitizeStringForFileName(updateData.title);
     if (!sanitizedTitle) {
-      alert("Title must not be blank");
+      toast.warning("Title must not be blank");
       setTitle("");
       return;
     }
@@ -100,7 +101,7 @@ function useDocContext() {
         navigate("/server");
       },
       onError: () => {
-        alert("delete contents failed, check console for error");
+        toast.error("delete contents failed, check console for error");
       },
     }),
   );

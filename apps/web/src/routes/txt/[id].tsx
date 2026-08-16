@@ -12,6 +12,7 @@ import { Edit, Trash } from "lucide-react";
 import { useSetAtom } from "jotai";
 import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export interface entry {
   name: string;
@@ -68,7 +69,7 @@ export default function TextPage() {
         setModalOpen(false);
       },
       onError: () => {
-        alert("Update Failed");
+        toast.error("Update Failed");
       },
     }),
   );

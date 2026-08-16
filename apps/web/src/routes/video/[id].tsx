@@ -6,6 +6,7 @@ import { Image } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useRef, useCallback } from "react";
 import { useCaptureFrame } from "@/hooks/useCaptureFrame";
+import { toast } from "sonner";
 
 export default function VideoPage() {
   const { orpc, doc, encodedTitle, tags } = useDoc();
@@ -21,7 +22,7 @@ export default function VideoPage() {
   const setCoverGivenFileMuation = useMutation(
     orpc.video.setCoverGivenFile.mutationOptions({
       onSuccess: () => {
-        alert("Cover set successfully");
+        toast.success("Cover set successfully");
       },
     }),
   );

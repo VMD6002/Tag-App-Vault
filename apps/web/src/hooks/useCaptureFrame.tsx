@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { type RefObject } from "react";
+import { toast } from "sonner";
 
 export const useCaptureFrame = (
   videoRef: RefObject<HTMLVideoElement | null>,
@@ -42,7 +43,7 @@ export const useCaptureFrame = (
       }
 
       if (isBlank) {
-        alert(
+        toast.warning(
           "Captured frame is blank (pure black/transparent). Choose another Frame",
         );
         return Promise.resolve(null);

@@ -10,6 +10,7 @@ import {
 import { useDoc } from "../../contexts/Doc.Context";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback } from "react";
+import { toast } from "sonner";
 
 export default function Gallery() {
   const { setCoverMutation, doc, setDoc, orpc } = useDoc();
@@ -30,7 +31,7 @@ export default function Gallery() {
         })
         .catch((err) => {
           console.log(err);
-          alert("Failed to update Cover");
+          toast.error("Failed to update Cover");
         });
     },
     [doc],

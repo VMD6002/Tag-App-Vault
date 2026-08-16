@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
 
 export interface MultiSelectOption {
   value: string;
@@ -9,6 +10,10 @@ export interface MultiSelectOption {
   /** Group the options by providing key. */
   [key: string]: string | boolean | undefined;
 }
+
+type Theme = "dark" | "light" | "system";
+
+export const themeAtom = atomWithStorage<Theme>("vite-ui-theme", "system");
 
 export const searchAtom = atom("");
 export const allAtom = atom<MultiSelectOption[]>([]);

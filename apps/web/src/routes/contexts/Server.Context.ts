@@ -19,6 +19,7 @@ import { FilterQueryAtom, injectFilterDataIntoURLAtom } from "@/atom";
 import { sanitizeStringForFileName } from "@tagapp/utils";
 import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
 import constate from "constate";
+import { toast } from "sonner";
 
 const useServer = () => {
   const setFiltered = useSetAtom(filteredAtom);
@@ -32,7 +33,7 @@ const useServer = () => {
         setServerTags(Object.keys(res));
       },
       onError: () => {
-        alert("Could't fetch server tags");
+        toast.error("Could't fetch server tags");
       },
     }),
   );
@@ -94,7 +95,7 @@ const useServer = () => {
         setInputDisabled(false);
       },
       onError: () => {
-        alert("Couldn't update, check console for error");
+        toast.error("Couldn't update, check console for error");
         setInputDisabled(false);
       },
     }),
@@ -104,7 +105,7 @@ const useServer = () => {
   const updateContentFunc = useCallback(() => {
     const sanitizedTitle = sanitizeStringForFileName(updateData.title);
     if (!sanitizedTitle) {
-      alert("Title must not be blank");
+      toast("Title must not be blank");
       setUpdateTitle("");
       return;
     }
@@ -140,7 +141,7 @@ const useServer = () => {
         setInputDisabled(false);
       },
       onError: () => {
-        alert("Bulk update failed, check console for error");
+        toast.error("Bulk update failed, check console for error");
         setInputDisabled(false);
       },
     }),
@@ -171,7 +172,7 @@ const useServer = () => {
         setFiltered((old) => old.filter((doc) => !res.includes(doc.id)));
       },
       onError: () => {
-        alert("delete contents failed, check console for error");
+        toast.error("delete contents failed, check console for error");
       },
     }),
   );

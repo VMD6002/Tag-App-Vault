@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Image } from "lucide-react";
 import { useCallback, useRef } from "react";
+import { toast } from "sonner";
 
 export const contentModalOpenAtom = atom(false);
 export const contentModalDataAtom = atom<entry | null>(null);
@@ -29,7 +30,7 @@ export default function GaleryContentModal() {
     orpc.gallery.setCoverGivenFile.mutationOptions({
       onSuccess: (data, inputs) => {
         setGalleryData(data);
-        alert(`${inputs.content} cover set successfully`);
+        toast.success(`${inputs.content} cover set successfully`);
       },
     }),
   );
