@@ -2,7 +2,7 @@ import TitleHeader from "@/components/craft/TitleHeader";
 import { useDoc } from "../contexts/Doc.Context";
 import DocInfoSection from "../components/DocInfoSection";
 import { useMutation } from "@tanstack/react-query";
-import GaleryContentModal from "./components/GaleryContentModal";
+import GaleryContentModal from "./components/GalleryContentModal";
 import { useSetAtom } from "jotai";
 
 import GalleryOptions from "./components/GalleryOptions";

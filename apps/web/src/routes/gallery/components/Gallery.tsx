@@ -2,8 +2,8 @@ import GalleryContentCard from "./GalleryContentCard";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Slider } from "@/components/ui/slider";
 import {
-  galleryViewModeAtom,
-  galleryListWidthAtom,
+  galleryViewModeFamily,
+  galleryListWidthFamily,
   currentModeAtom,
   galleryDataAtom,
 } from "./atom";
@@ -15,8 +15,10 @@ import { toast } from "sonner";
 export default function Gallery() {
   const { setCoverMutation, doc, setDoc, orpc } = useDoc();
 
-  const galleryViewMode = useAtomValue(galleryViewModeAtom);
-  const [galleryListWidth, setGalleryListWidth] = useAtom(galleryListWidthAtom);
+  const galleryViewMode = useAtomValue(galleryViewModeFamily(doc.id));
+  const [galleryListWidth, setGalleryListWidth] = useAtom(
+    galleryListWidthFamily(doc.id),
+  );
   const galleryData = useAtomValue(galleryDataAtom);
   const setCurrentMode = useSetAtom(currentModeAtom);
   const setGalleryData = useSetAtom(galleryDataAtom);
@@ -61,6 +63,7 @@ export default function Gallery() {
 
   const layoutClasses = {
     list: "mx-auto",
+    responsive: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
     "grid-2": "grid-cols-2",
     "grid-3": "grid-cols-3",
     "grid-4": "grid-cols-4",
@@ -95,3 +98,6 @@ export default function Gallery() {
     </>
   );
 }
+
+// Below const so tailwind loads this style in, i dont think i have used in any other places, hence the need to put this uncessary constant here
+const className = "grid-cols-1";

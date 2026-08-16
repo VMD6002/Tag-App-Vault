@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useDoc } from "../../contexts/Doc.Context";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
-  autoPlayAtom,
+  autoPlayFamily,
   currentModeAtom,
   type entry,
   selectedContentAtom,
@@ -10,7 +10,7 @@ import {
 import {
   contentModalDataAtom,
   contentModalOpenAtom,
-} from "./GaleryContentModal";
+} from "./GalleryContentModal";
 import LazyVideo from "@/components/LazyVideo";
 import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
@@ -27,8 +27,11 @@ const ContentMold = ({
   data: entry;
   currentMode: string;
 }) => {
-  const { encodedTitle } = useDoc();
-  const autoPlay = useAtomValue(autoPlayAtom);
+  const {
+    encodedTitle,
+    doc: { id },
+  } = useDoc();
+  const autoPlay = useAtomValue(autoPlayFamily(id));
 
   const contentUrl = getMediaUrl(encodedTitle, data.name);
   const coverUrl =

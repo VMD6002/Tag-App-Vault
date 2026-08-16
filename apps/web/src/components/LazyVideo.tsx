@@ -58,9 +58,16 @@ const LazyVideo: React.FC<LazyVideoProps> = ({
   useEffect(() => {
     if (!videoRef.current || !shouldLoad) return;
 
-    if (AutoPlay) videoRef.current.play();
-    else videoRef.current.pause();
-  }, [AutoPlay, videoRef.current]);
+    if (AutoPlay) {
+      // Force DOM property sync so browsers allow autoplay
+      videoRef.current.muted = true;
+      videoRef.current.play().catch((err) => {
+        console.warn("Autoplay blocked:", err);
+      });
+    } else {
+      videoRef.current.pause();
+    }
+  }, [AutoPlay, shouldLoad]);
 
   return (
     <div ref={parentDivRef} className="w-full">

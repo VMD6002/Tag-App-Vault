@@ -9,22 +9,27 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
-  autoPlayAtom,
+  autoPlayFamily,
   galleryDataAtom,
   type SortMode,
-  sortModeAtom,
+  sortModeFamily,
   sortModes,
-  galleryViewModeAtom,
+  galleryViewModeFamily,
+  galleryViewModes,
 } from "./atom";
 import { useCallback } from "react";
-
-const galleryViewModes = ["list", "grid-2", "grid-3", "grid-4"];
+import { useDoc } from "@/routes/contexts/Doc.Context";
 
 export default function GalleryOptions() {
-  const [autoPlay, setAutoPlay] = useAtom(autoPlayAtom);
+  const {
+    doc: { id },
+  } = useDoc();
+  const [autoPlay, setAutoPlay] = useAtom(autoPlayFamily(id));
 
-  const [sortMode, setSortMode] = useAtom(sortModeAtom);
-  const [galleryViewMode, setGalleryViewMode] = useAtom(galleryViewModeAtom);
+  const [sortMode, setSortMode] = useAtom(sortModeFamily(id));
+  const [galleryViewMode, setGalleryViewMode] = useAtom(
+    galleryViewModeFamily(id),
+  );
 
   const setGalleryData = useSetAtom(galleryDataAtom);
 
