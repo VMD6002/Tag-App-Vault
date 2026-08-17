@@ -6,22 +6,45 @@ import {
   galleryListWidthFamily,
   currentModeAtom,
   galleryDataAtom,
+  sortModeFamily,
 } from "./atom";
 import { useDoc } from "../../contexts/Doc.Context";
 import { useMutation } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
 export default function Gallery() {
   const { setCoverMutation, doc, setDoc, orpc } = useDoc();
 
   const galleryViewMode = useAtomValue(galleryViewModeFamily(doc.id));
+  const sortMode = useAtomValue(sortModeFamily(doc.id)); // <-- Add sortMode
   const [galleryListWidth, setGalleryListWidth] = useAtom(
     galleryListWidthFamily(doc.id),
   );
-  const galleryData = useAtomValue(galleryDataAtom);
+  const [galleryData, setGalleryData] = useAtom(galleryDataAtom);
   const setCurrentMode = useSetAtom(currentModeAtom);
-  const setGalleryData = useSetAtom(galleryDataAtom);
+
+  // Compute sorted data reactively whenever galleryData or sortMode changes
+  const sortedGalleryData = useMemo(() => {
+    return [...galleryData].sort((a, b) => {
+      switch (sortMode) {
+        case "created-date-asc":
+          return a.createdAt - b.createdAt;
+        case "created-date-desc":
+          return b.createdAt - a.createdAt;
+        case "updated-date-asc":
+          return a.modifiedAt - b.modifiedAt;
+        case "updated-date-desc":
+          return b.modifiedAt - a.modifiedAt;
+        case "name-asc":
+          return a.name.localeCompare(b.name);
+        case "name-desc":
+          return b.name.localeCompare(a.name);
+        default:
+          return 0;
+      }
+    });
+  }, [galleryData, sortMode]);
 
   const updateCover = useCallback(
     (coverPath: string) => {
@@ -86,7 +109,8 @@ export default function Gallery() {
         className={`grid gap-4 ${layoutClasses[galleryViewMode]}`}
         style={isList ? { width: galleryListWidth + "%" } : {}}
       >
-        {galleryData.map((entry) => (
+        {/* Map over sortedGalleryData instead of galleryData */}
+        {sortedGalleryData.map((entry) => (
           <GalleryContentCard
             removeContentCover={removeContentCover}
             updateCover={updateCover}
@@ -98,6 +122,3 @@ export default function Gallery() {
     </>
   );
 }
-
-// Below const so tailwind loads this style in, i dont think i have used in any other places, hence the need to put this uncessary constant here
-const className = "grid-cols-1";
