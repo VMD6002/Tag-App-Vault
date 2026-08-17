@@ -30,6 +30,8 @@ import { contentTypes } from "@tagapp/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCallback, useMemo } from "react";
 
+import { Pencil, Trash2 } from "lucide-react";
+
 export default function Filters() {
   const { setFiltered, removeContents, filterData, serverSyncFunc } =
     useServerActions();
@@ -172,30 +174,58 @@ export default function Filters() {
         )}
       </div>
       {!!tags && (
-        <div className="flex justify-between mb-4 items-center flex-wrap-reverse gap-y-3">
-          <div className="flex items-center space-x-5">
-            <Button onClick={toggleSelectionMode} variant="outline">
-              Toggle Selection Mode
+        <div className="sticky top-[4.8rem] z-10 bg-background py-2 mb-4 flex justify-between items-center flex-wrap-reverse gap-y-3">
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={toggleSelectionMode}
+              variant={selectionOn ? "default" : "outline"}
+            >
+              Toggle Selection
             </Button>
-            <span className="font-mono text-base">{filtered.length}</span>
-            {selectionOn ? (
+
+            {selectionOn && (
               <>
-                <div className="flex space-x-3">
+                <Button
+                  disabled={selectedEntries.length < 1}
+                  onClick={openBulkUpdateModal}
+                  variant="outline"
+                  size="icon"
+                  title="Update Selected"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  disabled={selectedEntries.length < 1}
+                  onClick={deleteSelected}
+                  variant="outline"
+                  size="icon"
+                  title="Delete Selected"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+
+                <div className="flex items-center space-x-2 pl-2">
                   <Label>Select All</Label>
                   <Checkbox
-                    checked={selectedEntries.length === filtered.length}
+                    checked={
+                      filtered.length > 0 &&
+                      selectedEntries.length === filtered.length
+                    }
                     onCheckedChange={onSelectAllCheckedChange}
                   />
                 </div>
-                <span className="font-mono text-base">
-                  {selectedEntries.length}
+                <span className="font-mono text-sm">
+                  ({selectedEntries.length}/{filtered.length})
                 </span>
               </>
-            ) : (
-              <></>
+            )}
+
+            {!selectionOn && (
+              <span className="font-mono text-base">{filtered.length}</span>
             )}
           </div>
-          <div className="flex space-x-3">
+
+          <div className="flex space-x-3 items-center">
             <Label>Order By Latest</Label>
             <Switch
               checked={orderByLatest}
@@ -206,28 +236,6 @@ export default function Filters() {
             />
           </div>
         </div>
-      )}
-      {selectionOn ? (
-        <div>
-          <Button
-            disabled={selectedEntries.length < 1}
-            onClick={openBulkUpdateModal}
-            className="mb-4 mr-4"
-            variant="outline"
-          >
-            Update Selected
-          </Button>
-          <Button
-            disabled={selectedEntries.length < 1}
-            onClick={deleteSelected}
-            className="mb-4"
-            variant="outline"
-          >
-            Delete Selected
-          </Button>
-        </div>
-      ) : (
-        <></>
       )}
       <div className="mb-10" />
     </>
