@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Router, Route, Switch } from "wouter";
 import { ThemeProvider } from "@/components/theme-provider";
 import NavBar from "@/components/NavBar";
@@ -7,9 +7,9 @@ import DocProvider from "./routes/contexts/Doc.Context";
 import { useHashLocation } from "wouter/use-hash-location";
 import { tagsAtom, themeAtom } from "./atom";
 import { useAtomValue, useSetAtom } from "jotai";
-import GetTagsFromTagAppScriptEle from "./lib/GetTagsFromTagAppScriptEle";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
+import { ConfirmProvider } from "./components/craft/confirm-dialog";
 
 const PageNotFound = lazy(() => import("./404"));
 const Library = lazy(() => import("./routes/"));
@@ -31,41 +31,35 @@ const queryClient = new QueryClient({
   },
 });
 
+const MESSAGE_TYPE_SEND_TAGS = "TAG_APP_INJECT_TAGS";
+const MESSAGE_TYPE_ACK_TAGS = "TAG_APP_TAGS_RECEIVED";
+
 function App() {
   const theme = useAtomValue(themeAtom);
   const setTags = useSetAtom(tagsAtom);
-  const countRef = useRef(0);
 
   useEffect(() => {
-    let timeoutId: null | NodeJS.Timeout;
+    const handleMessage = (event: MessageEvent) => {
+      // Security: ensure message comes from the current window frame
+      if (event.source !== window) return;
 
-    const checkTagsExistance = () => {
-      const tags = GetTagsFromTagAppScriptEle();
+      if (event.data?.type === MESSAGE_TYPE_SEND_TAGS) {
+        const receivedTags = event.data.payload;
 
-      if (!tags && countRef.current < 20) {
-        countRef.current++;
-        console.log(countRef.current + ": Checking for tags");
+        if (Array.isArray(receivedTags)) {
+          setTags(receivedTags);
+          console.log("Tags received and updated in React state.");
 
-        // Schedule the next check and save the ID
-        timeoutId = setTimeout(checkTagsExistance, 500);
-        return;
+          // Send ACK back to content script to stop retries
+          window.postMessage({ type: MESSAGE_TYPE_ACK_TAGS }, "*");
+        }
       }
-
-      if (!tags) {
-        console.log("Count finished, No Tags found");
-        return;
-      }
-
-      setTags(tags);
-      console.log("Tags found and set successfully");
     };
 
-    // Kick off the initial check
-    checkTagsExistance();
+    window.addEventListener("message", handleMessage);
 
-    // Cleanup: Clears the timeout if the component unmounts while polling
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener("message", handleMessage);
     };
   }, [setTags]);
 
@@ -112,6 +106,7 @@ function App() {
         </QueryClientProvider>
         <div className="h-12" />
         <Toaster theme={theme} />
+        <ConfirmProvider />
       </ThemeProvider>
     </Router>
   );
