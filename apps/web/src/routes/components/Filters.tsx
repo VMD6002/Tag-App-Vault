@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCallback, useMemo } from "react";
 
 import { Pencil, Trash2 } from "lucide-react";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export default function Filters() {
   const { setFiltered, removeContents, filterData, serverSyncFunc } =
@@ -62,11 +63,17 @@ export default function Filters() {
     [filtered],
   );
 
-  const deleteSelected = useCallback(() => {
-    if (!confirm(`U sure u want to delete ${selectedEntries.length} items ?`))
-      return;
-    removeContents(selectedEntries);
-  }, [selectedEntries]);
+  const deleteSelected = useCallback(
+    () =>
+      confirm
+        .destructive(
+          `U sure u want to delete ${selectedEntries.length} items ?`,
+        )
+        .then((ok) => {
+          if (ok) removeContents(selectedEntries);
+        }),
+    [selectedEntries],
+  );
 
   const setSelectionTagsInitial = useSetAtom(selectionTagsInitialAtom);
   const setSelectionTags = useSetAtom(selectionTagsAtom);

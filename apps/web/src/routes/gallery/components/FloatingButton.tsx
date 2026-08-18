@@ -5,6 +5,7 @@ import { Grid2X2Check, Image, Trash } from "lucide-react";
 import { useDoc } from "../../contexts/Doc.Context";
 import { currentModeAtom, galleryDataAtom, selectedContentAtom } from "./atom";
 import { toast } from "sonner";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export default function FloatingButtons() {
   const { orpc, doc } = useDoc();
@@ -16,23 +17,26 @@ export default function FloatingButtons() {
   const removeContentMutation = useMutation(
     orpc.gallery.removeGalleryContents.mutationOptions({
       onSuccess: (res) => {
+        setSelected([]);
         setGalleryData(res);
       },
     }),
   );
-
   const removeGalleryContents = () => {
     if (!selected.length) {
       toast.warning("No items selected");
       return;
     }
-    if (!confirm(`Confirm ${selected.length} items deletion`)) return;
-    removeContentMutation.mutate({
-      name: doc.title,
-      id: doc.id,
-      contents: selected,
-    });
-    setSelected([]);
+    confirm
+      .destructive(`Confirm ${selected.length} items deletion`)
+      .then((ok) => {
+        if (ok)
+          removeContentMutation.mutate({
+            name: doc.title,
+            id: doc.id,
+            contents: selected,
+          });
+      });
   };
 
   return (
@@ -41,9 +45,13 @@ export default function FloatingButtons() {
         <div className="flex gap-1">
           <Button
             onClick={() => {
-              if (galleryData.length === selected.length) setSelected([]);
-              else if (confirm("Select All ?"))
-                setSelected(galleryData.map((e) => e.name));
+              if (galleryData.length === selected.length) {
+                setSelected([]);
+                return;
+              }
+              confirm("Select All?").then((ok) => {
+                if (ok) setSelected(galleryData.map((e) => e.name));
+              });
             }}
             variant="secondary"
             size="icon"

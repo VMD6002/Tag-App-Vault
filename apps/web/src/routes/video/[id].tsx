@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRef, useCallback } from "react";
 import { useCaptureFrame } from "@/hooks/useCaptureFrame";
 import { toast } from "sonner";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export default function VideoPage() {
   const { orpc, doc, encodedTitle, tags } = useDoc();
@@ -28,7 +29,7 @@ export default function VideoPage() {
   );
 
   const setCover = useCallback(async () => {
-    if (!confirm("U sure u want to set new cover ??")) return;
+    if (!(await confirm("U sure u want to set new cover ??"))) return;
     const file = await captureFrame(`cover.${doc.title}.${doc.id}`);
     if (!file) return;
     setCoverGivenFileMuation.mutate({

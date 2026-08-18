@@ -23,6 +23,7 @@ import { useServerActions } from "../contexts/Server.Context";
 import { cn } from "@/lib/utils";
 import { TagParentChildList } from "./DocInfoSection";
 import { tagsAtom } from "@/atom";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 function getCoverUrl(Content: ContentServerType) {
   const pathPrefix = `media/${CTypeDir[Content.type]}`;
@@ -82,8 +83,9 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
   }, [Content]);
 
   const removeContent = useCallback(() => {
-    if (!confirm("Confirm Deletion")) return;
-    removeContents([Content.id]);
+    confirm.destructive("Confirm Deletion?").then((ok) => {
+      if (ok) removeContents([Content.id]);
+    });
   }, [Content.id]);
 
   const Selected = useMemo(

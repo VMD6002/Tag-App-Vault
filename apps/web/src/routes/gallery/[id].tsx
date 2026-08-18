@@ -12,6 +12,7 @@ import FloatingButtons from "./components/FloatingButton";
 import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 import { useCallback, useEffect } from "react";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export default function GalleryPage() {
   const { doc, encodedTitle, setCoverMutation, tags, orpc } = useDoc();
@@ -43,10 +44,16 @@ export default function GalleryPage() {
     : null;
 
   const setCover = useCallback(
-    (img?: string) => {
-      if (!confirm("Confirm Cover Update")) return;
-      setCoverMutation.mutate({ coverPath: img, id: doc.id, name: doc.title });
-    },
+    (img?: string) =>
+      confirm("Confirm Cover Update").then((ok) => {
+        if (ok)
+          setCoverMutation.mutate({
+            coverPath: img,
+            id: doc.id,
+            name: doc.title,
+          });
+      }),
+
     [doc.id],
   );
 

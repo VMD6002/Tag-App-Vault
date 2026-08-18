@@ -12,6 +12,7 @@ import { useDoc } from "../../contexts/Doc.Context";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export default function Gallery() {
   const { setCoverMutation, doc, setDoc, orpc } = useDoc();
@@ -71,14 +72,15 @@ export default function Gallery() {
   );
 
   const removeContentCover = useCallback(
-    (cover: string) => {
-      if (!confirm(`Confirm ${cover} removal`)) return;
-      removeContentMutation.mutate({
-        name: doc.title,
-        id: doc.id,
-        contents: [".gallery-covers/" + cover],
-      });
-    },
+    (cover: string) =>
+      confirm.destructive(`Confirm ${cover} removal`).then((ok) => {
+        if (ok)
+          removeContentMutation.mutate({
+            name: doc.title,
+            id: doc.id,
+            contents: [".gallery-covers/" + cover],
+          });
+      }),
     [doc],
   );
 

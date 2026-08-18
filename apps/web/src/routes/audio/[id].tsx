@@ -9,10 +9,10 @@ import { audiosAtom, currentAtom } from "./atom";
 import { useAtom } from "jotai";
 import FloatingButtons from "./FloatingButton";
 import { useCallback, useEffect } from "react";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export default function AudioPage() {
-  const { doc, setCoverMutation, encodedTitle, removeContent, orpc, tags } =
-    useDoc();
+  const { doc, setCoverMutation, encodedTitle, orpc, tags } = useDoc();
 
   const [audios, setAudios] = useAtom(audiosAtom);
   const [current, setCurrent] = useAtom(currentAtom);
@@ -36,8 +36,14 @@ export default function AudioPage() {
 
   const setCover = useCallback(
     (img?: string) => {
-      if (!confirm("Confirm Cover Update")) return;
-      setCoverMutation.mutate({ coverPath: img, id: doc.id, name: doc.title });
+      confirm("Confirm Cover Update?").then((ok) => {
+        if (ok)
+          setCoverMutation.mutate({
+            coverPath: img,
+            id: doc.id,
+            name: doc.title,
+          });
+      });
     },
     [doc.id],
   );
@@ -52,11 +58,13 @@ export default function AudioPage() {
 
   const removeContentCover = useCallback(
     (cover: string) => {
-      if (!confirm(`Confirm ${cover} removal`)) return;
-      removeContentMutation.mutate({
-        name: doc.title,
-        id: doc.id,
-        contents: [".audio-covers/" + cover],
+      confirm.destructive(`Confirm ${cover} removal`).then((ok) => {
+        if (ok)
+          removeContentMutation.mutate({
+            name: doc.title,
+            id: doc.id,
+            contents: [".audio-covers/" + cover],
+          });
       });
     },
     [doc],

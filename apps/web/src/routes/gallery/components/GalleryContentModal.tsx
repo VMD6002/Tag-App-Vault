@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Image, ImagePlus } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export const contentModalOpenAtom = atom(false);
 export const contentModalDataAtom = atom<entry | null>(null);
@@ -36,7 +37,7 @@ export default function GaleryContentModal() {
   );
 
   const setCover = useCallback(async () => {
-    if (!confirm("U sure u want to set new cover ??")) return;
+    if (!(await confirm("U sure u want to set new cover ??"))) return;
     const file = await captureFrame(`cover.${doc.title}.${doc.id}`);
     if (!file) return;
     setCoverGivenFileMuation.mutate({
@@ -48,7 +49,8 @@ export default function GaleryContentModal() {
   }, [captureFrame, doc.id, doc.title, setCoverGivenFileMuation, data?.name]);
 
   const setVideoAndGalleryCover = useCallback(async () => {
-    if (!confirm("Set current frame as video cover AND gallery cover?")) return;
+    if (!(await confirm("Set current frame as video cover AND gallery cover?")))
+      return;
     const file = await captureFrame(`cover.${doc.title}.${doc.id}`);
     if (!file) return;
 

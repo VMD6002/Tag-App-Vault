@@ -13,6 +13,7 @@ import { useSetAtom } from "jotai";
 import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { confirm } from "@/components/craft/confirm-dialog";
 
 export interface entry {
   name: string;
@@ -114,10 +115,16 @@ export default function TextPage() {
   }, [currentTxt]);
 
   const setCover = useCallback(
-    (img?: string) => {
-      if (!confirm("Confirm Cover Update")) return;
-      setCoverMutation.mutate({ coverPath: img, id: doc.id, name: doc.title });
-    },
+    (img?: string) =>
+      confirm("Confirm Cover Update").then(
+        (ok) =>
+          ok &&
+          setCoverMutation.mutate({
+            coverPath: img,
+            id: doc.id,
+            name: doc.title,
+          }),
+      ),
     [doc.id],
   );
 
