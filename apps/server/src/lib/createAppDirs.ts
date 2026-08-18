@@ -10,7 +10,6 @@ const AppDirs = [
   "media/Audios",
   "media/Texts",
   "media/Galleries",
-  "webSync",
   "DB",
 ];
 
