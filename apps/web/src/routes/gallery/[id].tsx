@@ -58,7 +58,7 @@ export default function GalleryPage() {
   );
 
   return (
-    <>
+    <div className="relative">
       <GaleryContentModal />
       <button
         className="w-fit grid mx-auto hover:cursor-pointer"
@@ -93,6 +93,6 @@ export default function GalleryPage() {
       {!!tags && <FloatingButtons />}
       <GalleryOptions />
       <Gallery />
-    </>
+    </div>
   );
 }

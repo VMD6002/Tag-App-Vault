@@ -30,7 +30,7 @@ export default function GalleryOptions() {
   );
 
   return (
-    <div className="w-full flex flex-col sm:flex-row mb-10">
+    <div className="w-full flex flex-col sm:flex-row mb-10 sticky top-[4.8rem] z-10 bg-background p-2">
       <Select
         value={sortMode}
         onValueChange={(selected) => setSortMode(selected as SortMode)}
