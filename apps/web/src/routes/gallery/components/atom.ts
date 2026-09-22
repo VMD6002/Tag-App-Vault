@@ -2,13 +2,14 @@ import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import { atomFamily } from "jotai-family";
 
-export interface entry {
+export type entry = {
   name: string;
   type: "video" | "img";
+  cover?: string;
   createdAt: number;
   modifiedAt: number;
-  cover?: string;
-}
+  tags?: string[];
+};
 
 export const galleryDataAtom = atom<entry[]>([]);
 
@@ -48,3 +49,6 @@ export const galleryViewModeFamily = atomFamily((id: string) =>
 export const galleryListWidthFamily = atomFamily((id: string) =>
   atomWithStorage<number>(`gallery_listWidth_${id}`, 100),
 );
+
+export const tagModalOpenAtom = atom<boolean>(false);
+export const tagModalDataAtom = atom<entry | null>(null);

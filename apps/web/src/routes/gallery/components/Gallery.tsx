@@ -1,4 +1,5 @@
 import GalleryContentCard from "./GalleryContentCard";
+import TagContentModal from "./TagContentModal";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -18,14 +19,13 @@ export default function Gallery() {
   const { setCoverMutation, doc, setDoc, orpc } = useDoc();
 
   const galleryViewMode = useAtomValue(galleryViewModeFamily(doc.id));
-  const sortMode = useAtomValue(sortModeFamily(doc.id)); // <-- Add sortMode
+  const sortMode = useAtomValue(sortModeFamily(doc.id));
   const [galleryListWidth, setGalleryListWidth] = useAtom(
     galleryListWidthFamily(doc.id),
   );
   const [galleryData, setGalleryData] = useAtom(galleryDataAtom);
   const setCurrentMode = useSetAtom(currentModeAtom);
 
-  // Compute sorted data reactively whenever galleryData or sortMode changes
   const sortedGalleryData = useMemo(() => {
     return [...galleryData].sort((a, b) => {
       switch (sortMode) {
@@ -88,10 +88,11 @@ export default function Gallery() {
 
   const layoutClasses = {
     list: "mx-auto",
-    responsive: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-    "grid-2": "grid-cols-2",
-    "grid-3": "grid-cols-3",
-    "grid-4": "grid-cols-4",
+    responsive:
+      "gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
+    "grid-2": "grid-cols-2 gap-8",
+    "grid-3": "grid-cols-3 gap-6",
+    "grid-4": "grid-cols-4 gap-3",
   };
 
   return (
@@ -108,10 +109,9 @@ export default function Gallery() {
         </div>
       )}
       <div
-        className={`grid gap-4 ${layoutClasses[galleryViewMode]}`}
+        className={`grid ${layoutClasses[galleryViewMode]}`}
         style={isList ? { width: galleryListWidth + "%" } : {}}
       >
-        {/* Map over sortedGalleryData instead of galleryData */}
         {sortedGalleryData.map((entry) => (
           <GalleryContentCard
             removeContentCover={removeContentCover}
@@ -121,6 +121,8 @@ export default function Gallery() {
           />
         ))}
       </div>
+
+      <TagContentModal />
     </>
   );
 }

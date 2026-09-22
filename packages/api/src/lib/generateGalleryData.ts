@@ -11,9 +11,14 @@ export interface entry {
 
 // The input must be of form "${galleryName}.${id}""
 export const generateGalleryData = async (galleryNameWithID: string) => {
+  const IgnoreSet = new Set([
+    ".gallery-covers",
+    ".gallery-data.json",
+    ".tags.json",
+  ]);
   const contents = (
     await readdir(`./media/Galleries/${galleryNameWithID}`)
-  ).filter((j) => j !== ".gallery-covers" && !j.endsWith("gallery-data.json"));
+  ).filter((j) => !IgnoreSet.has(j));
 
   let galleryCovers = await readdir(
     `./media/Galleries/${galleryNameWithID}/.gallery-covers`,

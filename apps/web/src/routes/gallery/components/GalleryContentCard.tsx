@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useDoc } from "../../contexts/Doc.Context";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
@@ -6,6 +6,8 @@ import {
   currentModeAtom,
   type entry,
   selectedContentAtom,
+  tagModalOpenAtom,
+  tagModalDataAtom,
 } from "./atom";
 import {
   contentModalDataAtom,
@@ -13,9 +15,33 @@ import {
 } from "./GalleryContentModal";
 import LazyVideo from "@/components/LazyVideo";
 import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
+import { Trash, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+export function TagParentChildList({ tags }: { tags: string[] }) {
+  const parentTags = useMemo(
+    () => [...new Set([...tags.map((k) => k.split(":")[0])])],
+    [tags],
+  );
+
+  return (
+    <>
+      {parentTags.sort().map((parent) => (
+        <div key={parent}>
+          {parent}:{" "}
+          <span className="text-muted-foreground">
+            {tags
+              .filter((k) => k.startsWith(parent))
+              .sort()
+              .map((e) => e.replace(parent + ":", "").replaceAll("_", " "))
+              .join(", ")}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
 
 const getMediaUrl = (encodedTitle: string, contentPath: string) =>
   `/media/Galleries/${encodedTitle}/${encodeURIComponent(contentPath)}`;
@@ -69,8 +95,17 @@ export default function GalleryContentCard({
 
   const setContentModalOpen = useSetAtom(contentModalOpenAtom);
   const setContentModalData = useSetAtom(contentModalDataAtom);
+  const setTagModalOpen = useSetAtom(tagModalOpenAtom);
+  const setTagModalData = useSetAtom(tagModalDataAtom);
+
   const currentMode = useAtomValue(currentModeAtom);
   const [selected, setSelected] = useAtom(selectedContentAtom);
+
+  const openTagModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTagModalData(data);
+    setTagModalOpen(true);
+  };
 
   const handleClick = useCallback(() => {
     switch (currentMode) {
@@ -109,6 +144,7 @@ export default function GalleryContentCard({
           "blur-[2px]",
       )}
     >
+      {/* Remove Cover Action */}
       {!!tags && data.cover && currentMode === "view" && (
         <Button
           variant="destructive"
@@ -119,10 +155,38 @@ export default function GalleryContentCard({
           <Trash />
         </Button>
       )}
-      <button className="size-full" onClick={handleClick}>
+
+      {/* Media Image / Video */}
+      <button className="w-full text-left" onClick={handleClick}>
         <ContentMold data={data} currentMode={currentMode} />
-        <span className="text-base">{data.name}</span>
       </button>
+
+      {/* Inline Title & Edit Button */}
+      <div className="flex items-center gap-2.5 mt-1">
+        {currentMode === "view" && (
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            className="rounded-none shrink-0"
+            onClick={openTagModal}
+          >
+            <Tag className="size-4" />
+          </Button>
+        )}
+        <button
+          className="text-base truncate text-left w-full"
+          onClick={handleClick}
+        >
+          {data.name}
+        </button>
+      </div>
+
+      {/* Formatted Tag List (No pills/badges) */}
+      {!!data.tags?.length && (
+        <div className="mt-1.5 text-sm space-y-0.5">
+          <TagParentChildList tags={data.tags} />
+        </div>
+      )}
     </div>
   );
 }
