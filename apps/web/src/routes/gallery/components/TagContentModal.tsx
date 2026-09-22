@@ -167,7 +167,6 @@ export default function TagContentModal() {
               onChange={setSelectedTags}
               options={tagOptions}
               placeholder="Select tags..."
-              creatable
             />
           </div>
         </div>
