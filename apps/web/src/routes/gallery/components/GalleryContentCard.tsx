@@ -134,7 +134,7 @@ export default function GalleryContentCard({
   return (
     <div
       className={cn(
-        "relative my-auto w-full hover:cursor-pointer",
+        "my-auto w-full hover:cursor-pointer",
         currentMode !== "view" && "border-2 p-3",
         currentMode === "delete" &&
           selected.includes(data.name) &&
@@ -144,18 +144,6 @@ export default function GalleryContentCard({
           "blur-[2px]",
       )}
     >
-      {/* Remove Cover Action */}
-      {!!tags && data.cover && currentMode === "view" && (
-        <Button
-          variant="destructive"
-          className="absolute right-0 rounded-none rounded-bl z-10 backdrop-blur-xs"
-          size="icon-lg"
-          onClick={() => removeContentCover(data.cover!)}
-        >
-          <Trash />
-        </Button>
-      )}
-
       {/* Media Image / Video */}
       <button className="w-full text-left" onClick={handleClick}>
         <ContentMold data={data} currentMode={currentMode} />
@@ -163,16 +151,26 @@ export default function GalleryContentCard({
 
       {/* Inline Title & Edit Button */}
       <div className="flex items-center gap-2.5 mt-1">
-        {currentMode === "view" && (
+        <Button
+          variant="secondary"
+          size="icon-sm"
+          className="rounded-none shrink-0"
+          onClick={openTagModal}
+        >
+          <Tag className="size-4" />
+        </Button>
+        {/* Remove Cover Action */}
+        {!!tags && data.cover && currentMode === "view" && (
           <Button
-            variant="secondary"
-            size="icon-sm"
+            variant="destructive"
             className="rounded-none shrink-0"
-            onClick={openTagModal}
+            size="icon-sm"
+            onClick={() => removeContentCover(data.cover!)}
           >
-            <Tag className="size-4" />
+            <Trash />
           </Button>
         )}
+
         <button
           className="text-base truncate text-left w-full"
           onClick={handleClick}
