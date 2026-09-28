@@ -87,12 +87,12 @@ export default function Gallery() {
   const isList = galleryViewMode === "list";
 
   const layoutClasses = {
-    list: "mx-auto",
+    list: "flex flex-col mx-auto gap-8",
     responsive:
-      "gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-    "grid-2": "grid-cols-2 gap-8",
-    "grid-3": "grid-cols-3 gap-6",
-    "grid-4": "grid-cols-4 gap-3",
+      "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3",
+    "grid-2": "grid grid-cols-2 gap-8",
+    "grid-3": "grid grid-cols-3 gap-6",
+    "grid-4": "grid grid-cols-4 gap-3",
   };
 
   return (
@@ -109,7 +109,7 @@ export default function Gallery() {
         </div>
       )}
       <div
-        className={`grid ${layoutClasses[galleryViewMode]}`}
+        className={layoutClasses[galleryViewMode]}
         style={isList ? { width: galleryListWidth + "%" } : {}}
       >
         {sortedGalleryData.map((entry) => (
