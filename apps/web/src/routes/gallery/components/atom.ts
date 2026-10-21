@@ -31,7 +31,7 @@ export const sortModes = [
 ] as const;
 export type SortMode = (typeof sortModes)[number];
 export const sortModeFamily = atomFamily((id: string) =>
-  atomWithStorage<SortMode>(`gallery_sortMode_${id}`, "created-date-asc"),
+  atomWithStorage<SortMode>(`gallery_sortMode_${id}`, "name-asc"),
 );
 
 export const galleryViewModes = [
