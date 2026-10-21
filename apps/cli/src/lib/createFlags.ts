@@ -1,55 +1,51 @@
 import { existsSync } from "node:fs";
-import { TMP_DIR } from "./constants";
+import { TMP_DIR, fileBase } from "./constants";
 import { downloadContent } from "./downloadContent";
 import { getImageExtensionFromURL } from "./getImageExtensionFromURL";
 import type { ContentWebType } from "@tagapp/utils/types";
 
 const DEFAULT_FLAGS = ["--embed-thumbnail", "-R", "3"];
 
+// Splits on whitespace but keeps quoted values (with spaces) intact.
+const tokenize = (s: string) =>
+  Array.from(
+    s.matchAll(/"([^"]*)"|'([^']*)'|\S+/g),
+    (m) => m[1] ?? m[2] ?? m[0],
+  );
+
 export async function createFlag(item: ContentWebType): Promise<string[]> {
+  const base = fileBase(item.title, item.id);
   const flags = [
     item.url,
     "-o",
-    `${TMP_DIR}/${item.title}.${item.id}.%(ext)s`,
+    `${TMP_DIR}/${base}.%(ext)s`,
     ...DEFAULT_FLAGS,
   ];
 
-  if (item.download?.flags) {
-    flags.push(
-      ...item.download.flags.value
-        .replace(/"|'/g, "")
-        .split(" ")
-        .filter(Boolean),
-    );
-  }
+  if (item.download?.flags) flags.push(...tokenize(item.download.flags.value));
 
   if (item.tags.includes("meta:yt-cookie")) {
-    const siteTag = item.tags.find((tag) => tag.startsWith("Site:"));
-    if (!siteTag) {
-      throw new Error("No site tag found for cookies");
-    }
-
-    const siteName = siteTag.split(":")[1];
-    if (!siteName || !existsSync(`./cookies/${siteName}.txt`)) {
-      throw new Error(`No cookies file found for site ${siteName ?? "unknown"}`);
-    }
-    flags.push("--cookies", `./cookies/${siteName}.txt`);
+    const site = item.tags
+      .find((t) => t.startsWith("Site:"))
+      ?.slice("Site:".length);
+    if (!site) throw new Error("No site tag found for cookies");
+    const cookies = `./cookies/${site}.txt`;
+    if (!existsSync(cookies))
+      throw new Error(`No cookies file found for site ${site}`);
+    flags.push("--cookies", cookies);
   }
 
-  if (!item.tags.includes("meta:different-cover")) {
+  if (item.tags.includes("meta:different-cover")) {
+    if (!item.cover) throw new Error("No cover found");
+    await downloadContent(
+      item.cover,
+      `${TMP_DIR}/cover.${base}.${getImageExtensionFromURL(item.cover)}`,
+    );
+  } else {
     flags.push(
       "--write-thumbnail",
       "-o",
-      `thumbnail:${TMP_DIR}/cover.${item.title}.${item.id}.%(ext)s`,
-    );
-  } else {
-    if (!item.cover) {
-      throw new Error("No cover found");
-    }
-    const ext = getImageExtensionFromURL(item.cover);
-    await downloadContent(
-      item.cover,
-      `${TMP_DIR}/cover.${item.title}.${item.id}.${ext}`,
+      `thumbnail:${TMP_DIR}/cover.${base}.%(ext)s`,
     );
   }
 

@@ -8,10 +8,11 @@ import {
   currentModeAtom,
   galleryDataAtom,
   sortModeFamily,
+  autoPlayFamily,
 } from "./atom";
 import { useDoc } from "../../contexts/Doc.Context";
 import { useMutation } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
 
@@ -25,6 +26,7 @@ export default function Gallery() {
   );
   const [galleryData, setGalleryData] = useAtom(galleryDataAtom);
   const setCurrentMode = useSetAtom(currentModeAtom);
+  const setAutoPlay = useSetAtom(autoPlayFamily(doc.id));
 
   const sortedGalleryData = useMemo(() => {
     return [...galleryData].sort((a, b) => {
@@ -94,6 +96,10 @@ export default function Gallery() {
     "grid-3": "grid grid-cols-3 gap-6",
     "grid-4": "grid grid-cols-4 gap-3",
   };
+
+  useEffect(() => {
+    if (doc.tags.includes("meta:autoplay")) setAutoPlay(true);
+  }, [doc.tags]);
 
   return (
     <>

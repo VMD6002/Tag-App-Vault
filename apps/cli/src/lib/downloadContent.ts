@@ -1,15 +1,18 @@
+import { createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { USER_AGENT } from "./constants";
-import { writeFileSync } from "node:fs";
 
 export async function downloadContent(url: string, filePath: string) {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": USER_AGENT,
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText} for ${url}`);
+  const response = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+  if (!response.ok || !response.body) {
+    throw new Error(
+      `HTTP ${response.status}: ${response.statusText} for ${url}`,
+    );
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  writeFileSync(filePath, buffer);
+  // Stream to disk instead of buffering the whole file in memory.
+  await pipeline(
+    Readable.fromWeb(response.body as any),
+    createWriteStream(filePath),
+  );
 }
