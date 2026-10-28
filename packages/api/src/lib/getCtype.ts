@@ -8,6 +8,7 @@ export default function getCtype(fileName: string) {
   const [FileExt, Name] = getFileExt(fileName);
   let Ctype = "invalid";
   switch (FileExt) {
+    case "jxl":
     case "jpg":
     case "jpeg":
     case "png":
