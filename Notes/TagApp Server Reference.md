@@ -1,6 +1,8 @@
+# TagApp Server Rerence Guide
+
 ## Media Folder Structure
 
-```
+```txtx
 media
 ├── Gallaries
 │   ├── <Gallery Name>
@@ -59,7 +61,7 @@ media
 
 content = videos or image
 
-```
+```txt
 Images / Videos
 ├── .covers
 │   ├── cover.<content name>.<ext>
@@ -71,7 +73,7 @@ Images / Videos
 
 Note: Video has the extra
 
-```
+```txt
 .captions
 ├── cover.<video name>.vtt
 └── ...video caption files
@@ -81,7 +83,7 @@ Note: Video has the extra
 
 Note: .audio-covers and .gallery-covers used in place .covers to avoid Caddy config setup for .covers
 
-```
+```txt
 Audios / Galleries
 ├── <Audio-List / Gallery Name>
 │   ├── .(audio / gallery)-covers
@@ -96,7 +98,7 @@ Audios / Galleries
 
 ### Text Structure
 
-```
+```txt
 Texts
 ├── <Text Group Name>
 │   ├── .media
@@ -111,7 +113,7 @@ Texts
 
 ## Sync Folder Structure
 
-```
+```txt
 Sync
 ├── <Gallery Name>.gallery
 │   ├── .gallery-covers
@@ -148,5 +150,6 @@ Sync
 | Meta Tag             | Description                                                     |
 | -------------------- | --------------------------------------------------------------- |
 | meta:captions        | If caption file is included ( checks when running server sync ) |
+| meta:autplay         | Switchs on gallery autoplay functionality                       |
 | meta:yt‑cookie       | Use Cookies when downloading                                    |
 | meta:different-cover | To download the specfied cover with curl                        |
