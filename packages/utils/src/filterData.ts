@@ -1,10 +1,10 @@
-import z from "zod";
 import { ArrayHasAll, ArrayHasAnyModified } from "@tagapp/utils";
-import Fuse from "fuse.js";
 import type {
   ContentServerDataType,
   ContentServerType,
 } from "@tagapp/utils/types";
+import Fuse from "fuse.js";
+import z from "zod";
 
 export const FilterQuerySchema = z.object({
   any: z.string().array(), // 1st array - content with at least one of these tags

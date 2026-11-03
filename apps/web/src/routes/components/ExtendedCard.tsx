@@ -1,4 +1,6 @@
-import { Button } from "@/components/ui/button";
+import { CTypeDir } from "@tagapp/utils";
+import type { ContentServerType, CType } from "@tagapp/utils/types";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   Check,
   GalleryVerticalEnd,
@@ -8,7 +10,8 @@ import {
   SquarePlay,
 } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
-import { selectEntryAtom, selectionOnAtom } from "../atom.selection";
+import { tagsAtom } from "@/atom";
+import { confirm } from "@/components/craft/confirm-dialog";
 import {
   updateExtraDataAtom,
   updateIdAtom,
@@ -16,14 +19,11 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
-import { useAtomValue, useSetAtom } from "jotai";
-import type { ContentServerType, CType } from "@tagapp/utils/types";
-import { CTypeDir } from "@tagapp/utils";
-import { useServerActions } from "../contexts/Server.Context";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { selectEntryAtom, selectionOnAtom } from "../atom.selection";
+import { useServerActions } from "../contexts/Server.Context";
 import { TagParentChildList } from "./DocInfoSection";
-import { tagsAtom } from "@/atom";
-import { confirm } from "@/components/craft/confirm-dialog";
 
 function getCoverUrl(Content: ContentServerType) {
   const pathPrefix = `media/${CTypeDir[Content.type]}`;
@@ -137,7 +137,11 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
             </Button>
           </div>
         )}
-        <a href={getUrl(Content.id, Content.type)} target="_blank" rel="noopener">
+        <a
+          href={getUrl(Content.id, Content.type)}
+          target="_blank"
+          rel="noopener"
+        >
           <h1 className="mb-1 text-lg font-semibold font-stretch-condensed">
             {Content.title}
           </h1>
@@ -164,16 +168,12 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
         </div>
       </div>
       {selectionOn ? (
-        <>
-          {Selected ? (
-            <Check className="bg-foreground border-background border top-4 left-4 text-background absolute rounded-sm" />
-          ) : (
-            <div className="bg-background border-foreground border aspect-square h-5 top-4 left-4 text-background absolute rounded-sm" />
-          )}
-        </>
-      ) : (
-        <></>
-      )}
+        Selected ? (
+          <Check className="bg-foreground border-background border top-4 left-4 text-background absolute rounded-sm" />
+        ) : (
+          <div className="bg-background border-foreground border aspect-square h-5 top-4 left-4 text-background absolute rounded-sm" />
+        )
+      ) : null}
     </div>
   );
 });

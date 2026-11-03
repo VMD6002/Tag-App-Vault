@@ -1,8 +1,14 @@
+import { sanitizeStringForFileName } from "@tagapp/utils";
+import type { ContentServerType } from "@tagapp/utils/types";
 import { useMutation } from "@tanstack/react-query";
+import constate from "constate";
+import { useAtomValue, useSetAtom } from "jotai";
+import { Disc3 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useRoute } from "wouter";
 import { navigate } from "wouter/use-hash-location";
-import { sanitizeStringForFileName } from "@tagapp/utils";
-import { useAtomValue, useSetAtom } from "jotai";
+import { tagsAtom } from "@/atom";
 import UpdateModal from "@/components/craft/UpdateModal";
 import {
   updateDataAtom,
@@ -13,13 +19,7 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
-import constate from "constate";
-import { Disc3 } from "lucide-react";
 import { orpc } from "@/lib/orpc";
-import type { ContentServerType } from "@tagapp/utils/types";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { tagsAtom } from "@/atom";
-import { toast } from "sonner";
 
 const docPlaceholderData: ContentServerType = {
   id: "",
@@ -53,7 +53,7 @@ function useDocContext() {
         setUpdateTags(res.tags.map((tag) => ({ label: tag, value: tag })));
         setDoc(res);
         setTimeout(
-          () => (document.title = document.title + " - " + res.title),
+          () => (document.title = `${document.title} - ${res.title}`),
           100,
         );
       },

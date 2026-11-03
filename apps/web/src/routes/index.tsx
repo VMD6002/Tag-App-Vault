@@ -1,18 +1,18 @@
-import TitleHeader from "@/components/craft/TitleHeader";
-import Filters from "./components/Filters";
-import ExtendedCard from "./components/ExtendedCard";
-import UpdateModal from "@/components/craft/UpdateModal";
-import BulkUpdateModal from "@/components/craft/BulkUpdateModal";
-import { ServerProvider, useServerActions } from "./contexts/Server.Context";
 import { useAtomValue, useSetAtom } from "jotai";
-import { filteredAtom } from "./atom";
-import TIMEOUTS from "@/lib/TIMEOUTS";
+import { useEffect } from "react";
 import {
   initializeFilterDataFromURLAtom,
   resetFilterAtom,
   tagsAtom,
 } from "@/atom";
-import { useEffect } from "react";
+import BulkUpdateModal from "@/components/craft/BulkUpdateModal";
+import TitleHeader from "@/components/craft/TitleHeader";
+import UpdateModal from "@/components/craft/UpdateModal";
+import TIMEOUTS from "@/lib/TIMEOUTS";
+import { filteredAtom } from "./atom";
+import ExtendedCard from "./components/ExtendedCard";
+import Filters from "./components/Filters";
+import { ServerProvider, useServerActions } from "./contexts/Server.Context";
 
 function Child() {
   const { updateContentFunc, bulkUpdateContentFunc, filterData } =

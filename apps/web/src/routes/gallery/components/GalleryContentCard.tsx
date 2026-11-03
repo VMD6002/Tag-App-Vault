@@ -1,23 +1,23 @@
-import { useCallback, useMemo } from "react";
-import { useDoc } from "../../contexts/Doc.Context";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Tag, Trash } from "lucide-react";
+import { useCallback, useMemo } from "react";
+import { toast } from "sonner";
+import LazyVideo from "@/components/LazyVideo";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useDoc } from "../../contexts/Doc.Context";
 import {
   autoPlayFamily,
   currentModeAtom,
   type entry,
   selectedContentAtom,
-  tagModalOpenAtom,
   tagModalDataAtom,
+  tagModalOpenAtom,
 } from "./atom";
 import {
   contentModalDataAtom,
   contentModalOpenAtom,
 } from "./GalleryContentModal";
-import LazyVideo from "@/components/LazyVideo";
-import { Button } from "@/components/ui/button";
-import { Trash, Tag } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 export function TagParentChildList({ tags }: { tags: string[] }) {
   const parentTags = useMemo(
@@ -34,7 +34,7 @@ export function TagParentChildList({ tags }: { tags: string[] }) {
             {tags
               .filter((k) => k.startsWith(parent))
               .sort()
-              .map((e) => e.replace(parent + ":", "").replaceAll("_", " "))
+              .map((e) => e.replace(`${parent}:`, "").replaceAll("_", " "))
               .join(", ")}
           </span>
         </div>
@@ -61,7 +61,7 @@ const ContentMold = ({
 
   const contentUrl = getMediaUrl(encodedTitle, data.name);
   const coverUrl =
-    data.cover && getMediaUrl(encodedTitle, ".gallery-covers/" + data.cover);
+    data.cover && getMediaUrl(encodedTitle, `.gallery-covers/${data.cover}`);
 
   if (data.type === "video" && (autoPlay || !data.cover))
     return (
@@ -123,7 +123,7 @@ export default function GalleryContentCard({
       case "cover":
         if (data.type === "img") updateCover(data.name);
         else if (data.type === "video" && data.cover)
-          updateCover(".gallery-covers/" + data.cover);
+          updateCover(`.gallery-covers/${data.cover}`);
         else toast.warning("Invalid Option. Choose a valid cover image");
         break;
       default:

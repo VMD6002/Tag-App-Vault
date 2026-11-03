@@ -1,3 +1,5 @@
+import { Link } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -8,8 +10,6 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { ModeToggle } from "./mode-toggle";
-import { Link } from "wouter";
-import { useHashLocation } from "wouter/use-hash-location";
 
 const Links = [
   { Name: "Library", Path: "/" },

@@ -1,20 +1,20 @@
-import GalleryContentCard from "./GalleryContentCard";
-import TagContentModal from "./TagContentModal";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Slider } from "@/components/ui/slider";
-import {
-  galleryViewModeFamily,
-  galleryListWidthFamily,
-  currentModeAtom,
-  galleryDataAtom,
-  sortModeFamily,
-  autoPlayFamily,
-} from "./atom";
-import { useDoc } from "../../contexts/Doc.Context";
 import { useMutation } from "@tanstack/react-query";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
+import { Slider } from "@/components/ui/slider";
+import { useDoc } from "../../contexts/Doc.Context";
+import {
+  autoPlayFamily,
+  currentModeAtom,
+  galleryDataAtom,
+  galleryListWidthFamily,
+  galleryViewModeFamily,
+  sortModeFamily,
+} from "./atom";
+import GalleryContentCard from "./GalleryContentCard";
+import TagContentModal from "./TagContentModal";
 
 export default function Gallery() {
   const { setCoverMutation, doc, setDoc, orpc } = useDoc();
@@ -80,7 +80,7 @@ export default function Gallery() {
           removeContentMutation.mutate({
             name: doc.title,
             id: doc.id,
-            contents: [".gallery-covers/" + cover],
+            contents: [`.gallery-covers/${cover}`],
           });
       }),
     [doc],
@@ -116,7 +116,7 @@ export default function Gallery() {
       )}
       <div
         className={layoutClasses[galleryViewMode]}
-        style={isList ? { width: galleryListWidth + "%" } : {}}
+        style={isList ? { width: `${galleryListWidth}%` } : {}}
       >
         {sortedGalleryData.map((entry) => (
           <GalleryContentCard

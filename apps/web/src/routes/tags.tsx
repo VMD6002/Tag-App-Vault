@@ -1,8 +1,8 @@
+import { useMutation } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { Button } from "@/components/ui/button";
 import { orpc } from "@/lib/orpc";
-import { useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
 
 type ServerTagType = Record<string, number>;
 
@@ -31,7 +31,7 @@ const TagGroup = ({
             className="bg-secondary text-secondary-foreground rounded-md text-sm shadow-xs px-4 py-2"
           >
             {String(tags[tag]).padStart(3, "0")} |{" "}
-            {tag.replace(parent + ":", "").replaceAll("_", " ")}
+            {tag.replace(`${parent}:`, "").replaceAll("_", " ")}
           </span>
         ))}
       </div>

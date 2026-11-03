@@ -1,15 +1,15 @@
-import { lazy, Suspense, useEffect } from "react";
-import { Router, Route, Switch } from "wouter";
-import { ThemeProvider } from "@/components/theme-provider";
-import NavBar from "@/components/NavBar";
-import Spinner from "@/components/craft/Spinner";
-import DocProvider from "./routes/contexts/Doc.Context";
-import { useHashLocation } from "wouter/use-hash-location";
-import { tagsAtom, themeAtom } from "./atom";
-import { useAtomValue, useSetAtom } from "jotai";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useAtomValue, useSetAtom } from "jotai";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "sonner";
+import { Route, Router, Switch } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
+import Spinner from "@/components/craft/Spinner";
+import NavBar from "@/components/NavBar";
+import { ThemeProvider } from "@/components/theme-provider";
+import { tagsAtom, themeAtom } from "./atom";
 import { ConfirmProvider } from "./components/craft/confirm-dialog";
+import DocProvider from "./routes/contexts/Doc.Context";
 
 const PageNotFound = lazy(() => import("./404"));
 const Library = lazy(() => import("./routes/"));

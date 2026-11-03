@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { render, Box, Text, useApp } from "ink";
 import {
   appendFileSync,
   mkdirSync,
@@ -8,22 +6,25 @@ import {
   renameSync,
   writeFileSync,
 } from "node:fs";
+import { Box, render, Text, useApp } from "ink";
 import PQueue from "p-queue";
+import { useEffect, useState } from "react";
 
 import type YTDlpWrap from "yt-dlp-wrap-plus";
+
 const { default: YTDlpWrapRuntime } = require("yt-dlp-wrap-plus");
 
+import type { ContentWebType } from "@tagapp/utils/types";
 import {
-  TMP_DIR,
   COMPLETED_DIR,
-  QUEUE_FILE,
   ERROR_LOG,
   fileBase,
+  QUEUE_FILE,
+  TMP_DIR,
 } from "./lib/constants";
 import { createFlag } from "./lib/createFlags";
 import { downloadContent } from "./lib/downloadContent";
 import { getImageExtensionFromURL } from "./lib/getImageExtensionFromURL";
-import type { ContentWebType } from "@tagapp/utils/types";
 
 mkdirSync(TMP_DIR, { recursive: true });
 mkdirSync(COMPLETED_DIR, { recursive: true });

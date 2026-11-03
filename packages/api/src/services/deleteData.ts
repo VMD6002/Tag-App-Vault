@@ -1,10 +1,10 @@
-import { rm, rename } from "node:fs/promises";
+import { rename, rm } from "node:fs/promises";
+import { ORPCError } from "@orpc/server";
+import { CTypeDir } from "@tagapp/utils";
+import type { ContentServerType } from "@tagapp/utils/types";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, tagDB } from "../db/tags.js";
-import { ORPCError } from "@orpc/server";
-import { rmByBasename, renameByBasename } from "../lib/fsBaseNameFunctions.js";
-import type { ContentServerType } from "@tagapp/utils/types";
-import { CTypeDir } from "@tagapp/utils";
+import { renameByBasename, rmByBasename } from "../lib/fsBaseNameFunctions.js";
 
 export async function deleteData(IdList: string[]) {
   const Deleted: ContentServerType[] = [];

@@ -1,4 +1,5 @@
 import { useAtom } from "jotai";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -7,17 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { useDoc } from "@/routes/contexts/Doc.Context";
 import {
   autoPlayFamily,
+  type GalleryViewMode,
+  galleryViewModeFamily,
+  galleryViewModes,
   type SortMode,
   sortModeFamily,
   sortModes,
-  galleryViewModeFamily,
-  galleryViewModes,
-  type GalleryViewMode,
 } from "./atom";
-import { useDoc } from "@/routes/contexts/Doc.Context";
 
 export default function GalleryOptions() {
   const {

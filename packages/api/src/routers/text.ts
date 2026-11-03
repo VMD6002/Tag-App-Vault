@@ -1,7 +1,7 @@
+import { rm, writeFile } from "node:fs/promises";
 import { ORPCError, os } from "@orpc/server";
 import { pathExists, readJSON, writeJSON } from "fs-extra";
 import z from "zod";
-import { rm, writeFile } from "node:fs/promises";
 import { generateTxtData } from "../lib/generateTextData";
 
 const txtExistsCheck = async (name: string, id: string) => {

@@ -1,14 +1,14 @@
-import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useDoc } from "../../contexts/Doc.Context";
-import { type entry, galleryDataAtom } from "./atom";
-import { useCaptureFrame } from "@/hooks/useCaptureFrame";
 import { useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Image, ImagePlus } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useCaptureFrame } from "@/hooks/useCaptureFrame";
+import { useDoc } from "../../contexts/Doc.Context";
+import { type entry, galleryDataAtom } from "./atom";
 
 export const contentModalOpenAtom = atom(false);
 export const contentModalDataAtom = atom<entry | null>(null);
@@ -56,7 +56,9 @@ export default function GaleryContentModal() {
     const file = await captureFrame(`cover.${doc.title}.${doc.id}`);
     if (!file) return;
 
-    const contentName = data?.name ? data.name.split(".").slice(0, -1).join(".") : "";
+    const contentName = data?.name
+      ? data.name.split(".").slice(0, -1).join(".")
+      : "";
 
     try {
       const updatedGalleryData = await setCoverGivenFileMuation.mutateAsync({

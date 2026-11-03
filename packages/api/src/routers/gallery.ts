@@ -1,10 +1,10 @@
+import { mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { ORPCError, os } from "@orpc/server";
 import { pathExists, readJSON, writeJSON } from "fs-extra";
 import z from "zod";
-import { generateGalleryData } from "../lib/generateGalleryData";
-import { mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { rmByBasename } from "../lib/fsBaseNameFunctions";
-import path from "node:path";
+import { generateGalleryData } from "../lib/generateGalleryData";
 
 const galleryExistsCheck = async (name: string, id: string) => {
   if (!(await pathExists(`./media/Galleries/${name}.${id}`))) {

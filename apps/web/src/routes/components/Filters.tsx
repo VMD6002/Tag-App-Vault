@@ -1,10 +1,7 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useServerActions } from "../contexts/Server.Context";
-import MultipleSelector from "@/components/ui/multiple-selector";
+import { contentTypes } from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Pencil, Trash2 } from "lucide-react";
+import { useCallback, useMemo } from "react";
 import {
   allAtom,
   anyAtom,
@@ -14,6 +11,15 @@ import {
   tagsAtom,
   typesAtom,
 } from "@/atom";
+import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
+import { confirm } from "@/components/craft/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import MultipleSelector from "@/components/ui/multiple-selector";
+import { Switch } from "@/components/ui/switch";
+import { filteredAtom, serverTagsAtom } from "../atom";
 import {
   selectAllAtom,
   selectionEntriesAtom,
@@ -23,15 +29,7 @@ import {
   toggleSelectionModeAtom,
   unSelectAllAtom,
 } from "../atom.selection";
-
-import { filteredAtom, serverTagsAtom } from "../atom";
-import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
-import { contentTypes } from "@tagapp/utils";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useCallback, useMemo } from "react";
-
-import { Pencil, Trash2 } from "lucide-react";
-import { confirm } from "@/components/craft/confirm-dialog";
+import { useServerActions } from "../contexts/Server.Context";
 
 export default function Filters() {
   const { setFiltered, removeContents, filterData, serverSyncFunc } =
@@ -109,8 +107,8 @@ export default function Filters() {
     ]
       .sort()
       .map((o: string) => ({
-        label: o + ":*",
-        value: o + ":*",
+        label: `${o}:*`,
+        value: `${o}:*`,
       }));
     return [
       ...tagsForMultiSelectComponent,

@@ -1,6 +1,6 @@
-import errorLog from "../lib/errorLog.js";
 import { JSONFilePreset } from "lowdb/node";
 import z from "zod";
+import errorLog from "../lib/errorLog.js";
 
 const tagDBValidator = z.record(z.string(), z.number().min(0));
 type tagDB = z.infer<typeof tagDBValidator>;
@@ -43,4 +43,5 @@ const IncrementTagCount = (tags: string[] | Set<string>) => {
     errorLog(batchError);
   }
 };
-export { tagDB, IncrementTagCount, DecrementTagCount };
+
+export { DecrementTagCount, IncrementTagCount, tagDB };

@@ -1,10 +1,13 @@
+import CodeEditor from "@uiw/react-textarea-code-editor";
+import { useAtom, useAtomValue } from "jotai";
+import { Redo2 } from "lucide-react";
+import { tagsAtom } from "@/atom";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import MultipleSelector from "@/components/ui/multiple-selector";
-import CodeEditor from "@uiw/react-textarea-code-editor";
-import SeeMore from "./SeeMore";
-import { useAtom, useAtomValue } from "jotai";
+import { cn } from "@/lib/utils";
 import {
   updateContentUrlAtom,
   updateCoverAtom,
@@ -16,10 +19,7 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "./atom";
-import { Redo2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useTheme } from "@/components/theme-provider";
-import { tagsAtom } from "@/atom";
+import SeeMore from "./SeeMore";
 
 export default function UpdateModal({
   className = "",

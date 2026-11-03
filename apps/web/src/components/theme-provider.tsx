@@ -1,6 +1,6 @@
-import { themeAtom } from "@/atom";
 import { useAtom } from "jotai";
 import { createContext, useContext, useEffect } from "react";
+import { themeAtom } from "@/atom";
 
 type Theme = "dark" | "light" | "system";
 

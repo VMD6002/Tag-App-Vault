@@ -1,15 +1,15 @@
-import { tagDB } from "../db/tags.js";
-import { FilterQuerySchema, filterData } from "@tagapp/utils";
-import { deleteData as deleteDocs } from "../services/deleteData.js";
-import { setDoc as set } from "../services/setDoc.js";
-import { syncContent } from "../services/syncContent.js";
 import { ORPCError, os } from "@orpc/server";
+import { FilterQuerySchema, filterData } from "@tagapp/utils";
 import z from "zod";
+import { contentDataDB } from "../db/contentData.js";
+import { settingsDB } from "../db/settings.js";
+import { tagDB } from "../db/tags.js";
+import { deleteData as deleteDocs } from "../services/deleteData.js";
 
 // TODO: Setup getSyncData for editing functionality before syncing it up
 import { getSyncData as gtSyncData } from "../services/getSyncData.js";
-import { contentDataDB } from "../db/contentData.js";
-import { settingsDB } from "../db/settings.js";
+import { setDoc as set } from "../services/setDoc.js";
+import { syncContent } from "../services/syncContent.js";
 export const getSyncData = os.handler(gtSyncData);
 
 export const sync = os.handler(syncContent);

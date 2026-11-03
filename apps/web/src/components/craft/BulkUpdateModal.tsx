@@ -1,10 +1,9 @@
+import { atom, useAtom, useAtomValue } from "jotai";
 import { tagsAtom } from "@/atom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import MultipleSelector from "@/components/ui/multiple-selector";
 import { selectionTagsAtom } from "@/routes/atom.selection";
-import { useAtom, useAtomValue } from "jotai";
-import { atom } from "jotai";
 
 export const bulkUpdateModalOpenAtom = atom(false);
 

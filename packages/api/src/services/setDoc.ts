@@ -1,10 +1,10 @@
-import { CTypeDir, eqSet, SetDifferenceES6 } from "@tagapp/utils";
 import { rename } from "node:fs/promises";
+import { ORPCError } from "@orpc/server";
+import { CTypeDir, eqSet, SetDifferenceES6 } from "@tagapp/utils";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
-import { ORPCError } from "@orpc/server";
-import type { DocType } from "../routers/main.js";
 import { renameByBasename } from "../lib/fsBaseNameFunctions.js";
+import type { DocType } from "../routers/main.js";
 
 export async function setDoc(input: DocType) {
   const NewData = input;

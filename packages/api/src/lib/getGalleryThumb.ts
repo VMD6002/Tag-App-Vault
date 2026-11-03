@@ -43,7 +43,7 @@ export async function getGalleryThumb(
 
     for (const entry of coverEntries) {
       const [ctype] = getCtype(entry);
-      if (ctype === "img") return ".gallery-covers/" + entry;
+      if (ctype === "img") return `.gallery-covers/${entry}`;
     }
   } catch {
     // .gallery-covers directory doesn't exist — nothing we can do

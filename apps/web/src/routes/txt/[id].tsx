@@ -1,20 +1,19 @@
-import TitleHeader from "@/components/craft/TitleHeader";
-import { useDoc } from "../contexts/Doc.Context";
-import DocInfoSection from "../components/DocInfoSection";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import UpdateTxtModal from "./UpdateTxtModal";
-import { Edit, Trash } from "lucide-react";
 import { useSetAtom } from "jotai";
-import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
+import { Edit, Trash } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import Markdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useSearchParams } from "wouter";
 import { confirm } from "@/components/craft/confirm-dialog";
+import TitleHeader from "@/components/craft/TitleHeader";
+import { Button } from "@/components/ui/button";
+import DocInfoSection from "../components/DocInfoSection";
+import { useDoc } from "../contexts/Doc.Context";
+import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
+import UpdateTxtModal from "./UpdateTxtModal";
 
 export interface entry {
   name: string;

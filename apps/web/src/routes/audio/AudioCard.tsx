@@ -1,10 +1,10 @@
-import { useDoc } from "../contexts/Doc.Context";
 import { useAtom, useAtomValue } from "jotai";
-import { currentAtom, currentModeAtom, selectedContentAtom } from "./atom";
-import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 import { useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { useDoc } from "../contexts/Doc.Context";
 import type { AudioEntry } from "./atom";
+import { currentAtom, currentModeAtom, selectedContentAtom } from "./atom";
 
 export default function AudioCard({
   data,

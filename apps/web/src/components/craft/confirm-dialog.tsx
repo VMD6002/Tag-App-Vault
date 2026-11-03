@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { AlertTriangle, CheckCircle2, Info, OctagonAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +11,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
-import { AlertTriangle, Info, CheckCircle2, OctagonAlert } from "lucide-react";
 
 export type ConfirmVariant =
   | "default"

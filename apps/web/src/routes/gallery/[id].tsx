@@ -1,18 +1,17 @@
-import TitleHeader from "@/components/craft/TitleHeader";
-import { useDoc } from "../contexts/Doc.Context";
-import DocInfoSection from "../components/DocInfoSection";
 import { useMutation } from "@tanstack/react-query";
-import GaleryContentModal from "./components/GalleryContentModal";
 import { useSetAtom } from "jotai";
-
-import GalleryOptions from "./components/GalleryOptions";
-import Gallery from "./components/Gallery";
-import { galleryDataAtom } from "./components/atom";
-import FloatingButtons from "./components/FloatingButton";
-import { Button } from "@/components/ui/button";
 import { Trash } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { confirm } from "@/components/craft/confirm-dialog";
+import TitleHeader from "@/components/craft/TitleHeader";
+import { Button } from "@/components/ui/button";
+import DocInfoSection from "../components/DocInfoSection";
+import { useDoc } from "../contexts/Doc.Context";
+import { galleryDataAtom } from "./components/atom";
+import FloatingButtons from "./components/FloatingButton";
+import Gallery from "./components/Gallery";
+import GaleryContentModal from "./components/GalleryContentModal";
+import GalleryOptions from "./components/GalleryOptions";
 
 export default function GalleryPage() {
   const { doc, encodedTitle, setCoverMutation, tags, orpc } = useDoc();

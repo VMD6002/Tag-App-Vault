@@ -1,10 +1,10 @@
+import { useSetAtom } from "jotai";
+import { useMemo } from "react";
+import Markdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 import { updateModalOpenAtom } from "@/components/craft/UpdateModal/atom";
 import { Button } from "@/components/ui/button";
-import { useSetAtom } from "jotai";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import { useMemo } from "react";
 import { useDoc } from "../contexts/Doc.Context";
 
 export function TagParentChildList({ tags }: { tags: string[] }) {
@@ -22,7 +22,7 @@ export function TagParentChildList({ tags }: { tags: string[] }) {
             {tags
               .filter((k) => k.startsWith(parent))
               .sort()
-              .map((e) => e.replace(parent + ":", "").replaceAll("_", " "))
+              .map((e) => e.replace(`${parent}:`, "").replaceAll("_", " "))
               .join(", ")}
           </span>
         </div>
@@ -73,9 +73,7 @@ export default function DocInfoSection() {
             <TagParentChildList tags={doc.tags} />
           </div>
         </>
-      ) : (
-        <></>
-      )}
+      ) : null}
       <hr className="my-4" />
       <div className="w-11/12 typography max-w-full break-all mb-4">
         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>

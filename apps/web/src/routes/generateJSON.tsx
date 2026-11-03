@@ -1,18 +1,17 @@
-import { useCallback, useState } from "react";
-import { z } from "zod";
+import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtomValue } from "jotai";
-import saveJsonFile from "@/lib/saveJsonFile";
-
+import { customAlphabet } from "nanoid";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { tagsAtom } from "@/atom";
+import TitleHeader from "@/components/craft/TitleHeader";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import MultipleSelector from "@/components/ui/multiple-selector";
-import CodeEditor from "@uiw/react-textarea-code-editor";
-import { customAlphabet } from "nanoid";
-import TitleHeader from "@/components/craft/TitleHeader";
-import { tagsAtom } from "@/atom";
-import { useTheme } from "@/components/theme-provider";
-import { toast } from "sonner";
+import saveJsonFile from "@/lib/saveJsonFile";
 
 const capitalLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const smallLetter = "abcdefghijklmnopqrstuvwxyz";
@@ -56,7 +55,7 @@ export default function GenerateJSONPage() {
   const globalTags = useAtomValue(tagsAtom);
   const { theme } = useTheme();
 
-  const [id, setId] = useState("gen_" + nanoid());
+  const [id, setId] = useState(`gen_${nanoid()}`);
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState<any[]>([]);
   const [extraData, setExtraData] = useState("");
@@ -80,12 +79,12 @@ export default function GenerateJSONPage() {
   };
 
   const generateAndSetUniqueIdFromTitle = useCallback(() => {
-    const id = "gen_title_" + getUniqueIdFromString(title);
+    const id = `gen_title_${getUniqueIdFromString(title)}`;
     setId(id);
   }, [title]);
 
   const generateRandomId = useCallback(() => {
-    const id = "gen_" + nanoid();
+    const id = `gen_${nanoid()}`;
     setId(id);
   }, []);
 

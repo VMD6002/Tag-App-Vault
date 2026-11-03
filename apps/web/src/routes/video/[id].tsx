@@ -1,13 +1,13 @@
-import TitleHeader from "@/components/craft/TitleHeader";
-import { useDoc } from "../contexts/Doc.Context";
-import DocInfoSection from "../components/DocInfoSection";
-import { Button } from "@/components/ui/button";
-import { Image } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { useRef, useCallback } from "react";
-import { useCaptureFrame } from "@/hooks/useCaptureFrame";
+import { Image } from "lucide-react";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
+import TitleHeader from "@/components/craft/TitleHeader";
+import { Button } from "@/components/ui/button";
+import { useCaptureFrame } from "@/hooks/useCaptureFrame";
+import DocInfoSection from "../components/DocInfoSection";
+import { useDoc } from "../contexts/Doc.Context";
 
 export default function VideoPage() {
   const { orpc, doc, encodedTitle, tags } = useDoc();
@@ -58,9 +58,7 @@ export default function VideoPage() {
                 srcLang="en"
                 label="English"
               />
-            ) : (
-              <></>
-            )}
+            ) : null}
           </video>
           {!!tags && (
             <Button

@@ -1,11 +1,11 @@
-import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { Grid2X2Check, Image, Trash } from "lucide-react";
-import { useDoc } from "../contexts/Doc.Context";
-import { currentModeAtom, audiosAtom, selectedContentAtom } from "./atom";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { useDoc } from "../contexts/Doc.Context";
+import { audiosAtom, currentModeAtom, selectedContentAtom } from "./atom";
 
 export default function FloatingButtons() {
   const { orpc, doc } = useDoc();
@@ -74,9 +74,7 @@ export default function FloatingButtons() {
             <Trash className="text-red-500 scale-125" />
           </Button>
         </div>
-      ) : (
-        <></>
-      )}
+      ) : null}
       <div className="flex gap-1">
         <Button
           onClick={() => setMode((old) => (old === "cover" ? "view" : "cover"))}

@@ -1,15 +1,15 @@
-import TitleHeader from "@/components/craft/TitleHeader";
-import { useDoc } from "../contexts/Doc.Context";
-import DocInfoSection from "../components/DocInfoSection";
 import { useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
-import AudioCard from "./AudioCard";
-import { audiosAtom, currentAtom } from "./atom";
 import { useAtom } from "jotai";
-import FloatingButtons from "./FloatingButton";
+import { Trash } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { confirm } from "@/components/craft/confirm-dialog";
+import TitleHeader from "@/components/craft/TitleHeader";
+import { Button } from "@/components/ui/button";
+import DocInfoSection from "../components/DocInfoSection";
+import { useDoc } from "../contexts/Doc.Context";
+import AudioCard from "./AudioCard";
+import { audiosAtom, currentAtom } from "./atom";
+import FloatingButtons from "./FloatingButton";
 
 export default function AudioPage() {
   const { doc, setCoverMutation, encodedTitle, orpc, tags } = useDoc();
@@ -63,7 +63,7 @@ export default function AudioPage() {
           removeContentMutation.mutate({
             name: doc.title,
             id: doc.id,
-            contents: [".audio-covers/" + cover],
+            contents: [`.audio-covers/${cover}`],
           });
       });
     },

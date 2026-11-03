@@ -20,7 +20,7 @@ export function replaceWithConstantKey(
 ) {
   let newText = text;
   for (const [key, value] of Object.entries(constants)) {
-    newText = newText.replaceAll(value, "$" + key);
+    newText = newText.replaceAll(value, `$${key}`);
   }
   return newText;
 }

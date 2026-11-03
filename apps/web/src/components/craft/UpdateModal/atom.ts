@@ -1,5 +1,5 @@
-import type { MultiSelectOption } from "@/atom";
 import { atom } from "jotai";
+import type { MultiSelectOption } from "@/atom";
 
 // Fixed
 export const updateIdAtom = atom("");

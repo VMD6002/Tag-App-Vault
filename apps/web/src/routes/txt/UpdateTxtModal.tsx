@@ -1,8 +1,8 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtom } from "jotai";
-import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
-import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
+import { Button } from "@/components/ui/button";
+import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
 
 export default function UpdateTxtModal({
   updateFunc,
@@ -13,16 +13,18 @@ export default function UpdateTxtModal({
   const [modalOpen, setModalOpen] = useAtom(updateTxtModalOpenAtom);
   const { theme } = useTheme();
 
-  if (!modalOpen) return <></>;
+  if (!modalOpen) return null;
 
   return (
     <div
       style={{ zIndex: 2147483647 }}
       className="grid fixed min-h-screen top-0 right-0 w-full place-items-center overflow-y-auto overflow-x-clip"
     >
-      <div
+      <button
+        type="button"
+        aria-label="Close modal backdrop"
         onClick={() => setModalOpen(false)}
-        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs"
+        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs border-0 cursor-default"
       />
       <div className="max-w-3xl absolute w-full grid bg-secondary rounded shadow px-8 py-10">
         <div className="max-h-[max(80vh,20rem)] h-full overflow-y-scroll mb-4">

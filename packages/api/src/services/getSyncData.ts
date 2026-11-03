@@ -1,15 +1,15 @@
-import { writeFile, stat, readdir, rename } from "node:fs/promises";
-import { pathExists, readJSON } from "fs-extra/esm";
-import getCtype from "../lib/getCtype.js";
-import { customAlphabet } from "nanoid";
+import { readdir, rename, stat, writeFile } from "node:fs/promises";
 import {
   ContentJsonSchema,
-  type ContentWebType,
   type ContentJsonType,
+  type ContentWebType,
   type CType,
 } from "@tagapp/utils/types";
-import { getGalleryThumb } from "../lib/getGalleryThumb.js";
+import { pathExists, readJSON } from "fs-extra/esm";
+import { customAlphabet } from "nanoid";
 import z from "zod";
+import getCtype from "../lib/getCtype.js";
+import { getGalleryThumb } from "../lib/getGalleryThumb.js";
 
 export interface NewContentType extends ContentJsonType {
   type: CType;
@@ -39,7 +39,7 @@ async function GenerateAndAddToNewContents(
   ctype: CType,
   timePath: string,
 ) {
-  const id = "gen_" + nanoid();
+  const id = `gen_${nanoid()}`;
   const time = Math.floor((await stat(timePath)).mtime.getTime() / 1000);
   const jsonData: ContentJsonType = {
     id,

@@ -1,8 +1,8 @@
-import { rm, rename } from "node:fs/promises";
-import { getSyncData } from "./getSyncData.js";
+import { rename, rm } from "node:fs/promises";
+import { CTypeDir } from "@tagapp/utils";
 import { contentDataDB, type contentDataDBType } from "../db/contentData.js";
 import { IncrementTagCount, tagDB } from "../db/tags.js";
-import { CTypeDir } from "@tagapp/utils";
+import { getSyncData } from "./getSyncData.js";
 
 export async function syncContent() {
   const Data = await getSyncData();

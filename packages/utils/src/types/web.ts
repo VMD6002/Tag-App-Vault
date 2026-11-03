@@ -1,5 +1,5 @@
-import { ContentJsonSchema } from "./shared";
 import z from "zod";
+import { ContentJsonSchema } from "./shared";
 
 export const presetSchema = z.object({
   label: z.string(),

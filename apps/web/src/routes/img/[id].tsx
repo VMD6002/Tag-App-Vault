@@ -1,7 +1,7 @@
 import TitleHeader from "@/components/craft/TitleHeader";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useDoc } from "../contexts/Doc.Context";
 import DocInfoSection from "../components/DocInfoSection";
+import { useDoc } from "../contexts/Doc.Context";
 
 export default function ImagePage() {
   const { encodedTitle } = useDoc();

@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
-import { TMP_DIR, fileBase } from "./constants";
+import type { ContentWebType } from "@tagapp/utils/types";
+import { fileBase, TMP_DIR } from "./constants";
 import { downloadContent } from "./downloadContent";
 import { getImageExtensionFromURL } from "./getImageExtensionFromURL";
-import type { ContentWebType } from "@tagapp/utils/types";
 
 const DEFAULT_FLAGS = ["--embed-thumbnail", "-R", "3"];
 

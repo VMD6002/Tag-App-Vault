@@ -1,7 +1,7 @@
+import { readdir, rm } from "node:fs/promises";
 import { ORPCError, os } from "@orpc/server";
 import { pathExists } from "fs-extra";
 import z from "zod";
-import { readdir, rm } from "node:fs/promises";
 
 const audioExistsCheck = async (name: string, id: string) => {
   if (!(await pathExists(`./media/Audios/${name}.${id}`))) {
@@ -33,7 +33,7 @@ export const getAudioData = os
       .map((audioFile) => ({
         name: audioFile,
         cover: coverFiles.find(
-          (file) => file.startsWith("cover." + audioFile.slice(0, -4)), // This is setup specifically for .mp3 and .wav files only
+          (file) => file.startsWith(`cover.${audioFile.slice(0, -4)}`), // This is setup specifically for .mp3 and .wav files only
         ),
       }));
 
@@ -77,7 +77,7 @@ export const removeAudioContents = os
       .map((audioFile) => ({
         name: audioFile,
         cover: coverFiles.find(
-          (file) => file.startsWith("cover." + audioFile.slice(0, -4)), // This is setup specifically for .mp3 and .wav files only
+          (file) => file.startsWith(`cover.${audioFile.slice(0, -4)}`), // This is setup specifically for .mp3 and .wav files only
         ),
       }));
 
