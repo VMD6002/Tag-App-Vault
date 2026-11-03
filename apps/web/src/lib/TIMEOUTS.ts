@@ -1,9 +1,9 @@
 const TIMEOUTS = {
   timeouts: [],
-  // @ts-ignore
+  // @ts-expect-error
   setTimeout: function (fn, delay) {
     const id = setTimeout(fn, delay);
-    // @ts-ignore
+    // @ts-expect-error
     this.timeouts.push(id);
   },
   clearAllTimeouts: function () {

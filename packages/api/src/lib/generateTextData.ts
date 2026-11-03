@@ -12,7 +12,7 @@ export const generateTxtData = async (galleryNameWithID: string) => {
     (j) => j !== ".media" && !j.endsWith("txt-data.json"),
   );
 
-  let mediaFiles = await readdir(
+  const mediaFiles = await readdir(
     `./media/Texts/${galleryNameWithID}/.media`,
   ).catch(() => []);
 

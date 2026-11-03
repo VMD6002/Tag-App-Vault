@@ -225,7 +225,7 @@ export const renameGalleryContent = os
     await galleryExistsCheck(name, id);
 
     // Validate characters in file base name
-    const invalidCharsRegex = /[\/\\?%*:|"<>]/;
+    const invalidCharsRegex = /[/\\?%*:|"<>]/;
     const trimmedBase = newBaseName.trim();
     if (!trimmedBase || invalidCharsRegex.test(trimmedBase)) {
       throw new ORPCError("NOT_ACCEPTABLE", {

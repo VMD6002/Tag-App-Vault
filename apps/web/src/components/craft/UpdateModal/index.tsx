@@ -40,16 +40,18 @@ export default function UpdateModal({
   const exists = useAtomValue(updateExistsAtom);
   const resetFuntions = useAtomValue(updateResetOptionsAtom);
 
-  if (!modalOpen) return <></>;
+  if (!modalOpen) return null;
 
   return (
     <div
       style={{ zIndex: 2147483647 }}
       className="grid fixed min-h-screen top-0 right-0 w-full place-items-center overflow-y-auto overflow-x-clip"
     >
-      <div
+      <button
+        type="button"
+        aria-label="Close modal backdrop"
         onClick={() => setModalOpen(false)}
-        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs"
+        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs border-0 cursor-default"
       />
       <div
         className={cn(

@@ -160,7 +160,7 @@ export default function Filters() {
         <Button onClick={filterData} className="w-full max-w-2xs">
           Filter
         </Button>
-        {!!tags ? (
+        {tags ? (
           <Button onClick={serverSyncFunc} className="w-fit">
             Sync
           </Button>

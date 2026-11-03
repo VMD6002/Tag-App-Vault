@@ -2,3 +2,5 @@ node_modules
 tmp
 .devtool
 .vscode
+dist
+*.tsbuildinfo

@@ -1,6 +1,6 @@
 import { rm, rename } from "node:fs/promises";
 import { getSyncData } from "./getSyncData.js";
-import { contentDataDB, contentDataDBType } from "../db/contentData.js";
+import { contentDataDB, type contentDataDBType } from "../db/contentData.js";
 import { IncrementTagCount, tagDB } from "../db/tags.js";
 import { CTypeDir } from "@tagapp/utils";
 
@@ -75,7 +75,6 @@ export async function syncContent() {
       }
 
       delete newContentData[content.id];
-      continue;
     }
   }
 

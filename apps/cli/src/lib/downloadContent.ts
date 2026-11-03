@@ -12,7 +12,7 @@ export async function downloadContent(url: string, filePath: string) {
   }
   // Stream to disk instead of buffering the whole file in memory.
   await pipeline(
-    Readable.fromWeb(response.body as any),
+    Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]),
     createWriteStream(filePath),
   );
 }

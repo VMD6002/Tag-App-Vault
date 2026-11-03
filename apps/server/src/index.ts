@@ -44,12 +44,11 @@ const { values } = parseArgs({
 const { port, prefix } = values;
 
 // --- Port Settings Logic ---
-let activePort: number;
 if (port && !settingsDB.data.port) {
   settingsDB.data.port = Number(port);
   settingsDB.write();
 }
-activePort = settingsDB.data.port || 5000;
+const activePort = settingsDB.data.port || 5000;
 
 // --- Prefix Settings Logic ---
 if (prefix) {

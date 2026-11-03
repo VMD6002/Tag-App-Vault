@@ -165,7 +165,7 @@ export async function getSyncData() {
           );
           Files.delete(file);
           break;
-        case "video":
+        case "video": {
           const fileExts = [CoverFiles.get(Name), FileExt];
           if (await pathExists(`./Sync/${Name}.json`)) {
             const JsonData = await readContentJSONFile(`./Sync/${Name}.json`);
@@ -187,6 +187,7 @@ export async function getSyncData() {
           }
           Files.delete(file);
           break;
+        }
       }
     }),
   );
@@ -222,7 +223,7 @@ export async function getSyncData() {
     Array.from(Folders).map(async (folder) => {
       if (!folder.endsWith("txt")) return;
       const Name = folder.slice(0, -4);
-      let Thumb = (
+      const Thumb = (
         await readdir(`./Sync/${folder}/.media`).catch(() => [])
       ).find((f) => getCtype(f)[0] === "img");
       if (await pathExists(`./Sync/${Name}.json`)) {
@@ -242,7 +243,7 @@ export async function getSyncData() {
     Array.from(Folders).map(async (folder) => {
       if (!folder.endsWith("audio")) return;
       const Name = folder.slice(0, -6);
-      let Thumb = await readdir(`./Sync/${folder}/.audio-covers`).catch(
+      const Thumb = await readdir(`./Sync/${folder}/.audio-covers`).catch(
         () => [],
       );
       if (await pathExists(`./Sync/${Name}.json`)) {

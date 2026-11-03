@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState } from "react";
+import type React from "react";
+import { useRef, useEffect, useState } from "react";
 
 type LazyVideoProps = React.VideoHTMLAttributes<HTMLVideoElement> & {
   src?: string;

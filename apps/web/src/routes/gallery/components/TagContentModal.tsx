@@ -89,7 +89,7 @@ export default function TagContentModal() {
         setNameError("File name cannot be empty.");
         return;
       }
-      const invalidChars = /[\/\\?%*:|"<>]/;
+      const invalidChars = /[/\\?%*:|"<>]/;
       if (invalidChars.test(trimmedBase)) {
         setNameError("Invalid characters in file name.");
         return;

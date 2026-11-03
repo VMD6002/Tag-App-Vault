@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { type RefObject } from "react";
+import type { RefObject } from "react";
 import { toast } from "sonner";
 
 export const useCaptureFrame = (

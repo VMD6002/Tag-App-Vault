@@ -3,7 +3,7 @@ import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, tagDB } from "../db/tags.js";
 import { ORPCError } from "@orpc/server";
 import { rmByBasename, renameByBasename } from "../lib/fsBaseNameFunctions.js";
-import { ContentServerType } from "@tagapp/utils/types";
+import type { ContentServerType } from "@tagapp/utils/types";
 import { CTypeDir } from "@tagapp/utils";
 
 export async function deleteData(IdList: string[]) {
@@ -103,8 +103,6 @@ export async function deleteData(IdList: string[]) {
           );
         }
       }
-
-      continue;
     }
   }
 

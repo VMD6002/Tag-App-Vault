@@ -19,16 +19,18 @@ export default function BlukUpdateModal({
 
   const [selectionTags, setSelectionTags] = useAtom(selectionTagsAtom);
 
-  if (!modalOpen) return <></>;
+  if (!modalOpen) return null;
 
   return (
     <div
       style={{ zIndex: 2147483647 }}
       className="grid fixed h-screen top-0 right-0 w-full place-items-center"
     >
-      <div
+      <button
+        type="button"
+        aria-label="Close modal backdrop"
         onClick={() => setModalOpen(false)}
-        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs"
+        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs border-0 cursor-default"
       />
       <div className="max-w-md absolute w-full grid bg-secondary rounded shadow px-8 py-10">
         <Label className="mb-2">Tags</Label>

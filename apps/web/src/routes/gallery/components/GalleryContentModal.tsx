@@ -19,10 +19,12 @@ export default function GaleryContentModal() {
   const { orpc, encodedTitle, doc, tags, setCoverMutation, setDoc } = useDoc();
   const setGalleryData = useSetAtom(galleryDataAtom);
 
-  const contentUrl = `/media/Galleries/${encodedTitle}/${encodeURIComponent(data?.name!)}`;
+  const contentUrl = data?.name
+    ? `/media/Galleries/${encodedTitle}/${encodeURIComponent(data.name)}`
+    : "";
   const coverUrl =
     data?.type === "video" && data?.cover
-      ? `/media/Galleries/${encodedTitle}/.gallery-covers/${encodeURIComponent(data?.cover!)}`
+      ? `/media/Galleries/${encodedTitle}/.gallery-covers/${encodeURIComponent(data.cover)}`
       : undefined;
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,7 +45,7 @@ export default function GaleryContentModal() {
     setCoverGivenFileMuation.mutate({
       id: doc.id,
       name: doc.title,
-      content: data?.name.split(".").slice(0, -1).join(".")!,
+      content: data?.name ? data.name.split(".").slice(0, -1).join(".") : "",
       file,
     });
   }, [captureFrame, doc.id, doc.title, setCoverGivenFileMuation, data?.name]);
@@ -54,7 +56,7 @@ export default function GaleryContentModal() {
     const file = await captureFrame(`cover.${doc.title}.${doc.id}`);
     if (!file) return;
 
-    const contentName = data?.name.split(".").slice(0, -1).join(".")!;
+    const contentName = data?.name ? data.name.split(".").slice(0, -1).join(".") : "";
 
     try {
       const updatedGalleryData = await setCoverGivenFileMuation.mutateAsync({
@@ -132,6 +134,7 @@ export default function GaleryContentModal() {
           <img
             className="max-h-[90vh] size-full object-contain"
             src={contentUrl}
+            alt={data?.name ?? "Gallery content"}
           />
         )}
       </DialogContent>

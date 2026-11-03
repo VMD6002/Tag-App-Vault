@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { render, Box, Text, useApp } from "ink";
 import {
   appendFileSync,
@@ -39,8 +39,10 @@ const globalThrottle = new PQueue({ concurrency: 3 });
 
 function enqueueTask(scraper: string, task: () => Promise<void>) {
   let queue = scraperQueues.get(scraper);
-  if (!queue)
-    scraperQueues.set(scraper, (queue = new PQueue({ concurrency: 1 })));
+  if (!queue) {
+    queue = new PQueue({ concurrency: 1 });
+    scraperQueues.set(scraper, queue);
+  }
   return queue.add(() => globalThrottle.add(task));
 }
 
@@ -141,26 +143,27 @@ function App() {
         speed: "0B/s",
         eta: "00:00",
       });
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as Error | undefined;
       updateTask(index, { status: "failed" });
       appendFileSync(
         ERROR_LOG,
-        `[${item.title}]: ${error?.message ?? "Unknown error"}\n${error?.stack ?? ""}\n`,
+        `[${item.title}]: ${err?.message ?? "Unknown error"}\n${err?.stack ?? ""}\n`,
       );
     }
   }
 
   useEffect(() => {
-    downloadData.forEach((item, i) =>
-      enqueueTask(item.scraper, () => processTask(item, i)),
-    );
+    downloadData.forEach((item, i) => {
+      enqueueTask(item.scraper, () => processTask(item, i));
+    });
   }, []);
 
   // Let the process exit once everything has finished (otherwise Ink keeps it alive).
   useEffect(() => {
     if (tasks.every((t) => t.status === "completed" || t.status === "failed"))
       exit();
-  }, [tasks]);
+  }, [tasks, exit]);
 
   return (
     <Box flexDirection="column" padding={1}>

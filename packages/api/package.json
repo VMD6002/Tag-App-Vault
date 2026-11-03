@@ -16,7 +16,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "type:check": "tsc -b"
+    "type:check": "tsc -b",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write"
   },
   "type": "module"
 }

@@ -117,6 +117,7 @@ export default function AudioPage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 w-full my-6 gap-3 mb-10">
         {audios.map((audio) => (
           <AudioCard
+            key={audio.name}
             data={audio}
             updateCover={setCover}
             removeContentCover={removeContentCover}

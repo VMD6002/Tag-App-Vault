@@ -19,9 +19,16 @@
     "build:caddy": "cp apps/Caddyfile apps/server/dist",
     "build:serverFull": "rm -rf apps/server/dist && bun build:server && bun build:cli && bun build:web && bun build:caddy",
     "type:check": "bun run -r type:check",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "format": "biome format",
+    "format:fix": "biome format --write",
+    "check": "biome check",
+    "check:fix": "biome check --write",
     "update:all": "bun -r update"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.6.4",
     "@types/node": "^24.13.3"
   }
 }

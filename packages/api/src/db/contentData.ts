@@ -1,4 +1,4 @@
-import { ContentServerType } from "@tagapp/utils/types";
+import type { ContentServerType } from "@tagapp/utils/types";
 import type { Low } from "lowdb";
 import { JSONFilePreset } from "lowdb/node";
 

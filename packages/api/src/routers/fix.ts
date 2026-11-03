@@ -5,9 +5,9 @@ import { os } from "@orpc/server";
 export const hardResetTagCount = os.handler(async () => {
   tagDB.data = {};
   for (const id in contentDataDB.data) {
-    contentDataDB.data[id]!.tags.forEach(
-      (tag) => (tagDB.data[tag] = (tagDB.data[tag] ?? 0) + 1),
-    );
+    contentDataDB.data[id]!.tags.forEach((tag) => {
+      tagDB.data[tag] = (tagDB.data[tag] ?? 0) + 1;
+    });
   }
   await tagDB.write();
   console.log("Server Tag Count Fixed");

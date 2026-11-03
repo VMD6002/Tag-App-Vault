@@ -54,9 +54,6 @@ export const ContentJsonSchema = z.object({
 
 export default function GenerateJSONPage() {
   const globalTags = useAtomValue(tagsAtom);
-
-  if (!globalTags) return <p>Loading...</p>;
-
   const { theme } = useTheme();
 
   const [id, setId] = useState("gen_" + nanoid());
@@ -91,6 +88,8 @@ export default function GenerateJSONPage() {
     const id = "gen_" + nanoid();
     setId(id);
   }, []);
+
+  if (!globalTags) return <p>Loading...</p>;
 
   return (
     <>

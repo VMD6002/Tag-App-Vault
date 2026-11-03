@@ -20,7 +20,7 @@ export async function setDoc(input: DocType) {
   if (NewData.title !== OldData?.title) {
     switch (OldData.type) {
       case "img":
-      case "video":
+      case "video": {
         const mvOperationData = [
           {
             baseDir: `./media/${CTypeDir[OldData.type]}`,
@@ -41,7 +41,7 @@ export async function setDoc(input: DocType) {
             newPath: `caption.${NewData.title}.${OldData.id}.vtt`,
           });
 
-        let completed = [];
+        const completed = [];
         try {
           for (const operation of mvOperationData) {
             await renameByBasename(
@@ -73,6 +73,7 @@ export async function setDoc(input: DocType) {
           });
         }
         break;
+      }
       case "gallery":
       case "audio":
       case "txt":

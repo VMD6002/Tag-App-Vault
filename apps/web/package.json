@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build --emptyOutDir",
     "check": "tsc -b",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write"
   },
   "dependencies": {
     "@babel/runtime": "^8.0.7",
