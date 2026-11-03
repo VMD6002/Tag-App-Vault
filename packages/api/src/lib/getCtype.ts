@@ -1,3 +1,5 @@
+import type { CType } from "@tagapp/utils/types";
+
 export const getFileExt = (fileName: string) => {
   const ext = fileName.slice(((fileName.lastIndexOf(".") - 1) >>> 0) + 2);
   const FileName = fileName.slice(0, -1 * (ext.length + 1));
@@ -6,7 +8,7 @@ export const getFileExt = (fileName: string) => {
 
 export default function getCtype(fileName: string) {
   const [FileExt, Name] = getFileExt(fileName);
-  let Ctype = "invalid";
+  let Ctype: CType | "invalid" = "invalid";
   switch (FileExt) {
     case "jxl":
     case "jpg":

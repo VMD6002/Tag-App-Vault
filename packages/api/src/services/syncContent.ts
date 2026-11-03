@@ -5,83 +5,53 @@ import { IncrementTagCount, tagDB } from "../db/tags.js";
 import { getSyncData } from "./getSyncData.js";
 
 export async function syncContent() {
-  const Data = await getSyncData();
-  const newContentData: contentDataDBType = {};
+  const syncData = await getSyncData();
+  const synced: contentDataDBType = {};
 
-  for (const id in Data) {
-    const content = Data[id]!;
+  for (const { ext, ...data } of Object.values(syncData)) {
+    const { id, title, type, tags } = data;
+    const name = `${title}.${id}`;
+    const isMedia = type === "img" || type === "video";
+    const dest = `./media/${CTypeDir[type]}`;
 
-    const { ext, ...data } = content;
-    const coverFile = `cover.${content.title}.${content.id}.${content.ext[0]}`;
-    const file = `${content.title}.${content.id}.${content.ext[1]}`;
+    // [path inside ./Sync, path inside the media dir]
+    const moves: [string, string][] = isMedia
+      ? [
+          [`cover.${name}.${ext[0]}`, `.covers/cover.${name}.${ext[0]}`],
+          [`${name}.${ext[1]}`, `${name}.${ext[1]}`],
+        ]
+      : [[`${name}.${type}`, name]];
+    if (ext[2]) {
+      moves.push([`caption.${name}.vtt`, `.captions/caption.${name}.vtt`]);
+    }
 
-    const movedFiles: { from: string; to: string }[] = [];
-
-    const safeRename = async (from: string, to: string) => {
-      await rename(from, to);
-      movedFiles.push({ from, to });
-    };
-
+    const moved: [string, string][] = [];
     try {
-      newContentData[content.id] = data;
-
-      switch (content.type) {
-        case "img":
-        case "video":
-          await safeRename(
-            `./Sync/${coverFile}`,
-            `./media/${CTypeDir[content.type]}/.covers/${coverFile}`,
-          );
-          await safeRename(
-            `./Sync/${file}`,
-            `./media/${CTypeDir[content.type]}/${file}`,
-          );
-          if (content.tags.includes("meta:captions")) {
-            const captionFile = `caption.${content.title}.${content.id}.vtt`;
-            await safeRename(
-              `./Sync/${captionFile}`,
-              `./media/${CTypeDir[content.type]}/.captions/${captionFile}`,
-            );
-          }
-          break;
-        case "gallery":
-        case "audio":
-        case "txt":
-          await safeRename(
-            `./Sync/${content.title}.${content.id}.${content.type}`,
-            `./media/${CTypeDir[content.type]}/${content.title}.${content.id}`,
-          );
-          newContentData[content.id]!.cover = content.ext[0];
-          break;
-        default:
-          continue;
+      for (const [from, to] of moves) {
+        const move: [string, string] = [`./Sync/${from}`, `${dest}/${to}`];
+        await rename(...move);
+        moved.push(move);
       }
+      await rm(`./Sync/${name}.json`);
 
-      await rm(`./Sync/${content.title}.${content.id}.json`);
-
-      IncrementTagCount(content.tags);
+      IncrementTagCount(tags);
+      synced[id] = isMedia ? data : { ...data, cover: ext[0] };
     } catch (error) {
-      console.error(`Error processing content ${content.id}:`, error);
+      console.error(`Error processing content ${id}:`, error);
 
-      for (const moved of movedFiles.reverse()) {
-        try {
-          await rename(moved.to, moved.from);
-        } catch (rollbackError) {
-          console.error(
-            `Failed to rollback ${moved.to} to ${moved.from}:`,
-            rollbackError,
-          );
-        }
+      for (const [src, dst] of moved.reverse()) {
+        await rename(dst, src).catch((rollbackError) =>
+          console.error(`Failed to rollback ${dst} to ${src}:`, rollbackError),
+        );
       }
-
-      delete newContentData[content.id];
     }
   }
 
-  contentDataDB.data = { ...newContentData, ...contentDataDB.data };
+  if (Object.keys(synced).length) {
+    contentDataDB.data = { ...synced, ...contentDataDB.data };
+    await Promise.all([contentDataDB.write(), tagDB.write()]);
+  }
 
-  await contentDataDB.write();
-  await tagDB.write();
   console.log("Data Synced");
   return contentDataDB.data;
 }

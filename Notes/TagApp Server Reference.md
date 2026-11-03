@@ -149,7 +149,7 @@ Sync
 
 | Meta Tag             | Description                                                     |
 | -------------------- | --------------------------------------------------------------- |
-| meta:captions        | If caption file is included ( checks when running server sync ) |
+| meta:caption         | If caption file is included ( checks when running server sync ) |
 | meta:autplay         | Switchs on gallery autoplay functionality                       |
 | meta:yt‑cookie       | Use Cookies when downloading                                    |
 | meta:different-cover | To download the specfied cover with curl                        |

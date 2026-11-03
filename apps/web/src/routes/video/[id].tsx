@@ -15,7 +15,7 @@ export default function VideoPage() {
   const videoUrl = `/media/Videos/${encodedTitle}`;
   const posterUrl = `/media/Videos/.covers/cover.${encodedTitle}`;
   const captionUrl =
-    doc.tags.includes("meta:captions") &&
+    doc.tags.includes("meta:caption") &&
     `/media/Videos/.captions/caption.${encodedTitle}.vtt`;
 
   const videoRef = useRef<HTMLVideoElement>(null);

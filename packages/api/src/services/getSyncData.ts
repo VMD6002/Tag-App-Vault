@@ -1,11 +1,11 @@
-import { readdir, rename, stat, writeFile } from "node:fs/promises";
+import { readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import {
   ContentJsonSchema,
   type ContentJsonType,
   type ContentWebType,
   type CType,
 } from "@tagapp/utils/types";
-import { pathExists, readJSON } from "fs-extra/esm";
+import { readJSON } from "fs-extra/esm";
 import { customAlphabet } from "nanoid";
 import z from "zod";
 import getCtype from "../lib/getCtype.js";
@@ -16,253 +16,188 @@ export interface NewContentType extends ContentJsonType {
   ext: string[];
 }
 
-let Folders: Set<string> = new Set();
-let Files: Set<string> = new Set();
-let NewContents = new Map<string, NewContentType>();
+const SYNC = "./Sync";
+const CAPTIONS_TAG = "meta:caption";
+const nanoid = customAlphabet(
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+  10,
+);
 
-function AddToNewContents(Temp: ContentJsonType, FileExt: any[], ctype: CType) {
-  NewContents.set(Temp.id, {
-    ...Temp,
-    type: ctype,
-    ext: FileExt,
-  });
+/** Folder-based content types (`<name>.<type>/`) and how to find their thumbnail. */
+const folderThumbs = new Map<string, (dir: string) => Promise<unknown>>([
+  ["gallery", getGalleryThumb],
+  [
+    "txt",
+    async (dir) =>
+      (await readdir(`${dir}/.media`).catch(() => [])).find(
+        (f) => getCtype(f)[0] === "img",
+      ),
+  ],
+  ["audio", (dir) => readdir(`${dir}/.audio-covers`).catch(() => [])],
+]);
+
+/**
+ * Names (inside ./Sync) of every file/folder that belongs to one content item.
+ * `ext` is `[coverExt, fileExt, "vtt"?]` for img/video, `[thumb]` otherwise.
+ */
+const filesOf = (name: string, type: CType, [cover, ext, caption]: any[]) =>
+  type === "img" || type === "video"
+    ? [
+        `cover.${name}.${cover}`,
+        `${name}.${ext}`,
+        ...(caption ? [`caption.${name}.vtt`] : []),
+      ]
+    : [`${name}.${type}`];
+
+async function readContentJSON(name: string) {
+  const parsed = ContentJsonSchema.safeParse(
+    await readJSON(`${SYNC}/${name}.json`),
+  );
+  if (!parsed.success) {
+    console.error(
+      `[Sync Failed] Skipping ${name} due to the JSON validation errors below:`,
+    );
+    console.error(z.prettifyError(parsed.error));
+    return null;
+  }
+  return parsed.data;
 }
 
-const capitalLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const smallLetter = "abcdefghijklmnopqrstuvwxyz";
-const number = "1234567890";
-const nanoid = customAlphabet(`${smallLetter}${number}${capitalLetter}`, 10);
-
-async function GenerateAndAddToNewContents(
-  name: string,
-  fileExt: any[],
-  ctype: CType,
+async function generateContentJSON(
+  title: string,
   timePath: string,
-) {
-  const id = `gen_${nanoid()}`;
-  const time = Math.floor((await stat(timePath)).mtime.getTime() / 1000);
-  const jsonData: ContentJsonType = {
-    id,
-    title: name,
+): Promise<ContentJsonType> {
+  const time = Math.floor((await stat(timePath)).mtimeMs / 1000);
+  return {
+    id: `gen_${nanoid()}`,
+    title,
     tags: [],
     added: time,
     lastUpdated: time,
-    extraData: `Generated Data`,
+    extraData: "Generated Data",
   };
-  // Embed ID into file with generated data
-  await writeFile(`./Sync/${name}.${id}.json`, JSON.stringify(jsonData));
-
-  switch (ctype) {
-    case "img":
-    case "video":
-      await rename(
-        `./Sync/cover.${name}.${fileExt[0]}`,
-        `./Sync/cover.${name}.${id}.${fileExt[0]}`,
-      );
-      await rename(
-        `./Sync/${name}.${fileExt[1]}`,
-        `./Sync/${name}.${id}.${fileExt[1]}`,
-      );
-      if (fileExt[3]) {
-        // Renaming the caption file if it exists
-        await rename(
-          `./Sync/caption.${name}.vtt`,
-          `./Sync/caption.${name}.${id}.vtt`,
-        );
-      }
-      break;
-    case "audio":
-    case "txt":
-    case "gallery":
-      await rename(`./Sync/${name}.${ctype}`, `./Sync/${name}.${id}.${ctype}`);
-      break;
-  }
-
-  NewContents.set(id, {
-    ...jsonData,
-    type: ctype,
-    ext: fileExt,
-  });
 }
 
-async function readContentJSONFile(path: string) {
-  const jsonData = await readJSON(path);
-  const data = ContentJsonSchema.safeParse(jsonData);
-  if (!data.success) {
-    console.error(
-      `[Sync Failed] Skipping ${path.slice(6, -5)} Sync due below JSON Validation Errors:`,
+/** Splits every `tdata.*.json` into one `<title>.<id>.json` per item, then removes it. */
+async function splitTData(jsons: Set<string>) {
+  for (const file of [...jsons].filter((f) => f.startsWith("tdata."))) {
+    const items: ContentWebType[] = await readJSON(`${SYNC}/${file}`);
+    await Promise.all(
+      Object.values(items).map(async (item) => {
+        const name = `${item.title}.${item.id}.json`;
+        await writeFile(`${SYNC}/${name}`, JSON.stringify(item));
+        jsons.add(name);
+      }),
     );
-    console.log(z.prettifyError(data.error));
-    return null;
+    await rm(`${SYNC}/${file}`);
+    jsons.delete(file);
   }
-  return data.data;
 }
 
 export async function getSyncData() {
-  Folders = new Set();
-  Files = new Set();
-  NewContents = new Map();
+  const entries = await readdir(SYNC, { withFileTypes: true });
+  const names = entries.filter((e) => !e.isDirectory()).map((e) => e.name);
+  const folders = new Set(
+    entries.filter((e) => e.isDirectory()).map((e) => e.name),
+  );
+  const jsons = new Set(names.filter((f) => f.endsWith(".json")));
+  const files = new Set(names.filter((f) => !jsons.has(f)));
+  const contents: Record<string, NewContentType> = {};
 
-  const entries = await readdir("./Sync", { withFileTypes: true });
+  await splitTData(jsons);
 
-  for (const entry of entries) {
-    if (entry.isDirectory()) Folders.add(entry.name);
-    else Files.add(entry.name);
+  // cover.<name>.<ext> -> <name> => ext
+  const covers = new Map<string, string>();
+  for (const file of files) {
+    if (!file.startsWith("cover.")) continue;
+    const [type, ext, name] = getCtype(file);
+    if (type !== "invalid") covers.set(name.slice("cover.".length), ext);
   }
 
-  // Remove all json files from Files set and split up tdata files
-  await Promise.all(
-    [...Files].map(async (file) => {
-      if (!file.endsWith(".json")) return;
-      Files.delete(file);
-      if (!file.startsWith("tdata.")) return;
-      const UnSplittedData: ContentWebType[] = await readJSON(`./Sync/${file}`);
-      for (const Key in UnSplittedData) {
-        const data = UnSplittedData[Key]!;
-        await writeFile(
-          `./Sync/${data.title}.${data.id}.json`,
-          JSON.stringify(data),
-        );
-      }
-    }),
-  );
+  /**
+   * Loads (or generates) the metadata of one item, makes sure its files are
+   * named `<title>.<id>.*` and records it. Everything it consumed is removed
+   * from `files`/`folders`; whatever is left at the end is unsyncable.
+   */
+  const register = async (
+    name: string,
+    type: CType,
+    ext: any[],
+    timePath: string,
+  ) => {
+    const hasJson = jsons.has(`${name}.json`);
+    const loaded = hasJson
+      ? await readContentJSON(name)
+      : await generateContentJSON(name, timePath);
+    if (!loaded) return;
 
-  // Remove all cover files from Files set and add them to CoverFiles map
-  const CoverFiles = new Map<string, string>();
-  for (const file of Files) {
-    if (file.startsWith("cover.")) {
-      const [Ctype, FileExt, Name] = getCtype(file);
-      if (Ctype === "invalid") continue;
-      CoverFiles.set(Name.replace("cover.", ""), FileExt);
-      Files.delete(file);
+    // The caption tag always mirrors whether a caption file actually exists
+    const tags = loaded.tags.filter((t) => t !== CAPTIONS_TAG);
+    if (ext[2]) tags.push(CAPTIONS_TAG);
+    const data = { ...loaded, tags };
+
+    const newName = `${data.title}.${data.id}`;
+    if (newName !== name) {
+      // Embed the id in every file (cover, media, caption) and in the JSON
+      const from = filesOf(name, type, ext);
+      const to = filesOf(newName, type, ext);
+      await Promise.all(
+        from.map((f, i) => rename(`${SYNC}/${f}`, `${SYNC}/${to[i]}`)),
+      );
+      await writeFile(`${SYNC}/${newName}.json`, JSON.stringify(data));
+      if (hasJson) await rm(`${SYNC}/${name}.json`);
+    }
+
+    for (const f of filesOf(name, type, ext)) {
+      files.delete(f);
+      folders.delete(f);
+    }
+    contents[data.id] = { ...data, type, ext };
+  };
+
+  const mediaTasks = [...files]
+    .filter((f) => !/^(cover|caption)\./.test(f))
+    .map(async (file) => {
+      const [type, fileExt, name] = getCtype(file);
+      if (type !== "img" && type !== "video") return;
+
+      const coverExt = covers.get(name);
+      if (!coverExt) {
+        console.log(`[Sync Failed] No thumbnail found for ${name}`);
+        return;
+      }
+      const ext = [coverExt, fileExt];
+      if (type === "video" && files.has(`caption.${name}.vtt`)) ext.push("vtt");
+      await register(name, type, ext, `${SYNC}/${file}`);
+    });
+
+  const folderTasks = [...folders].map(async (folder) => {
+    const dot = folder.lastIndexOf(".");
+    const getThumb = folderThumbs.get(folder.slice(dot + 1));
+    if (dot < 1 || !getThumb) return;
+
+    const dir = `${SYNC}/${folder}`;
+    const type = folder.slice(dot + 1) as CType;
+    await register(folder.slice(0, dot), type, [await getThumb(dir)], dir);
+  });
+
+  for (const result of await Promise.allSettled([
+    ...mediaTasks,
+    ...folderTasks,
+  ])) {
+    if (result.status === "rejected") {
+      console.error("[Sync Failed]", result.reason);
     }
   }
 
-  // Process images and videos. Files
+  // Anything not consumed above can't be synced
   await Promise.all(
-    Array.from(Files).map(async (file) => {
-      const [Ctype, FileExt, Name] = getCtype(file);
-      if (Ctype === "invalid") return;
-      if (!CoverFiles.has(Name)) {
-        console.log(`[Sync Failed] No thumbnail found for ${Name}`);
-        return;
-      }
-      switch (Ctype) {
-        case "img":
-          if (await pathExists(`./Sync/${Name}.json`)) {
-            const JsonData = await readContentJSONFile(`./Sync/${Name}.json`);
-            if (!JsonData) break;
-            AddToNewContents(JsonData, [CoverFiles.get(Name), FileExt], Ctype);
-            Files.delete(`${Name}.json`);
-            Files.delete(file);
-            break;
-          }
-          GenerateAndAddToNewContents(
-            Name,
-            [CoverFiles.get(Name), FileExt],
-            Ctype,
-            `./Sync/${file}`,
-          );
-          Files.delete(file);
-          break;
-        case "video": {
-          const fileExts = [CoverFiles.get(Name), FileExt];
-          if (await pathExists(`./Sync/${Name}.json`)) {
-            const JsonData = await readContentJSONFile(`./Sync/${Name}.json`);
-            if (!JsonData) break;
-            AddToNewContents(JsonData, fileExts, Ctype);
-            Files.delete(`caption.${Name}.vtt`);
-            Files.delete(`${Name}.json`);
-          } else {
-            if (await pathExists(`./Sync/caption.${Name}.vtt`)) {
-              Files.delete(`caption.${Name}.vtt`);
-              fileExts.push("vtt");
-            }
-            GenerateAndAddToNewContents(
-              Name,
-              fileExts,
-              Ctype,
-              `./Sync/${file}`,
-            );
-          }
-          Files.delete(file);
-          break;
-        }
-      }
-    }),
+    [...files, ...folders].map((name) =>
+      rename(`${SYNC}/${name}`, `./UnSyncable/${name}`).catch((error) =>
+        console.error(`[Sync Failed] Could not move ${name}:`, error),
+      ),
+    ),
   );
 
-  // Process Galleries, Audio and Text. Folders
-
-  // Galleries
-  await Promise.all(
-    Array.from(Folders).map(async (folder) => {
-      if (!folder.endsWith("gallery")) return;
-      const Name = folder.slice(0, -8);
-      const Thumb = await getGalleryThumb(`./Sync/${folder}`);
-
-      if (await pathExists(`./Sync/${Name}.json`)) {
-        const JsonData = await readContentJSONFile(`./Sync/${Name}.json`);
-        if (!JsonData) return;
-        AddToNewContents(JsonData, [Thumb], "gallery");
-        Files.delete(`${Name}.json`);
-      } else {
-        GenerateAndAddToNewContents(
-          Name,
-          [Thumb],
-          "gallery",
-          `./Sync/${folder}`,
-        );
-      }
-      Folders.delete(folder);
-    }),
-  );
-
-  // Txts
-  await Promise.all(
-    Array.from(Folders).map(async (folder) => {
-      if (!folder.endsWith("txt")) return;
-      const Name = folder.slice(0, -4);
-      const Thumb = (
-        await readdir(`./Sync/${folder}/.media`).catch(() => [])
-      ).find((f) => getCtype(f)[0] === "img");
-      if (await pathExists(`./Sync/${Name}.json`)) {
-        const JsonData = await readContentJSONFile(`./Sync/${Name}.json`);
-        if (!JsonData) return;
-        AddToNewContents(JsonData, [Thumb], "txt");
-        Files.delete(`${Name}.json`);
-      } else {
-        GenerateAndAddToNewContents(Name, [Thumb], "txt", `./Sync/${folder}`);
-      }
-      Folders.delete(folder);
-    }),
-  );
-
-  // Audio
-  await Promise.all(
-    Array.from(Folders).map(async (folder) => {
-      if (!folder.endsWith("audio")) return;
-      const Name = folder.slice(0, -6);
-      const Thumb = await readdir(`./Sync/${folder}/.audio-covers`).catch(
-        () => [],
-      );
-      if (await pathExists(`./Sync/${Name}.json`)) {
-        const JsonData = await readContentJSONFile(`./Sync/${Name}.json`);
-        if (!JsonData) return;
-        AddToNewContents(JsonData, [Thumb], "audio");
-        Files.delete(`${Name}.json`);
-      } else {
-        GenerateAndAddToNewContents(Name, [Thumb], "audio", `./Sync/${folder}`);
-      }
-      Folders.delete(folder);
-    }),
-  );
-
-  await Promise.all(
-    Array.from(new Set([...Files, ...Folders])).map(async (content) => {
-      await rename(`./Sync/${content}`, `./UnSyncable/${content}`);
-    }),
-  );
-
-  return Object.fromEntries(NewContents);
+  return contents;
 }
