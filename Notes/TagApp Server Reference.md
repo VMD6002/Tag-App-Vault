@@ -69,10 +69,10 @@ All server paths are relative to the server's working directory.
 
 | Type | `media/` dir | Shape in `Sync/` | Cover source | Web route |
 | --- | --- | --- | --- | --- |
-| `img` | `Images` | `cover.<name>.<ext>` + `<name>.<ext>` + `<name>.json` | `.covers/cover.<name>.<ext>` | `/img/:id` |
-| `video` | `Videos` | same as `img`, plus optional `caption.<name>.vtt` | `.covers/cover.<name>.<ext>` | `/video/:id` |
-| `gallery` | `Galleries` | `<name>.gallery/` + `<name>.json` | first image in the folder, else first file in `.gallery-covers/` | `/gallery/:id` |
-| `audio` | `Audios` | `<name>.audio/` + `<name>.json` | file in `.audio-covers/` | `/audio/:id` |
+| `img` | `Images` | `<name>.<ext>` + `<name>.json`, plus optional `cover.<name>.<ext>` | `.covers/cover.<name>.<ext>`, generated if missing | `/img/:id` |
+| `video` | `Videos` | same as `img`, plus optional `caption.<name>.vtt` | `.covers/cover.<name>.<ext>` (optional) | `/video/:id` |
+| `gallery` | `Galleries` | `<name>.gallery/` + `<name>.json` | first image in the folder, else first image in `.gallery-covers/` | `/gallery/:id` |
+| `audio` | `Audios` | `<name>.audio/` + `<name>.json` | first image in `.audio-covers/` | `/audio/:id` |
 | `txt` | `Texts` | `<name>.txt/` + `<name>.json` | first image in `.media/` | `/txt/:id` |
 
 ---
@@ -143,7 +143,7 @@ What the server expects in `Sync/` before running sync. A `<name>.json` sidecar 
 
 ```txt
 Sync
-├── cover.<name>.<ext>             image/video cover        ┐
+├── cover.<name>.<ext>             image/video cover (opt.) ┐
 ├── <name>.<ext>                   image / video file       │ one img/video item
 ├── caption.<name>.vtt             video caption (optional) │
 ├── <name>.json                    metadata (optional)      ┘
@@ -170,14 +170,16 @@ What does **not** sync:
 
 | Found in `Sync/` | Result |
 | --- | --- |
-| Image/video without a matching `cover.<name>.<ext>` | `UnSyncable/` (logged: "No thumbnail found") |
+| Image with no cover that `Bun.Image` can't decode (`svg`, `jxl`, and `avif` on Linux) | `UnSyncable/` (logged) |
 | `cover.*` or `caption.*` file with no matching media | `UnSyncable/` |
+| `cover.*` file that isn't an image, or a second cover for the same item (the alphabetically first extension wins) | `UnSyncable/` |
+| Item whose id is already in the library, or repeats another item's id in the same scan | stays in `Sync/` (logged), nothing changes |
 | Caption for an **image** | `UnSyncable/` |
 | Loose `.md`/`.txt`/`.mp3`/`.wav` file (not in a folder) | `UnSyncable/` |
 | Folder whose suffix isn't `.gallery`, `.audio` or `.txt` | `UnSyncable/` |
 | Unrecognised extension | `UnSyncable/` |
 | Item whose `<name>.json` is invalid | skipped; its files go to `UnSyncable/` |
-| `<name>.json` with no matching item | stays in `Sync/` |
+| `<name>.json` with no matching item | stays in `Sync/` (logged, returned as `orphanJsons`) |
 
 ---
 
@@ -205,25 +207,32 @@ Sidecar `<name>.json` (validated by `ContentJsonSchema`):
 
 ## Sync process
 
-Two steps, both exposed as `main` procedures. `getSyncData` previews, `sync` commits. **Both modify `Sync/`** (renames, generated JSON, moving leftovers to `UnSyncable/`).
+`main.getSyncData` is a read-only preview. `main.sync` prepares `Sync/` and commits it. A lock (`lib/syncLock.ts`) makes overlapping calls wait for each other.
 
-1. **Scan** (`services/getSyncData.ts`)
-   1. Split any `tdata.*.json` into per-item JSON.
-   2. Index covers: every `cover.<name>.<ext>` file.
-   3. Image/video: pair each media file with its cover (required) and, for videos, `caption.<name>.vtt`.
+`getSyncData` returns `{ contents, unsyncable, orphanJsons }`. Ids it generates exist only in that response, so they differ between previews.
+
+1. **Scan** (`services/getSyncData.ts`, writes nothing)
+   1. Read any `tdata.*.json` for metadata.
+   2. Index covers: every `cover.<name>.<ext>` image.
+   3. Image/video: pair each media file with its cover and, for videos, `caption.<name>.vtt`.
    4. Folders: `.gallery`, `.audio`, `.txt` suffix decides the type; a thumbnail is resolved (see [Covers](#covers)).
-   5. Load the sidecar JSON, or generate metadata. Validate with Zod.
-   6. `meta:caption` is **forced to mirror reality**: removed from the tags, then added back only if a caption file exists. Users cannot set it by hand.
-   7. Rename files to `<title>.<id>` if needed.
-   8. Move everything left over to `UnSyncable/`.
-2. **Commit** (`services/syncContent.ts`), per item:
+   5. Load the sidecar JSON, or generate metadata in memory. Validate with Zod.
+   6. Skip ids that are already in the library or repeated in this scan. They stay in `Sync/`.
+   7. Trim and deduplicate tags, and drop empty ones.
+   8. `meta:caption` is **forced to mirror reality**: removed from the tags, then added back only if a caption file exists. Users cannot set it by hand.
+2. **Prepare** (`services/prepareSync.ts`, `sync` only)
+   1. Split any `tdata.*.json` into per-item JSON, then run the scan.
+   2. Generate missing image covers: `cover.<name>.webp`, fitted inside 800x800 without enlarging, quality 80.
+   3. Write the sidecar and rename files to `<title>.<id>` if needed.
+   4. Move everything left over to `UnSyncable/`.
+3. **Commit** (`services/syncContent.ts`), per item:
 
 | Type | Moves (`Sync/` → `media/`) |
 | --- | --- |
-| `img` / `video` | `cover.<name>.<ext>` → `<Dir>/.covers/` · `<name>.<ext>` → `<Dir>/` · `caption.<name>.vtt` → `Videos/.captions/` |
+| `img` / `video` | `cover.<name>.<ext>` (if any) → `<Dir>/.covers/` · `<name>.<ext>` → `<Dir>/` · `caption.<name>.vtt` → `Videos/.captions/` |
 | `gallery` / `audio` / `txt` | `<name>.<type>/` → `<Dir>/<name>/` (suffix dropped) |
 
-   Then the sidecar `<name>.json` is deleted, tag counts incremented, the item added to `DB/contentData.json`. If any move fails, the item's moves are rolled back and it stays in `Sync/`.
+   Then the item is added to `DB/contentData.json`, tag counts are incremented, both are written to disk, and only then is the sidecar `<name>.json` deleted. If a move or a DB write fails, the item's moves are rolled back and it stays in `Sync/`. A crash after the moves but before the DB write leaves the files in `media/` with the sidecar reported as an orphan, so its metadata is still there to recover by hand.
 
 The downloader (`apps/cli`) feeds this step: it downloads into `./tmp`, then moves all `*.<id>.*` files into `Sync/` and writes `<title>.<id>.json` last.
 
@@ -235,10 +244,10 @@ The `cover` field in the DB depends on type:
 
 | Type | How the cover is found | `cover` value stored |
 | --- | --- | --- |
-| `img` / `video` | By naming convention: `.covers/cover.<name>.<ext>` | not used by the UI (path is built from title + id) |
-| `gallery` | First image (alphabetical) in the gallery root; if none, first image in `.gallery-covers/`; if none, no cover | path relative to the gallery folder, e.g. `pic.jpg` or `.gallery-covers/cover.clip.jpg` |
-| `audio` | A file in `.audio-covers/` | file name in `.audio-covers/` |
-| `txt` | First image in `.media/` | file name in `.media/` |
+| `img` / `video` | By naming convention: `.covers/cover.<name>.<ext>`. Images get a generated one if missing. Videos may have none, and the library card then shows the type icon | not used by the UI (path is built from title + id) |
+| `gallery` | First image (natural order) in the gallery root; if none, first image in `.gallery-covers/`; if none, no cover | path relative to the gallery folder, e.g. `pic.jpg` or `.gallery-covers/cover.clip.jpg` |
+| `audio` | First image (natural order) in `.audio-covers/`; if none, no cover | file name in `.audio-covers/` |
+| `txt` | First image (natural order) in `.media/` | file name in `.media/` |
 
 Changing covers later:
 
@@ -303,7 +312,5 @@ Caddy listens on `:5000`; everything outside `/media/*` is proxied to the app on
 
 Current sync behaviour that is likely unintended (remove entries once fixed):
 
-- **Audio `cover` is stored as an array** of file names, not a single string. Works by accident with exactly one cover file.
-- **Re-syncing an id that already exists** overwrites its media files, inflates tag counts, and keeps the old metadata.
-- **Leftovers move to `UnSyncable/` on every scan**, including a preview, so an item that is still being copied in (cover not yet arrived) is moved away.
+- **Leftovers move to `UnSyncable/` on every sync**, so a file that is still being copied in is moved away. An item with invalid JSON loses its media the same way, while the JSON stays in `Sync/`.
 - **Extensions such as `mkv`/`m4a`/`opus`** from yt-dlp are not recognised.

@@ -41,9 +41,10 @@ Imports: `@tagapp/api` exports `router` (type + value) and `settingsDB`; `@tagap
 
 1. **Queue**: UI/extension → `POST /downloads/set` (or `download.set`) validates `ContentWebType[]` and writes `Download/tmp.json`.
 2. **Download** (`apps/cli`): 1 concurrent per `scraper`, 3 total. Writes to `./tmp`, then moves `*.<id>.*` files and `<title>.<id>.json` to `../Sync`, removes the item from the queue. Errors → `error.log`.
-3. **Sync** (`services/getSyncData.ts`, `services/syncContent.ts`):
-   - `getSyncData` scans `Sync/`: splits `tdata.*.json` into per-item JSON; pairs media with `cover.<name>.<ext>` (missing cover = skipped); detects folder items by suffix (`.gallery`, `.audio`, `.txt`); validates JSON with Zod; **generates metadata if no JSON** (`extraData: "Generated Data"`, mtime as timestamps); renames files to embed the id; moves leftovers to `UnSyncable/`.
-   - `syncContent` moves each item into `media/<Dir>/` (covers → `.covers/`, captions → `.captions/`), increments tag counts, prepends to `DB/contentData.json`. Per-item failure rolls back moved files.
+3. **Sync** (`services/getSyncData.ts`, `services/prepareSync.ts`, `services/syncContent.ts`, serialized by `lib/syncLock.ts`):
+   - `getSyncData` is a read-only scan of `Sync/`: pairs media with `cover.<name>.<ext>`; detects folder items by suffix (`.gallery`, `.audio`, `.txt`); validates JSON with Zod; builds metadata in memory if there is no JSON (`extraData: "Generated Data"`, mtime as timestamps); normalizes tags; leaves ids that already exist in `Sync/`; reports orphan JSON.
+   - `prepareSync` does the writes: splits `tdata.*.json` into per-item JSON; generates missing image covers (`Bun.Image`, webp); writes sidecars and renames files to embed the id; moves leftovers to `UnSyncable/`.
+   - `syncContent` moves each item into `media/<Dir>/` (covers → `.covers/`, captions → `.captions/`), writes `DB/contentData.json` and `DB/tags.json`, then deletes the sidecar. Per-item failure rolls back moved files.
 4. **Browse**: UI queries oRPC; file bytes come from Caddy `/media/...`.
 
 ## Disk layout (runtime, relative to server cwd)
@@ -84,7 +85,7 @@ Add an endpoint: export `os.input(zod).handler(...)` from a router file; it is a
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | New content type        | `contentTypes`/`CTypeDir` (utils), `CtypeSchema`, `getCtype`, `getSyncData`/`syncContent`/`deleteData`/`setDoc` switch statements, `createAppDirs`, Caddyfile, web route + `App.tsx` |
 | New meta tag            | Document here; handle in CLI (`createFlags.ts`) or sync/web as needed                                                                                                                |
-| Sync behaviour          | `services/getSyncData.ts`, `services/syncContent.ts`                                                                                                                                 |
+| Sync behaviour          | `services/getSyncData.ts`, `services/prepareSync.ts`, `services/syncContent.ts`                                                                                                                                 |
 | Delete/rename behaviour | `services/deleteData.ts`, `services/setDoc.ts`, `lib/fsBaseNameFunctions.ts`                                                                                                         |
 | Filtering/search        | `packages/utils/src/filterData.ts`                                                                                                                                                   |
 | Download flags / yt-dlp | `apps/cli/src/lib/createFlags.ts`, `downloadContent.ts`                                                                                                                              |
@@ -98,6 +99,7 @@ bun dev:server      # cd apps/server && bun --watch src/index.ts (cwd = runtime 
 bun dev:web         # Vite
 bun type:check      # all workspaces
 bun check           # Biome lint+format (check:fix / lint:fix / format:fix to apply)
+bun test packages/api  # sync tests (scratch dir, needs Bun >= 1.4.2 for Bun.Image)
 bun build:serverFull  # → apps/server/dist: index.js, WebUI/, Download/index.js (CLI), Caddyfile
 ```
 
