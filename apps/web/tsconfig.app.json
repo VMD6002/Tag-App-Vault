@@ -28,5 +28,7 @@
       "@/*": ["./src/*"]
     }
   },
+  // Reads the API's emitted .d.ts instead of its source, so Bun's globals stay out of the web build
+  "references": [{ "path": "../../packages/api" }],
   "include": ["src"]
 }
