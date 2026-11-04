@@ -1,6 +1,14 @@
 import { readdir } from "node:fs/promises";
 import getCtype from "./getCtype.js";
 
+/** First image in `dir` in natural order (`img2` before `img10`), ignoring hidden entries. */
+export async function firstImage(dir: string) {
+  const entries = await readdir(dir).catch(() => []);
+  return entries
+    .filter((e) => !e.startsWith(".") && getCtype(e)[0] === "img")
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))[0];
+}
+
 /**
  * Gets a cover/thumbnail image for a gallery folder.
  *
@@ -13,42 +21,11 @@ import getCtype from "./getCtype.js";
  * Resolution strategy:
  *   1. Gallery with images (with or without videos) → first image from the gallery root
  *   2. Gallery with only videos → first image from the `.gallery-covers` subfolder
- *   3. Empty gallery / no usable thumbnail → returns `null`
+ *   3. Empty gallery / no usable thumbnail → returns `undefined`
  */
-export async function getGalleryThumb(
-  galleryPath: string,
-): Promise<string | null> {
-  const entries = await readdir(galleryPath);
-
-  // Separate images from the rest, ignoring hidden dirs like `.cover`
-  const images: string[] = [];
-
-  for (const entry of entries) {
-    if (entry.startsWith(".")) continue; // skip .cover and other hidden entries
-    const [ctype] = getCtype(entry);
-    if (ctype === "img") images.push(entry);
-  }
-
-  // Case 2 & 3: Gallery has images (possibly mixed with videos) → use first image
-  if (images.length > 0) {
-    images.sort();
-    return images[0]!;
-  }
-
-  // Case 1: Gallery has only videos (no images at root) → fall back to .gallery-covers/
-  try {
-    const coverEntries = (
-      await readdir(`${galleryPath}/.gallery-covers`)
-    ).sort();
-
-    for (const entry of coverEntries) {
-      const [ctype] = getCtype(entry);
-      if (ctype === "img") return `.gallery-covers/${entry}`;
-    }
-  } catch {
-    // .gallery-covers directory doesn't exist — nothing we can do
-  }
-
-  // No usable thumbnail found
-  return null;
+export async function getGalleryThumb(galleryPath: string) {
+  const root = await firstImage(galleryPath);
+  if (root) return root;
+  const cover = await firstImage(`${galleryPath}/.gallery-covers`);
+  return cover && `.gallery-covers/${cover}`;
 }

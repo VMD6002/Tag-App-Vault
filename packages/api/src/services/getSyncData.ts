@@ -9,7 +9,7 @@ import { readJSON } from "fs-extra/esm";
 import { customAlphabet } from "nanoid";
 import z from "zod";
 import getCtype from "../lib/getCtype.js";
-import { getGalleryThumb } from "../lib/getGalleryThumb.js";
+import { firstImage, getGalleryThumb } from "../lib/getGalleryThumb.js";
 
 export interface NewContentType extends ContentJsonType {
   type: CType;
@@ -24,16 +24,13 @@ const nanoid = customAlphabet(
 );
 
 /** Folder-based content types (`<name>.<type>/`) and how to find their thumbnail. */
-const folderThumbs = new Map<string, (dir: string) => Promise<unknown>>([
+const folderThumbs = new Map<
+  string,
+  (dir: string) => Promise<string | undefined>
+>([
   ["gallery", getGalleryThumb],
-  [
-    "txt",
-    async (dir) =>
-      (await readdir(`${dir}/.media`).catch(() => [])).find(
-        (f) => getCtype(f)[0] === "img",
-      ),
-  ],
-  ["audio", (dir) => readdir(`${dir}/.audio-covers`).catch(() => [])],
+  ["txt", (dir) => firstImage(`${dir}/.media`)],
+  ["audio", (dir) => firstImage(`${dir}/.audio-covers`)],
 ]);
 
 /**
