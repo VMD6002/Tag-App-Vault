@@ -8,6 +8,7 @@ import {
 import { readJSON } from "fs-extra/esm";
 import { customAlphabet } from "nanoid";
 import z from "zod";
+import { contentDataDB } from "../db/contentData.js";
 import getCtype from "../lib/getCtype.js";
 import { firstImage, getGalleryThumb } from "../lib/getGalleryThumb.js";
 
@@ -83,7 +84,9 @@ async function generateContentJSON(
  * Read-only scan of ./Sync. All writes live in prepareSync, so generated ids exist
  * only in the returned data until then.
  *
- * `unsyncable` lists the entries prepareSync moves out.
+ * Items whose id is already in the library, or repeats one found earlier in this
+ * scan, are logged and left in ./Sync. `unsyncable` lists the entries prepareSync
+ * moves out.
  */
 export async function getSyncData() {
   const entries = await readdir(SYNC, { withFileTypes: true });
@@ -137,15 +140,27 @@ export async function getSyncData() {
         : await generateContentJSON(name, timePath);
     if (!loaded) return;
 
+    const consume = () => {
+      for (const f of filesOf(name, type, ext)) {
+        files.delete(f);
+        folders.delete(f);
+      }
+    };
+
+    if (contentDataDB.data[loaded.id] || contents[loaded.id]) {
+      console.log(
+        `[Sync Skipped] ${name}: id ${loaded.id} already exists, leaving it in Sync`,
+      );
+      consume();
+      return;
+    }
+
     // The caption tag always mirrors whether a caption file actually exists
     const tags = new Set(loaded.tags.map((t) => t.trim()).filter(Boolean));
     tags.delete(CAPTIONS_TAG);
     if (ext[2]) tags.add(CAPTIONS_TAG);
 
-    for (const f of filesOf(name, type, ext)) {
-      files.delete(f);
-      folders.delete(f);
-    }
+    consume();
     contents[loaded.id] = { ...loaded, tags: [...tags], type, ext, name };
   };
 
