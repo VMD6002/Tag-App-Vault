@@ -20,6 +20,7 @@ const GalleryPage = lazy(() => import("./routes/gallery/[id]"));
 const TextPage = lazy(() => import("./routes/txt/[id]"));
 const AudioPage = lazy(() => import("./routes/audio/[id]"));
 const GenerateJSONPage = lazy(() => import("./routes/generateJSON"));
+const ReferencePage = lazy(() => import("./routes/reference"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +82,9 @@ function App() {
                 </Route>
                 <Route path="/generateContentJson">
                   <GenerateJSONPage />
+                </Route>
+                <Route path="/reference">
+                  <ReferencePage />
                 </Route>
                 {/* DocProvider has no path, so it must sit inside a Route or Switch would match it for every URL and the 404 would never render */}
                 <Route path={DOC_ROUTE}>
