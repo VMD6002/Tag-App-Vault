@@ -163,7 +163,7 @@ export default function TextPage() {
           refreshTxtDataMutation.mutate({ name: doc.title, id: doc.id })
         }
       >
-        <TitleHeader Title="Text" />
+        <TitleHeader Title="Text" Suffix={doc.title} />
       </button>
       <div
         className={

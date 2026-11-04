@@ -41,7 +41,7 @@ export default function VideoPage() {
 
   return (
     <>
-      <TitleHeader Title="Video" />
+      <TitleHeader Title="Video" Suffix={doc.title} />
       <div className="grid place-items-center sm:place-items-start sm:flex gap-4">
         <div className="w-full sm:w-3/5 rounded-sm max-h-[60vh] relative min-h-64 bg-input/50">
           <video

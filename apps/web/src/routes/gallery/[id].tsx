@@ -65,7 +65,7 @@ export default function GalleryPage() {
           refreshGalleryDataMutation.mutate({ name: doc.title, id: doc.id })
         }
       >
-        <TitleHeader Title="Gallery" />
+        <TitleHeader Title="Gallery" Suffix={doc.title} />
       </button>
       <div className="grid place-items-center sm:place-items-start justify-center sm:flex gap-4 mb-6">
         {coverUrl && (

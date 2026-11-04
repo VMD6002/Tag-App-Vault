@@ -21,9 +21,6 @@ import {
 } from "@/components/craft/UpdateModal/atom";
 import { orpc } from "@/lib/orpc";
 
-// Captured once so re-fetching a doc doesn't keep appending titles
-const baseTitle = document.title;
-
 const docPlaceholderData: ContentServerType = {
   id: "",
   title: "",
@@ -55,7 +52,6 @@ function useDocContext() {
         setExtraData(res.extraData);
         setUpdateTags(res.tags.map((tag) => ({ label: tag, value: tag })));
         setDoc(res);
-        document.title = `${baseTitle} - ${res.title}`;
       },
       onError: () => {
         console.error("Couldn't get doc, check console for errors");

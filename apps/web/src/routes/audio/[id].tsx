@@ -76,7 +76,7 @@ export default function AudioPage() {
 
   return (
     <>
-      <TitleHeader Title="Audio" />
+      <TitleHeader Title="Audio" Suffix={doc.title} />
       <div
         className={
           "grid place-items-center " +

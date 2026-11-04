@@ -4,14 +4,14 @@ import DocInfoSection from "../components/DocInfoSection";
 import { useDoc } from "../contexts/Doc.Context";
 
 export default function ImagePage() {
-  const { encodedTitle } = useDoc();
+  const { encodedTitle, doc } = useDoc();
 
   const imgUrl = `/media/Images/${encodedTitle}`;
   const coverUrl = `/media/Images/.covers/cover.${encodedTitle}`;
 
   return (
     <>
-      <TitleHeader Title="Image" />
+      <TitleHeader Title="Image" Suffix={doc.title} />
       <div className="grid place-items-center sm:place-items-start sm:flex gap-4">
         <Dialog>
           <DialogTrigger asChild>
