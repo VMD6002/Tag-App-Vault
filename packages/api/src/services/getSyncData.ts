@@ -135,9 +135,10 @@ export async function getSyncData() {
     if (!loaded) return;
 
     // The caption tag always mirrors whether a caption file actually exists
-    const tags = loaded.tags.filter((t) => t !== CAPTIONS_TAG);
-    if (ext[2]) tags.push(CAPTIONS_TAG);
-    const data = { ...loaded, tags };
+    const tags = new Set(loaded.tags.map((t) => t.trim()).filter(Boolean));
+    tags.delete(CAPTIONS_TAG);
+    if (ext[2]) tags.add(CAPTIONS_TAG);
+    const data = { ...loaded, tags: [...tags] };
 
     const newName = `${data.title}.${data.id}`;
     if (newName !== name) {
