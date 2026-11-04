@@ -50,7 +50,7 @@ media
     │   ├── cover.<video name>.<ext>
     │   └── ...video cover files
     ├── .captions
-    │   ├── cover.<video name>.vtt
+    │   ├── caption.<video name>.vtt
     │   └── ...video caption files
     │
     ├── <video name>.<ext>
