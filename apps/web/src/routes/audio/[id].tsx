@@ -26,7 +26,7 @@ export default function AudioPage() {
       onSuccess: (data) => {
         setAudios(data);
         if (!data.map((a) => a.name).includes(current))
-          setCurrent(data[0].name);
+          setCurrent(data[0]?.name ?? "");
       },
     }),
   );
@@ -45,7 +45,7 @@ export default function AudioPage() {
           });
       });
     },
-    [doc.id],
+    [doc.id, doc.title],
   );
 
   const removeContentMutation = useMutation(
@@ -97,14 +97,6 @@ export default function AudioPage() {
                 <Trash />
               </Button>
             )}
-            <Button
-              variant="destructive"
-              className="absolute top-0 right-0 rounded-none rounded-bl backdrop-blur-xs"
-              size="icon-lg"
-              onClick={() => setCover()}
-            >
-              <Trash />
-            </Button>
             <img
               className="w-full h-full max-h-[max(30vh,25rem)] object-contain"
               src={coverUrl}

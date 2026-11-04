@@ -53,7 +53,7 @@ export default function GalleryPage() {
           });
       }),
 
-    [doc.id],
+    [doc.id, doc.title],
   );
 
   return (
