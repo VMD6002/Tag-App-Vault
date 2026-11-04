@@ -1,7 +1,7 @@
 import { sanitizeStringForFileName } from "@tagapp/utils";
 import { useMutation } from "@tanstack/react-query";
 import constate from "constate";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { FilterQueryAtom, injectFilterDataIntoURLAtom } from "@/atom";
@@ -51,19 +51,20 @@ const useServer = () => {
 
   const [selectedEntries, setSelectedEntries] = useAtom(selectionEntriesAtom);
   const setSelectionModeOn = useSetAtom(selectionOnAtom);
-  const FilterQuery = useAtomValue(FilterQueryAtom);
+  const store = useStore();
 
+  // Read at call time: the first load runs from a timeout that would otherwise see the pre-URL-init filters
   const filterData = useCallback(() => {
     injectFilterDataIntoURL();
     setSelectedEntries([]);
     setSelectionModeOn(false);
-    getFilteredDataMutation.mutate(FilterQuery);
-  }, [FilterQuery]);
+    getFilteredDataMutation.mutate(store.get(FilterQueryAtom));
+  }, [store]);
 
   const syncContentsModified = useMutation(
     orpc.main.sync.mutationOptions({
       onSuccess: () => {
-        getFilteredDataMutation.mutate(FilterQuery);
+        getFilteredDataMutation.mutate(store.get(FilterQueryAtom));
       },
     }),
   );
@@ -123,18 +124,18 @@ const useServer = () => {
           if (!unSyncedTags.length) return old;
           return [...old, ...unSyncedTags];
         });
+        // New objects, not in-place edits: memo'd cards skip re-render on an identical reference
         setFiltered((oldFiltered) =>
           oldFiltered.map((content) => {
             if (!res.ids.includes(content.id)) return content;
-            for (const tag of res.removed) {
-              content.tags = content.tags.filter((val) => val !== tag);
-              content.lastUpdated = Math.floor(Date.now() / 1000);
-            }
-            for (const tag of res.added) {
-              if (content.tags.includes(tag)) continue;
-              content.tags.push(tag);
-            }
-            return content;
+            const tags = content.tags.filter((t) => !res.removed.includes(t));
+            for (const tag of res.added)
+              if (!tags.includes(tag)) tags.push(tag);
+            return {
+              ...content,
+              tags,
+              lastUpdated: Math.floor(Date.now() / 1000),
+            };
           }),
         );
         setBulkUpdateModalOpen(false);
@@ -170,6 +171,7 @@ const useServer = () => {
     orpc.main.removeContents.mutationOptions({
       onSuccess: (res) => {
         setFiltered((old) => old.filter((doc) => !res.includes(doc.id)));
+        setSelectedEntries((old) => old.filter((id) => !res.includes(id)));
       },
       onError: () => {
         toast.error("delete contents failed, check console for error");

@@ -24,10 +24,10 @@ export const toggleSelectionModeAtom = atom(null, (get, set) => {
   set(selectionOnAtom, !on);
 });
 
-export const selectAllAtom = atom(null, (get, set, filtered: string[]) => {
+export const selectAllAtom = atom(null, (_get, set, filtered: string[]) => {
   set(selectionEntriesAtom, filtered);
 });
 
-export const unSelectAllAtom = atom(null, (get, set) => {
+export const unSelectAllAtom = atom(null, (_get, set) => {
   set(selectionEntriesAtom, []);
 });

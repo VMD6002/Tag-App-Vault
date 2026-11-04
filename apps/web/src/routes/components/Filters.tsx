@@ -94,7 +94,7 @@ export default function Filters() {
 
   const tagsForMultiSelectComponent = useMemo(
     () =>
-      serverTags.sort().map((o: string) => ({
+      [...serverTags].sort().map((o: string) => ({
         label: o,
         value: o,
       })),
