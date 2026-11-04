@@ -1,4 +1,4 @@
-import { readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import {
   ContentJsonSchema,
   type ContentJsonType,
@@ -13,10 +13,13 @@ import { firstImage, getGalleryThumb } from "../lib/getGalleryThumb.js";
 
 export interface NewContentType extends ContentJsonType {
   type: CType;
-  ext: string[];
+  /** `[coverExt, fileExt, "vtt"?]` for img/video, `[thumb]` otherwise. */
+  ext: (string | undefined)[];
+  /** Current name on disk; differs from `<title>.<id>` until prepareSync renames it. */
+  name: string;
 }
 
-const SYNC = "./Sync";
+export const SYNC = "./Sync";
 const CAPTIONS_TAG = "meta:caption";
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
@@ -33,11 +36,12 @@ const folderThumbs = new Map<
   ["audio", (dir) => firstImage(`${dir}/.audio-covers`)],
 ]);
 
-/**
- * Names (inside ./Sync) of every file/folder that belongs to one content item.
- * `ext` is `[coverExt, fileExt, "vtt"?]` for img/video, `[thumb]` otherwise.
- */
-const filesOf = (name: string, type: CType, [cover, ext, caption]: any[]) =>
+/** Names (inside ./Sync) of every file/folder that belongs to one content item. */
+export const filesOf = (
+  name: string,
+  type: CType,
+  [cover, ext, caption]: NewContentType["ext"],
+) =>
   type === "img" || type === "video"
     ? [
         `cover.${name}.${cover}`,
@@ -46,9 +50,9 @@ const filesOf = (name: string, type: CType, [cover, ext, caption]: any[]) =>
       ]
     : [`${name}.${type}`];
 
-async function readContentJSON(name: string) {
+async function readContentJSON(name: string, source: unknown) {
   const parsed = ContentJsonSchema.safeParse(
-    await readJSON(`${SYNC}/${name}.json`),
+    source ?? (await readJSON(`${SYNC}/${name}.json`)),
   );
   if (!parsed.success) {
     console.error(
@@ -75,22 +79,12 @@ async function generateContentJSON(
   };
 }
 
-/** Splits every `tdata.*.json` into one `<title>.<id>.json` per item, then removes it. */
-async function splitTData(jsons: Set<string>) {
-  for (const file of [...jsons].filter((f) => f.startsWith("tdata."))) {
-    const items: ContentWebType[] = await readJSON(`${SYNC}/${file}`);
-    await Promise.all(
-      Object.values(items).map(async (item) => {
-        const name = `${item.title}.${item.id}.json`;
-        await writeFile(`${SYNC}/${name}`, JSON.stringify(item));
-        jsons.add(name);
-      }),
-    );
-    await rm(`${SYNC}/${file}`);
-    jsons.delete(file);
-  }
-}
-
+/**
+ * Read-only scan of ./Sync. All writes live in prepareSync, so generated ids exist
+ * only in the returned data until then.
+ *
+ * `unsyncable` lists the entries prepareSync moves out.
+ */
 export async function getSyncData() {
   const entries = await readdir(SYNC, { withFileTypes: true });
   const names = entries.filter((e) => !e.isDirectory()).map((e) => e.name);
@@ -101,7 +95,15 @@ export async function getSyncData() {
   const files = new Set(names.filter((f) => !jsons.has(f)));
   const contents: Record<string, NewContentType> = {};
 
-  await splitTData(jsons);
+  // Bundles are split by prepareSync; read them here so a preview sees their metadata.
+  const bundled = new Map<string, ContentWebType>();
+  for (const file of jsons) {
+    if (!file.startsWith("tdata.")) continue;
+    const items: ContentWebType[] = await readJSON(`${SYNC}/${file}`);
+    for (const item of Object.values(items)) {
+      bundled.set(`${item.title}.${item.id}`, item);
+    }
+  }
 
   // cover.<name>.<ext> -> <name> => ext. Sorted so duplicates resolve the same way every run.
   const covers = new Map<string, string>();
@@ -118,45 +120,33 @@ export async function getSyncData() {
   }
 
   /**
-   * Loads (or generates) the metadata of one item, makes sure its files are
-   * named `<title>.<id>.*` and records it. Everything it consumed is removed
-   * from `files`/`folders`; whatever is left at the end is unsyncable.
+   * Loads (or generates) the metadata of one item and records it. Everything it
+   * consumed is removed from `files`/`folders`; whatever is left at the end is
+   * unsyncable.
    */
   const register = async (
     name: string,
     type: CType,
-    ext: any[],
+    ext: NewContentType["ext"],
     timePath: string,
   ) => {
-    const hasJson = jsons.has(`${name}.json`);
-    const loaded = hasJson
-      ? await readContentJSON(name)
-      : await generateContentJSON(name, timePath);
+    const source = bundled.get(name);
+    const loaded =
+      source || jsons.has(`${name}.json`)
+        ? await readContentJSON(name, source)
+        : await generateContentJSON(name, timePath);
     if (!loaded) return;
 
     // The caption tag always mirrors whether a caption file actually exists
     const tags = new Set(loaded.tags.map((t) => t.trim()).filter(Boolean));
     tags.delete(CAPTIONS_TAG);
     if (ext[2]) tags.add(CAPTIONS_TAG);
-    const data = { ...loaded, tags: [...tags] };
-
-    const newName = `${data.title}.${data.id}`;
-    if (newName !== name) {
-      // Embed the id in every file (cover, media, caption) and in the JSON
-      const from = filesOf(name, type, ext);
-      const to = filesOf(newName, type, ext);
-      await Promise.all(
-        from.map((f, i) => rename(`${SYNC}/${f}`, `${SYNC}/${to[i]}`)),
-      );
-      await writeFile(`${SYNC}/${newName}.json`, JSON.stringify(data));
-      if (hasJson) await rm(`${SYNC}/${name}.json`);
-    }
 
     for (const f of filesOf(name, type, ext)) {
       files.delete(f);
       folders.delete(f);
     }
-    contents[data.id] = { ...data, type, ext };
+    contents[loaded.id] = { ...loaded, tags: [...tags], type, ext, name };
   };
 
   const mediaTasks = [...files]
@@ -170,7 +160,7 @@ export async function getSyncData() {
         console.log(`[Sync Failed] No thumbnail found for ${name}`);
         return;
       }
-      const ext = [coverExt, fileExt];
+      const ext: NewContentType["ext"] = [coverExt, fileExt];
       if (type === "video" && files.has(`caption.${name}.vtt`)) ext.push("vtt");
       await register(name, type, ext, `${SYNC}/${file}`);
     });
@@ -194,14 +184,5 @@ export async function getSyncData() {
     }
   }
 
-  // Anything not consumed above can't be synced
-  await Promise.all(
-    [...files, ...folders].map((name) =>
-      rename(`${SYNC}/${name}`, `./UnSyncable/${name}`).catch((error) =>
-        console.error(`[Sync Failed] Could not move ${name}:`, error),
-      ),
-    ),
-  );
-
-  return contents;
+  return { contents, unsyncable: [...files, ...folders] };
 }
