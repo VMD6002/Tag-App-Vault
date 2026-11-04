@@ -107,6 +107,7 @@ Server port and UI prefix come only from `settings.json` (defaults `5001` and `/
 
 ## Conventions
 
+- Solo project: commit directly on `main`; no feature branches or PRs. Prefer several small commits over one large one.
 - Biome: 2-space indent, double quotes; fix lint before committing. TypeScript, ESM, Zod for all boundary validation.
 - **File operations are transactional by convention**: multi-file moves track completed steps and roll back on error (see `syncContent`, `setDoc`, `deleteData`). Keep this when editing them.
 - **Deletes are two-phase**: rename to `*.del`, then remove; rollback on failure. DB is written only after fs success.
