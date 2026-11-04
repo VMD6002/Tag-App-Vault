@@ -1,7 +1,7 @@
 import { readdir, rm } from "node:fs/promises";
 import { ORPCError, os } from "@orpc/server";
-import { pathExists } from "fs-extra";
 import z from "zod";
+import { pathExists } from "../lib/fsBaseNameFunctions";
 
 const audioExistsCheck = async (name: string, id: string) => {
   if (!(await pathExists(`./media/Audios/${name}.${id}`))) {

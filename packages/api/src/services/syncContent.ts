@@ -1,4 +1,4 @@
-import { rename, rm } from "node:fs/promises";
+import { rename } from "node:fs/promises";
 import { CTypeDir } from "@tagapp/utils";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
@@ -46,9 +46,11 @@ export const syncContent = () =>
         await Promise.all([contentDataDB.write(), tagDB.write()]);
 
         // The sidecar goes last: it is the only copy of the metadata until the DB is on disk.
-        await rm(`./Sync/${name}.json`).catch((error) =>
-          console.error(`Could not remove sidecar of ${id}:`, error),
-        );
+        await Bun.file(`./Sync/${name}.json`)
+          .delete()
+          .catch((error) =>
+            console.error(`Could not remove sidecar of ${id}:`, error),
+          );
       } catch (error) {
         console.error(`Error processing content ${id}:`, error);
 

@@ -1,11 +1,10 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import {
   ContentJsonSchema,
   type ContentJsonType,
   type ContentWebType,
   type CType,
 } from "@tagapp/utils/types";
-import { readJSON } from "fs-extra/esm";
 import { customAlphabet } from "nanoid";
 import z from "zod";
 import { contentDataDB } from "../db/contentData.js";
@@ -53,7 +52,7 @@ export const filesOf = (
 
 async function readContentJSON(name: string, source: unknown) {
   const parsed = ContentJsonSchema.safeParse(
-    source ?? (await readJSON(`${SYNC}/${name}.json`)),
+    source ?? (await Bun.file(`${SYNC}/${name}.json`).json()),
   );
   if (!parsed.success) {
     console.error(
@@ -69,7 +68,7 @@ async function generateContentJSON(
   title: string,
   timePath: string,
 ): Promise<ContentJsonType> {
-  const time = Math.floor((await stat(timePath)).mtimeMs / 1000);
+  const time = Math.floor((await Bun.file(timePath).stat()).mtimeMs / 1000);
   return {
     id: `gen_${nanoid()}`,
     title,
@@ -104,7 +103,7 @@ export async function getSyncData() {
   for (const file of jsons) {
     if (!file.startsWith("tdata.")) continue;
     usedJsons.add(file);
-    const items: ContentWebType[] = await readJSON(`${SYNC}/${file}`);
+    const items: ContentWebType[] = await Bun.file(`${SYNC}/${file}`).json();
     for (const item of Object.values(items)) {
       bundled.set(`${item.title}.${item.id}`, item);
     }

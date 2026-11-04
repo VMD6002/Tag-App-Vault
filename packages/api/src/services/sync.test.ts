@@ -1,11 +1,5 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -189,7 +183,7 @@ test("B12: an orphan JSON is reported and left alone", async () => {
   const { orphanJsons } = await getSyncData();
   expect(orphanJsons).toEqual(["lost.1.json"]);
   await syncContent();
-  expect(existsSync("Sync/lost.1.json")).toBe(true);
+  expect(await Bun.file("Sync/lost.1.json").exists()).toBe(true);
 });
 
 test("B11: a video with no cover can be renamed and deleted", async () => {

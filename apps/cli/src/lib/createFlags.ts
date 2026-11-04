@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import type { ContentWebType } from "@tagapp/utils/types";
 import { fileBase, TMP_DIR } from "./constants";
 import { downloadContent } from "./downloadContent";
@@ -30,7 +29,7 @@ export async function createFlag(item: ContentWebType): Promise<string[]> {
       ?.slice("Site:".length);
     if (!site) throw new Error("No site tag found for cookies");
     const cookies = `./cookies/${site}.txt`;
-    if (!existsSync(cookies))
+    if (!(await Bun.file(cookies).exists()))
       throw new Error(`No cookies file found for site ${site}`);
     flags.push("--cookies", cookies);
   }

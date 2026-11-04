@@ -1,4 +1,4 @@
-import { readdir, rm, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import getCtype from "./getCtype";
 
 export interface entry {
@@ -35,9 +35,9 @@ export const generateGalleryData = async (galleryNameWithID: string) => {
         modifiedAt: 0,
       };
 
-      const entryStats = await stat(
+      const entryStats = await Bun.file(
         `./media/Galleries/${galleryNameWithID}/${file}`,
-      );
+      ).stat();
 
       const oldestDate = Math.min(
         entryStats.birthtimeMs > 0 ? entryStats.birthtimeMs : Infinity,
@@ -62,7 +62,9 @@ export const generateGalleryData = async (galleryNameWithID: string) => {
 
   await Promise.all(
     galleryCovers.map((cover) =>
-      rm(`./media/Galleries/${galleryNameWithID}/.gallery-covers/${cover}`),
+      Bun.file(
+        `./media/Galleries/${galleryNameWithID}/.gallery-covers/${cover}`,
+      ).delete(),
     ),
   );
 

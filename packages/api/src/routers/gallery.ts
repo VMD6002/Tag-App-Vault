@@ -1,9 +1,8 @@
-import { mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { ORPCError, os } from "@orpc/server";
-import { pathExists, readJSON, writeJSON } from "fs-extra";
 import z from "zod";
-import { rmByBasename } from "../lib/fsBaseNameFunctions";
+import { pathExists, rmByBasename } from "../lib/fsBaseNameFunctions";
 import { generateGalleryData } from "../lib/generateGalleryData";
 
 const galleryExistsCheck = async (name: string, id: string) => {
@@ -19,7 +18,8 @@ const attachTagsToGalleryData = async (galleryPath: string, items: any[]) => {
   const tagsFilePath = `${galleryPath}/.tags.json`;
   if (await pathExists(tagsFilePath)) {
     try {
-      const tagsData: Record<string, string[]> = await readJSON(tagsFilePath);
+      const tagsData: Record<string, string[]> =
+        await Bun.file(tagsFilePath).json();
       return items.map((item) => ({
         ...item,
         tags: tagsData[item.name] || item.tags || [],
@@ -46,12 +46,15 @@ export const getGalleryData = os
     await galleryExistsCheck(name, id);
 
     try {
-      const data = await readJSON(`${galleryPath}/.gallery-data.json`);
+      const data = await Bun.file(`${galleryPath}/.gallery-data.json`).json();
       return await attachTagsToGalleryData(galleryPath, data);
     } catch {
       const data = await generateGalleryData(`${name}.${id}`);
       const enrichedData = await attachTagsToGalleryData(galleryPath, data);
-      await writeJSON(`${galleryPath}/.gallery-data.json`, enrichedData);
+      await Bun.write(
+        `${galleryPath}/.gallery-data.json`,
+        JSON.stringify(enrichedData),
+      );
       return enrichedData;
     }
   });
@@ -72,7 +75,10 @@ export const refreshGalleryData = os
 
     const data = await generateGalleryData(`${name}.${id}`);
     const enrichedData = await attachTagsToGalleryData(galleryPath, data);
-    await writeJSON(`${galleryPath}/.gallery-data.json`, enrichedData);
+    await Bun.write(
+      `${galleryPath}/.gallery-data.json`,
+      JSON.stringify(enrichedData),
+    );
     return enrichedData;
   });
 
@@ -110,7 +116,10 @@ export const removeGalleryContents = os
       galleryPath,
       newGalleryData,
     );
-    await writeJSON(`${galleryPath}/.gallery-data.json`, enrichedData);
+    await Bun.write(
+      `${galleryPath}/.gallery-data.json`,
+      JSON.stringify(enrichedData),
+    );
 
     return enrichedData;
   });
@@ -127,16 +136,15 @@ export const setCoverGivenFile = os
   .handler(async ({ input }) => {
     const { id, name, content, file } = input;
     const galleryPath = `./media/Galleries/${name}.${id}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
 
     try {
       await rmByBasename(`${galleryPath}/.gallery-covers`, `cover.${content}`);
     } catch {}
 
     await mkdir(`${galleryPath}/.gallery-covers`, { recursive: true });
-    await writeFile(
+    await Bun.write(
       `${galleryPath}/.gallery-covers/cover.${content}.${file.type.split("/")[1]}`,
-      buffer,
+      file,
     );
 
     const newGalleryData = await generateGalleryData(`${name}.${id}`);
@@ -144,7 +152,10 @@ export const setCoverGivenFile = os
       galleryPath,
       newGalleryData,
     );
-    await writeJSON(`${galleryPath}/.gallery-data.json`, enrichedData);
+    await Bun.write(
+      `${galleryPath}/.gallery-data.json`,
+      JSON.stringify(enrichedData),
+    );
     return enrichedData;
   });
 
@@ -173,19 +184,19 @@ export const updateContentTags = os
     let tagsData: Record<string, string[]> = {};
     if (await pathExists(tagsFilePath)) {
       try {
-        tagsData = await readJSON(tagsFilePath);
+        tagsData = await Bun.file(tagsFilePath).json();
       } catch {
         tagsData = {};
       }
     }
     tagsData[content] = tags;
-    await writeJSON(tagsFilePath, tagsData, { spaces: 2 });
+    await Bun.write(tagsFilePath, JSON.stringify(tagsData, null, 2));
 
     const galleryDataPath = `${galleryPath}/.gallery-data.json`;
     let galleryData = [];
     if (await pathExists(galleryDataPath)) {
       try {
-        galleryData = await readJSON(galleryDataPath);
+        galleryData = await Bun.file(galleryDataPath).json();
       } catch {
         galleryData = await generateGalleryData(`${name}.${id}`);
       }
@@ -199,7 +210,7 @@ export const updateContentTags = os
         item.name === content ? tags : tagsData[item.name] || item.tags || [],
     }));
 
-    await writeJSON(galleryDataPath, updatedData, { spaces: 2 });
+    await Bun.write(galleryDataPath, JSON.stringify(updatedData, null, 2));
     return updatedData;
   });
 
@@ -283,11 +294,11 @@ export const renameGalleryContent = os
       if (await pathExists(tagsFilePath)) {
         try {
           const tagsData: Record<string, string[]> =
-            await readJSON(tagsFilePath);
+            await Bun.file(tagsFilePath).json();
           if (tagsData[oldContentName]) {
             tagsData[newContentName] = tagsData[oldContentName];
             delete tagsData[oldContentName];
-            await writeJSON(tagsFilePath, tagsData, { spaces: 2 });
+            await Bun.write(tagsFilePath, JSON.stringify(tagsData, null, 2));
           }
         } catch {}
       }
@@ -299,7 +310,10 @@ export const renameGalleryContent = os
       galleryPath,
       newGalleryData,
     );
-    await writeJSON(`${galleryPath}/.gallery-data.json`, enrichedData);
+    await Bun.write(
+      `${galleryPath}/.gallery-data.json`,
+      JSON.stringify(enrichedData),
+    );
 
     return { galleryData: enrichedData, newName: newContentName };
   });

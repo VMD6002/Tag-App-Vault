@@ -5,8 +5,6 @@
     "@orpc/server": "^1.16.0",
     "@orpc/zod": "^1.16.0",
     "@tagapp/utils": "workspace:*",
-    "@types/fs-extra": "^11.0.4",
-    "fs-extra": "^11.4.1",
     "fuse.js": "^7.5.0",
     "lowdb": "^7.0.1",
     "nanoid": "^5.1.16",

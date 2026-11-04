@@ -103,7 +103,7 @@ bun test packages/api  # sync tests (scratch dir, needs Bun >= 1.4.2 for Bun.Ima
 bun build:serverFull  # → apps/server/dist: index.js, WebUI/, Download/index.js (CLI), Caddyfile
 ```
 
-Server port and UI prefix come only from `settings.json` (defaults `5001` and `/`); there are no CLI flags, so edit the file and restart. Run server on `:5001` behind Caddy on `:5000`. CLI runs from `dist/Download` (its `../Sync` and `tmp.json` resolve relative to that).
+Server port and UI prefix come only from `settings.json` (defaults `5001` and `/`); there are no CLI flags, so edit the file and restart. Run server on `:5001` behind Caddy on `:5000`. CLI runs from `dist/Download` with `bun index.js` (its `../Sync` and `tmp.json` resolve relative to that).
 
 ## Conventions
 
@@ -112,6 +112,7 @@ Server port and UI prefix come only from `settings.json` (defaults `5001` and `/
 - **Deletes are two-phase**: rename to `*.del`, then remove; rollback on failure. DB is written only after fs success.
 - Always update tag counts when changing an item's tags or removing an item.
 - Server fs paths are cwd-relative (`./media`, `./DB`, `./Sync`).
+- Server and CLI run on Bun only. Prefer Bun APIs (`Bun.file`, `Bun.write`); use `node:fs` only for what Bun lacks: directories, `rename`, recursive or forced `rm`, and sync calls.
 
 ## Gotchas
 

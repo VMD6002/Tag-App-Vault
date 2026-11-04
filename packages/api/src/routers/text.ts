@@ -1,7 +1,7 @@
-import { rm, writeFile } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { ORPCError, os } from "@orpc/server";
-import { pathExists, readJSON, writeJSON } from "fs-extra";
 import z from "zod";
+import { pathExists } from "../lib/fsBaseNameFunctions";
 import { generateTxtData } from "../lib/generateTextData";
 
 const txtExistsCheck = async (name: string, id: string) => {
@@ -26,13 +26,16 @@ export const getTxtData = os
     await txtExistsCheck(name, id);
 
     try {
-      const data: Awaited<ReturnType<typeof generateTxtData>> = await readJSON(
+      const data: Awaited<ReturnType<typeof generateTxtData>> = await Bun.file(
         `./media/Texts/${name}.${id}/txt-data.json`,
-      );
+      ).json();
       return data;
     } catch {
       const data = await generateTxtData(`${name}.${id}`);
-      await writeJSON(`./media/Texts/${name}.${id}/txt-data.json`, data);
+      await Bun.write(
+        `./media/Texts/${name}.${id}/txt-data.json`,
+        JSON.stringify(data),
+      );
       return data;
     }
   });
@@ -57,7 +60,7 @@ export const setTxt = os
 
     await txtExistsCheck(name, id);
 
-    await writeFile(`./media/Texts/${name}.${id}/${txtName}`, txtContent);
+    await Bun.write(`./media/Texts/${name}.${id}/${txtName}`, txtContent);
     return input;
   });
 
@@ -75,7 +78,10 @@ export const refreshTxtData = os
     await txtExistsCheck(name, id);
 
     const data = await generateTxtData(`${name}.${id}`);
-    await writeJSON(`./media/Texts/${name}.${id}/txt-data.json`, data);
+    await Bun.write(
+      `./media/Texts/${name}.${id}/txt-data.json`,
+      JSON.stringify(data),
+    );
     return data;
   });
 

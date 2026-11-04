@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import { os } from "@orpc/server";
 import { z } from "zod";
 import { rmByBasename } from "../lib/fsBaseNameFunctions";
@@ -13,13 +12,12 @@ export const setCoverGivenFile = os
   )
   .handler(async ({ input }) => {
     const { id, name, file } = input;
-    const buffer = Buffer.from(await file.arrayBuffer());
     try {
       await rmByBasename("./media/Videos/.covers", `cover.${name}.${id}`);
     } catch (error) {}
-    await writeFile(
+    await Bun.write(
       `./media/Videos/.covers/cover.${name}.${id}.${file.type.split("/")[1]}`,
-      buffer,
+      file,
     );
     return { id, name };
   });

@@ -1,6 +1,15 @@
-import { readdir, rename, rm } from "node:fs/promises";
+import { readdir, rename } from "node:fs/promises";
 import { extname, join, parse } from "node:path";
 import { ORPCError } from "@orpc/server";
+
+/** Works for folders too, which `Bun.file(path).exists()` reports as missing. */
+export const pathExists = (path: string) =>
+  Bun.file(path)
+    .stat()
+    .then(
+      () => true,
+      () => false,
+    );
 
 export async function hasBasename(dir: string, basename: string) {
   const files = await readdir(dir);
@@ -18,7 +27,7 @@ export async function rmByBasename(dir: string, basename: string) {
   }
 
   const filePath = join(dir, foundFile);
-  await rm(filePath);
+  await Bun.file(filePath).delete();
 
   console.log(`✓ Deleted: ${filePath}`);
 }

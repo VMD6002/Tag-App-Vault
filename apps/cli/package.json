@@ -10,7 +10,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "build": "bun build src/index.tsx --outfile ../server/dist/Download/index.js --target node",
+    "build": "bun build src/index.tsx --outfile ../server/dist/Download/index.js --target bun",
     "lint": "biome lint",
     "lint:fix": "biome lint --write"
   },

@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import { RPCHandler } from "@orpc/server/fetch";
 import { router, settingsDB } from "@tagapp/api";
@@ -57,7 +56,7 @@ app.post("/downloads/set", async (c) => {
   // const res = contentWebSchema.array().safeParse(body);
   const res = contentWebSchema.array().parse(body);
 
-  await writeFile("./Download/tmp.json", JSON.stringify(res, null, 2), "utf-8");
+  await Bun.write("./Download/tmp.json", JSON.stringify(res, null, 2));
 
   return c.json(res);
 });
