@@ -264,7 +264,7 @@ Tags starting with `meta:` change behaviour rather than describing content.
 | Meta tag | Used by | Effect |
 | --- | --- | --- |
 | `meta:caption` | Sync | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten. |
-| `meta:autplay` | Web (gallery) | Enables gallery autoplay. The misspelling is the real tag name. |
+| `meta:autoplay` | Web (gallery) | Enables gallery autoplay. |
 | `meta:yt-cookie` | CLI | Download with `./cookies/<Site>.txt`. Requires a `Site:<name>` tag and that cookie file, otherwise the download fails. |
 | `meta:different-cover` | CLI | Download the cover from the item's `cover` URL (with `curl`-style download) instead of yt-dlp's thumbnail. Requires `cover` to be set. |
 

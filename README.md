@@ -33,7 +33,7 @@ Imports: `@tagapp/api` exports `router` (type + value) and `settingsDB`; `@tagap
 | Tag                    | Effect                                                                    |
 | ---------------------- | ------------------------------------------------------------------------- |
 | `meta:caption`         | A `.vtt` caption exists. Auto-maintained on sync to mirror file presence. |
-| `meta:autplay`         | Gallery autoplay (misspelling is the real value; don't "fix" it).         |
+| `meta:autoplay`        | Gallery autoplay.                                                         |
 | `meta:yt-cookie`       | CLI passes `./cookies/<Site>.txt`; requires a `Site:<name>` tag.          |
 | `meta:different-cover` | CLI downloads `item.cover` URL itself instead of yt-dlp's thumbnail.      |
 
@@ -85,7 +85,7 @@ Add an endpoint: export `os.input(zod).handler(...)` from a router file; it is a
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | New content type        | `contentTypes`/`CTypeDir` (utils), `CtypeSchema`, `getCtype`, `getSyncData`/`syncContent`/`deleteData`/`setDoc` switch statements, `createAppDirs`, Caddyfile, web route + `App.tsx` |
 | New meta tag            | Document here; handle in CLI (`createFlags.ts`) or sync/web as needed                                                                                                                |
-| Sync behaviour          | `services/getSyncData.ts`, `services/prepareSync.ts`, `services/syncContent.ts`                                                                                                                                 |
+| Sync behaviour          | `services/getSyncData.ts`, `services/prepareSync.ts`, `services/syncContent.ts`                                                                                                      |
 | Delete/rename behaviour | `services/deleteData.ts`, `services/setDoc.ts`, `lib/fsBaseNameFunctions.ts`                                                                                                         |
 | Filtering/search        | `packages/utils/src/filterData.ts`                                                                                                                                                   |
 | Download flags / yt-dlp | `apps/cli/src/lib/createFlags.ts`, `downloadContent.ts`                                                                                                                              |
