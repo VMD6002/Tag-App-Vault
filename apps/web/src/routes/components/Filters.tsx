@@ -13,11 +13,11 @@ import {
 } from "@/atom";
 import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
 import { confirm } from "@/components/craft/confirm-dialog";
+import MultiSelect from "@/components/craft/MultiSelect";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import MultipleSelector from "@/components/ui/multiple-selector";
 import { Switch } from "@/components/ui/switch";
 import { filteredAtom, serverTagsAtom } from "../atom";
 import {
@@ -129,25 +129,25 @@ export default function Filters() {
         className="mb-4"
       />
       <div className="grid md:grid-cols-2 gap-4 mb-4">
-        <MultipleSelector
+        <MultiSelect
           value={types}
           onChange={setTypes}
           options={contentTypes.map((o) => ({ label: o, value: o }))}
           placeholder={"All of these Content Types"}
         />
-        <MultipleSelector
+        <MultiSelect
           value={any}
           onChange={setAny}
           options={anyAndNoneTagsForMuliSelectComponent}
           placeholder={"Any of these tags"}
         />
-        <MultipleSelector
+        <MultiSelect
           value={none}
           onChange={setNone}
           options={anyAndNoneTagsForMuliSelectComponent}
           placeholder={"None of these tags"}
         />
-        <MultipleSelector
+        <MultiSelect
           value={all}
           onChange={setAll}
           options={tagsForMultiSelectComponent}

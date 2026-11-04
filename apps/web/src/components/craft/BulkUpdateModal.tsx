@@ -1,8 +1,8 @@
 import { atom, useAtom, useAtomValue } from "jotai";
 import { tagsAtom } from "@/atom";
+import MultiSelect from "@/components/craft/MultiSelect";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import MultipleSelector from "@/components/ui/multiple-selector";
 import { selectionTagsAtom } from "@/routes/atom.selection";
 
 export const bulkUpdateModalOpenAtom = atom(false);
@@ -33,7 +33,7 @@ export default function BlukUpdateModal({
       />
       <div className="max-w-md absolute w-full grid bg-secondary rounded shadow px-8 py-10">
         <Label className="mb-2">Tags</Label>
-        <MultipleSelector
+        <MultiSelect
           options={tags.map((o) => ({
             label: o,
             value: o,

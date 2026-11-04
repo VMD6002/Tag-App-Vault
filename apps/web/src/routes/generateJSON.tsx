@@ -5,12 +5,12 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { tagsAtom } from "@/atom";
+import MultiSelect from "@/components/craft/MultiSelect";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import MultipleSelector from "@/components/ui/multiple-selector";
 import saveJsonFile from "@/lib/saveJsonFile";
 
 const capitalLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -131,7 +131,7 @@ export default function GenerateJSONPage() {
         />
 
         <Label className="mb-2">Tags</Label>
-        <MultipleSelector
+        <MultiSelect
           options={globalTags.map((o) => ({
             label: o,
             value: o,

@@ -2,11 +2,11 @@ import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtom, useAtomValue } from "jotai";
 import { Redo2 } from "lucide-react";
 import { tagsAtom } from "@/atom";
+import MultiSelect from "@/components/craft/MultiSelect";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import MultipleSelector from "@/components/ui/multiple-selector";
 import { cn } from "@/lib/utils";
 import {
   updateContentUrlAtom,
@@ -91,7 +91,7 @@ export default function UpdateModal({
             </Button>
           )}
         </div>
-        <MultipleSelector
+        <MultiSelect
           options={tags.map((o) => ({
             label: o,
             value: o,

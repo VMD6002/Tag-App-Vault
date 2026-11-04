@@ -3,6 +3,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { type MultiSelectOption, tagsAtom } from "@/atom";
+import MultiSelect from "@/components/craft/MultiSelect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import MultipleSelector from "@/components/ui/multiple-selector";
 import { useDoc } from "../../contexts/Doc.Context";
 import { galleryDataAtom, tagModalDataAtom, tagModalOpenAtom } from "./atom";
 
@@ -41,7 +41,7 @@ export default function TagContentModal() {
   const [nameError, setNameError] = useState("");
   const [selectedTags, setSelectedTags] = useState<MultiSelectOption[]>([]);
 
-  // Format tagsAtom string array into MultipleSelector Option objects
+  // Format tagsAtom string array into MultiSelectOption objects
   const tagOptions = useMemo(() => {
     if (!globalTags) return [];
     return globalTags.map((t: string) => ({ label: t, value: t }));
@@ -162,7 +162,7 @@ export default function TagContentModal() {
           {/* Tags Selector */}
           <div className="space-y-2">
             <Label>Tags</Label>
-            <MultipleSelector
+            <MultiSelect
               value={selectedTags}
               onChange={setSelectedTags}
               options={tagOptions}
