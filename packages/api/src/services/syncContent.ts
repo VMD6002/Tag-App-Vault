@@ -1,14 +1,13 @@
 import { rename, rm } from "node:fs/promises";
 import { CTypeDir } from "@tagapp/utils";
-import { contentDataDB, type contentDataDBType } from "../db/contentData.js";
-import { IncrementTagCount, tagDB } from "../db/tags.js";
+import { contentDataDB } from "../db/contentData.js";
+import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
 import { withSyncLock } from "../lib/syncLock.js";
 import { prepareSync } from "./prepareSync.js";
 
 export const syncContent = () =>
   withSyncLock(async () => {
     const syncData = await prepareSync();
-    const synced: contentDataDBType = {};
 
     for (const { ext, name, ...data } of Object.values(syncData)) {
       const { id, type, tags } = data;
@@ -27,19 +26,33 @@ export const syncContent = () =>
       }
 
       const moved: [string, string][] = [];
+      let recorded = false;
       try {
         for (const [from, to] of moves) {
           const move: [string, string] = [`./Sync/${from}`, `${dest}/${to}`];
           await rename(...move);
           moved.push(move);
         }
-        await rm(`./Sync/${name}.json`);
 
+        contentDataDB.data = {
+          [id]: isMedia ? data : { ...data, cover: ext[0] },
+          ...contentDataDB.data,
+        };
         IncrementTagCount(tags);
-        synced[id] = isMedia ? data : { ...data, cover: ext[0] };
+        recorded = true;
+        await Promise.all([contentDataDB.write(), tagDB.write()]);
+
+        // The sidecar goes last: it is the only copy of the metadata until the DB is on disk.
+        await rm(`./Sync/${name}.json`).catch((error) =>
+          console.error(`Could not remove sidecar of ${id}:`, error),
+        );
       } catch (error) {
         console.error(`Error processing content ${id}:`, error);
 
+        if (recorded) {
+          delete contentDataDB.data[id];
+          DecrementTagCount(tags);
+        }
         for (const [src, dst] of moved.reverse()) {
           await rename(dst, src).catch((rollbackError) =>
             console.error(
@@ -49,11 +62,6 @@ export const syncContent = () =>
           );
         }
       }
-    }
-
-    if (Object.keys(synced).length) {
-      contentDataDB.data = { ...synced, ...contentDataDB.data };
-      await Promise.all([contentDataDB.write(), tagDB.write()]);
     }
 
     console.log("Data Synced");
