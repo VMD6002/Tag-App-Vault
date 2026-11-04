@@ -31,6 +31,8 @@ const queryClient = new QueryClient({
   },
 });
 
+const DOC_ROUTE = /^\/(img|video|gallery|txt|audio)\/[^/]+$/;
+
 const MESSAGE_TYPE_SEND_TAGS = "TAG_APP_INJECT_TAGS";
 const MESSAGE_TYPE_ACK_TAGS = "TAG_APP_TAGS_RECEIVED";
 
@@ -80,23 +82,26 @@ function App() {
                 <Route path="/generateContentJson">
                   <GenerateJSONPage />
                 </Route>
-                <DocProvider>
-                  <Route path="/img/:id">
-                    <ImagePage />
-                  </Route>
-                  <Route path="/video/:id">
-                    <VideoPage />
-                  </Route>
-                  <Route path="/gallery/:id">
-                    <GalleryPage />
-                  </Route>
-                  <Route path="/txt/:id">
-                    <TextPage />
-                  </Route>
-                  <Route path="/audio/:id">
-                    <AudioPage />
-                  </Route>
-                </DocProvider>
+                {/* DocProvider has no path, so it must sit inside a Route or Switch would match it for every URL and the 404 would never render */}
+                <Route path={DOC_ROUTE}>
+                  <DocProvider>
+                    <Route path="/img/:id">
+                      <ImagePage />
+                    </Route>
+                    <Route path="/video/:id">
+                      <VideoPage />
+                    </Route>
+                    <Route path="/gallery/:id">
+                      <GalleryPage />
+                    </Route>
+                    <Route path="/txt/:id">
+                      <TextPage />
+                    </Route>
+                    <Route path="/audio/:id">
+                      <AudioPage />
+                    </Route>
+                  </DocProvider>
+                </Route>
                 <Route>
                   <PageNotFound />
                 </Route>
