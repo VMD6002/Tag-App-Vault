@@ -94,7 +94,10 @@ export default function MultiSelect({
                 <CommandItem
                   key={o.value}
                   value={o.value}
-                  onSelect={() => toggle(o)}
+                  onSelect={() => {
+                    toggle(o);
+                    setQuery("");
+                  }}
                   className="justify-between"
                 >
                   {o.label}
