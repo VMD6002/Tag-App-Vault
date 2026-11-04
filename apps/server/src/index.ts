@@ -1,6 +1,5 @@
 import { writeFile } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
-import { parseArgs } from "node:util";
 import { RPCHandler } from "@orpc/server/fetch";
 import { router, settingsDB } from "@tagapp/api";
 import { Hono } from "hono";
@@ -27,40 +26,9 @@ function getLocalIP(): string {
   return "127.0.0.1";
 }
 
-// 1. Add prefix to your schema
-const schema = {
-  port: { type: "string" },
-  prefix: { type: "string" },
-} as const;
-
-const { values } = parseArgs({
-  args: process.argv.slice(2),
-  options: schema,
-  strict: true,
-});
-
-const { port, prefix } = values;
-
-// --- Port Settings Logic ---
-if (port && !settingsDB.data.port) {
-  settingsDB.data.port = Number(port);
-  settingsDB.write();
-}
-const activePort = settingsDB.data.port || 5000;
-
-// --- Prefix Settings Logic ---
-if (prefix) {
-  // Sanitize the flag input: ensure it starts with "/" and has no trailing "/"
-  let cleanPrefix = prefix.startsWith("/") ? prefix : `/${prefix}`;
-  cleanPrefix = cleanPrefix.replace(/\/$/, "");
-
-  // Update DB if the flag was provided
-  settingsDB.data.prefix = cleanPrefix;
-  settingsDB.write();
-}
-
-// Read the active prefix from the DB, fallback to "/app" if never set
-const activePrefix = settingsDB.data.prefix || "/app";
+// Port and prefix come from settings.json (edit the file to change them)
+const activePort = settingsDB.data.port;
+const activePrefix = settingsDB.data.prefix;
 
 createAppDirs();
 
