@@ -16,7 +16,7 @@ const TagGroup = ({
   tagsArray: string[];
 }) => {
   const Children = useMemo(
-    () => tagsArray.filter((k) => k.startsWith(parent)).sort(),
+    () => tagsArray.filter((k) => k.split(":")[0] === parent).sort(),
     [parent, tagsArray],
   );
   return (

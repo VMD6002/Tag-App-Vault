@@ -1,10 +1,11 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Tag, Trash } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import LazyVideo from "@/components/LazyVideo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TagParentChildList } from "../../components/DocInfoSection";
 import { useDoc } from "../../contexts/Doc.Context";
 import {
   autoPlayFamily,
@@ -18,30 +19,6 @@ import {
   contentModalDataAtom,
   contentModalOpenAtom,
 } from "./GalleryContentModal";
-
-export function TagParentChildList({ tags }: { tags: string[] }) {
-  const parentTags = useMemo(
-    () => [...new Set([...tags.map((k) => k.split(":")[0])])],
-    [tags],
-  );
-
-  return (
-    <>
-      {parentTags.sort().map((parent) => (
-        <div key={parent}>
-          {parent}:{" "}
-          <span className="text-muted-foreground">
-            {tags
-              .filter((k) => k.startsWith(parent))
-              .sort()
-              .map((e) => e.replace(`${parent}:`, "").replaceAll("_", " "))
-              .join(", ")}
-          </span>
-        </div>
-      ))}
-    </>
-  );
-}
 
 const getMediaUrl = (encodedTitle: string, contentPath: string) =>
   `/media/Galleries/${encodedTitle}/${encodeURIComponent(contentPath)}`;

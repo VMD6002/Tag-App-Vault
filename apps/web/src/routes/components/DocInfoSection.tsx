@@ -21,7 +21,7 @@ export function TagParentChildList({ tags }: { tags: string[] }) {
           {parent}:{" "}
           <span className="text-muted-foreground">
             {tags
-              .filter((k) => k.startsWith(parent))
+              .filter((k) => k.split(":")[0] === parent)
               .sort()
               .map((e) => e.replace(`${parent}:`, "").replaceAll("_", " "))
               .join(", ")}
