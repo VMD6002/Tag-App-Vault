@@ -103,12 +103,18 @@ export async function getSyncData() {
 
   await splitTData(jsons);
 
-  // cover.<name>.<ext> -> <name> => ext
+  // cover.<name>.<ext> -> <name> => ext. Sorted so duplicates resolve the same way every run.
   const covers = new Map<string, string>();
-  for (const file of files) {
+  for (const file of [...files].sort()) {
     if (!file.startsWith("cover.")) continue;
     const [type, ext, name] = getCtype(file);
-    if (type !== "invalid") covers.set(name.slice("cover.".length), ext);
+    if (type !== "img") continue;
+    const key = name.slice("cover.".length);
+    if (covers.has(key)) {
+      console.warn(`[Sync] Duplicate cover ${file} ignored for ${key}`);
+      continue;
+    }
+    covers.set(key, ext);
   }
 
   /**
