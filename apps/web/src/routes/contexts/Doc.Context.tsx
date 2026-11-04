@@ -21,6 +21,9 @@ import {
 } from "@/components/craft/UpdateModal/atom";
 import { orpc } from "@/lib/orpc";
 
+// Captured once so re-fetching a doc doesn't keep appending titles
+const baseTitle = document.title;
+
 const docPlaceholderData: ContentServerType = {
   id: "",
   title: "",
@@ -52,10 +55,7 @@ function useDocContext() {
         setExtraData(res.extraData);
         setUpdateTags(res.tags.map((tag) => ({ label: tag, value: tag })));
         setDoc(res);
-        setTimeout(
-          () => (document.title = `${document.title} - ${res.title}`),
-          100,
-        );
+        document.title = `${baseTitle} - ${res.title}`;
       },
       onError: () => {
         console.error("Couldn't get doc, check console for errors");
@@ -98,7 +98,7 @@ function useDocContext() {
   const removeContentsMutaion = useMutation(
     orpc.main.removeContents.mutationOptions({
       onSuccess: () => {
-        navigate("/server");
+        navigate("/");
       },
       onError: () => {
         toast.error("delete contents failed, check console for error");
@@ -144,6 +144,9 @@ export function Child({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     getContentMutation.mutate({ id });
   }, [id]);
+
+  if (getContentMutation.isError)
+    return <p className="text-center my-20">Couldn't load this item.</p>;
 
   if (getContentMutation.isPending || !doc.title)
     return (

@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
+import { confirm } from "@/components/craft/confirm-dialog";
 import { updateModalOpenAtom } from "@/components/craft/UpdateModal/atom";
 import { Button } from "@/components/ui/button";
 import { useDoc } from "../contexts/Doc.Context";
@@ -48,7 +49,11 @@ export default function DocInfoSection() {
           <Button
             className="w-1/2 rounded-l-none text-red-500 bg-red-600/10! dark:bg-red-950/20!"
             variant="outline"
-            onClick={removeContent}
+            onClick={() =>
+              confirm.destructive("Confirm Deletion?").then((ok) => {
+                if (ok) removeContent();
+              })
+            }
           >
             Remove
           </Button>
