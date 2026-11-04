@@ -86,7 +86,7 @@ async function generateContentJSON(
  *
  * Items whose id is already in the library, or repeats one found earlier in this
  * scan, are logged and left in ./Sync. `unsyncable` lists the entries prepareSync
- * moves out.
+ * moves out; `orphanJsons` lists sidecars no item used, which stay where they are.
  */
 export async function getSyncData() {
   const entries = await readdir(SYNC, { withFileTypes: true });
@@ -97,11 +97,13 @@ export async function getSyncData() {
   const jsons = new Set(names.filter((f) => f.endsWith(".json")));
   const files = new Set(names.filter((f) => !jsons.has(f)));
   const contents: Record<string, NewContentType> = {};
+  const usedJsons = new Set<string>();
 
   // Bundles are split by prepareSync; read them here so a preview sees their metadata.
   const bundled = new Map<string, ContentWebType>();
   for (const file of jsons) {
     if (!file.startsWith("tdata.")) continue;
+    usedJsons.add(file);
     const items: ContentWebType[] = await readJSON(`${SYNC}/${file}`);
     for (const item of Object.values(items)) {
       bundled.set(`${item.title}.${item.id}`, item);
@@ -139,6 +141,7 @@ export async function getSyncData() {
         ? await readContentJSON(name, source)
         : await generateContentJSON(name, timePath);
     if (!loaded) return;
+    usedJsons.add(`${name}.json`);
 
     const consume = () => {
       for (const f of filesOf(name, type, ext)) {
@@ -199,5 +202,10 @@ export async function getSyncData() {
     }
   }
 
-  return { contents, unsyncable: [...files, ...folders] };
+  const orphanJsons = [...jsons].filter((json) => !usedJsons.has(json));
+  for (const json of orphanJsons) {
+    console.warn(`[Sync] ${json} has no matching item, leaving it in Sync`);
+  }
+
+  return { contents, unsyncable: [...files, ...folders], orphanJsons };
 }
