@@ -75,7 +75,7 @@ export default function TextPage() {
     : null;
 
   const getTxtQuery = useQuery({
-    queryKey: [current, "Text"],
+    queryKey: ["Text", doc.id, current],
     queryFn: () => fetchTxt(`/media/Texts/${encodedTitle}`, current),
   });
 
