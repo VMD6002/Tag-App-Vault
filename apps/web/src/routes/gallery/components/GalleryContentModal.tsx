@@ -85,7 +85,7 @@ export default function GaleryContentModal() {
       toast.success("Video cover and gallery cover set successfully");
     } catch (err) {
       console.error(err);
-      toast.success("Failed to set video and gallery cover");
+      toast.error("Failed to set video and gallery cover");
     }
   }, [
     captureFrame,

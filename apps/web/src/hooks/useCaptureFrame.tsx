@@ -17,6 +17,7 @@ export const useCaptureFrame = (
         video.videoWidth === 0 ||
         video.videoHeight === 0
       ) {
+        toast.warning("Pause the video on the frame you want first");
         return Promise.resolve(null);
       }
 
