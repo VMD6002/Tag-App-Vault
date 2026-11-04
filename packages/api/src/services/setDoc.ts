@@ -3,7 +3,7 @@ import { ORPCError } from "@orpc/server";
 import { CTypeDir, eqSet, SetDifferenceES6 } from "@tagapp/utils";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
-import { renameByBasename } from "../lib/fsBaseNameFunctions.js";
+import { hasBasename, renameByBasename } from "../lib/fsBaseNameFunctions.js";
 import type { DocType } from "../routers/main.js";
 
 export async function setDoc(input: DocType) {
@@ -27,12 +27,17 @@ export async function setDoc(input: DocType) {
             oldPath: `${OldData.title}.${OldData.id}`,
             newPath: `${NewData.title}.${OldData.id}`,
           },
-          {
-            baseDir: `./media/${CTypeDir[OldData.type]}/.covers`,
-            oldPath: `cover.${OldData.title}.${OldData.id}`,
-            newPath: `cover.${NewData.title}.${OldData.id}`,
-          },
         ];
+
+        // Videos may have no cover
+        const coversDir = `./media/${CTypeDir[OldData.type]}/.covers`;
+        const oldCover = `cover.${OldData.title}.${OldData.id}`;
+        if (await hasBasename(coversDir, oldCover))
+          mvOperationData.push({
+            baseDir: coversDir,
+            oldPath: oldCover,
+            newPath: `cover.${NewData.title}.${OldData.id}`,
+          });
 
         if (OldData.type === "video" && OldData.tags.includes("meta:caption"))
           mvOperationData.push({

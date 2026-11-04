@@ -23,8 +23,9 @@ async function splitTData() {
 }
 
 /**
- * The writing half of a scan: splits bundles, writes missing or outdated
- * sidecars, renames items to `<title>.<id>` and moves leftovers to ./UnSyncable. Returns the items that are ready to sync.
+ * The writing half of a scan: splits bundles, generates missing image covers,
+ * writes missing or outdated sidecars, renames items to `<title>.<id>` and moves
+ * leftovers to ./UnSyncable. Returns the items that are ready to sync.
  */
 export async function prepareSync() {
   await splitTData();
@@ -34,6 +35,14 @@ export async function prepareSync() {
     const { name: oldName, type, ext, ...rest } = item;
     const newName = `${item.title}.${item.id}`;
     try {
+      if (type === "img" && !ext[0]) {
+        await new Bun.Image(`${SYNC}/${oldName}.${ext[1]}`)
+          .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .write(`${SYNC}/cover.${oldName}.webp`);
+        ext[0] = "webp";
+      }
+
       if (newName !== oldName) {
         // Embed the id in every file (cover, media, caption) and in the JSON
         const from = filesOf(oldName, type, ext);

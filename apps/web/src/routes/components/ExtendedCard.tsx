@@ -9,7 +9,7 @@ import {
   ScrollText,
   SquarePlay,
 } from "lucide-react";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { tagsAtom } from "@/atom";
 import { confirm } from "@/components/craft/confirm-dialog";
 import {
@@ -93,7 +93,10 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
     [isSelected, Content.id],
   );
 
-  const coverUrl = useMemo(() => getCoverUrl(Content), [Content]);
+  // Videos may have no cover file, and only the request can tell (the DB doesn't record it)
+  const [failedCoverUrl, setFailedCoverUrl] = useState<string | null>(null);
+  const fullCoverUrl = useMemo(() => getCoverUrl(Content), [Content]);
+  const coverUrl = fullCoverUrl !== failedCoverUrl ? fullCoverUrl : null;
 
   return (
     <div
@@ -111,6 +114,7 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
               loading="lazy"
               className="object-contain m-auto max-h-[max(8.25rem,55vh)] w-full min-h-33"
               src={`/${coverUrl}`}
+              onError={() => setFailedCoverUrl(coverUrl)}
             />
           </div>
           <div className="relative h-5">{contentTypeColor[Content.type]}</div>

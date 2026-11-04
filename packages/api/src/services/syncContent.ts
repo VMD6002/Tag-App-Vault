@@ -16,11 +16,14 @@ export const syncContent = () =>
 
       // [path inside ./Sync, path inside the media dir]
       const moves: [string, string][] = isMedia
-        ? [
-            [`cover.${name}.${ext[0]}`, `.covers/cover.${name}.${ext[0]}`],
-            [`${name}.${ext[1]}`, `${name}.${ext[1]}`],
-          ]
+        ? [[`${name}.${ext[1]}`, `${name}.${ext[1]}`]]
         : [[`${name}.${type}`, name]];
+      if (ext[0] && isMedia) {
+        moves.push([
+          `cover.${name}.${ext[0]}`,
+          `.covers/cover.${name}.${ext[0]}`,
+        ]);
+      }
       if (ext[2]) {
         moves.push([`caption.${name}.vtt`, `.captions/caption.${name}.vtt`]);
       }

@@ -4,7 +4,11 @@ import { CTypeDir } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, tagDB } from "../db/tags.js";
-import { renameByBasename, rmByBasename } from "../lib/fsBaseNameFunctions.js";
+import {
+  hasBasename,
+  renameByBasename,
+  rmByBasename,
+} from "../lib/fsBaseNameFunctions.js";
 
 export async function deleteData(IdList: string[]) {
   const Deleted: ContentServerType[] = [];
@@ -48,11 +52,18 @@ export async function deleteData(IdList: string[]) {
       switch (ContentDeleted.type) {
         case "img":
         case "video":
-          await safeRenameBasename(
-            `./media/${CTypeDir[ContentDeleted.type]}/.covers`,
-            `cover.${ContentDeleted.title}.${ContentDeleted.id}`,
-            `cover.${ContentDeleted.title}.${ContentDeleted.id}.del`,
-          );
+          // Videos may have no cover
+          if (
+            await hasBasename(
+              `./media/${CTypeDir[ContentDeleted.type]}/.covers`,
+              `cover.${ContentDeleted.title}.${ContentDeleted.id}`,
+            )
+          )
+            await safeRenameBasename(
+              `./media/${CTypeDir[ContentDeleted.type]}/.covers`,
+              `cover.${ContentDeleted.title}.${ContentDeleted.id}`,
+              `cover.${ContentDeleted.title}.${ContentDeleted.id}.del`,
+            );
           await safeRenameBasename(
             `./media/${CTypeDir[ContentDeleted.type]}`,
             `${ContentDeleted.title}.${ContentDeleted.id}`,

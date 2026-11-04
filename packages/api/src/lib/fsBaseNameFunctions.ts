@@ -2,6 +2,11 @@ import { readdir, rename, rm } from "node:fs/promises";
 import { extname, join, parse } from "node:path";
 import { ORPCError } from "@orpc/server";
 
+export async function hasBasename(dir: string, basename: string) {
+  const files = await readdir(dir);
+  return files.some((file) => parse(file).name === basename);
+}
+
 export async function rmByBasename(dir: string, basename: string) {
   const files = await readdir(dir);
   const foundFile = files.find((file) => parse(file).name === basename);
