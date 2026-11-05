@@ -29,17 +29,19 @@ export default function NavBarLinks() {
             className={"hidden sm:block"}
           >
             <NavigationMenuLink
-              asChild
               className={navigationMenuTriggerStyle()}
+              render={
+                <Link
+                  className={
+                    currentUrl === link.Path
+                      ? "underline underline-offset-2"
+                      : ""
+                  }
+                  href={link.Path}
+                />
+              }
             >
-              <Link
-                className={
-                  currentUrl === link.Path ? "underline underline-offset-2" : ""
-                }
-                href={link.Path}
-              >
-                {link.Name}
-              </Link>
+              {link.Name}
             </NavigationMenuLink>
           </NavigationMenuItem>
         ))}
@@ -54,18 +56,18 @@ export default function NavBarLinks() {
                 {Links.map((link) => (
                   <NavigationMenuLink
                     key={`Mobile-Nav-Link-${link.Name}`}
-                    asChild
+                    render={
+                      <Link
+                        className={`whitespace-nowrap ${
+                          currentUrl === link.Path
+                            ? "underline underline-offset-2"
+                            : ""
+                        }`}
+                        href={link.Path}
+                      />
+                    }
                   >
-                    <Link
-                      className={`whitespace-nowrap ${
-                        currentUrl === link.Path
-                          ? "underline underline-offset-2"
-                          : ""
-                      }`}
-                      href={link.Path}
-                    >
-                      {link.Name}
-                    </Link>
+                    {link.Name}
                   </NavigationMenuLink>
                 ))}
               </li>

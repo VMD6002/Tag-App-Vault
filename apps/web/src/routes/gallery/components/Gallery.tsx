@@ -108,7 +108,7 @@ export default function Gallery() {
           <Slider
             className="w-[calc(100%-2rem)] m-auto"
             value={[Number(galleryListWidth)]}
-            onValueChange={(o) => setGalleryListWidth(o[0])}
+            onValueChange={(o) => setGalleryListWidth([o].flat()[0])}
             max={100}
             step={1}
           />
