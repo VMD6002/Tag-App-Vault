@@ -42,9 +42,10 @@ export default function MultiSelect({
         <Popover
           open={open}
           onOpenChange={(next, details) => {
-            // Clicks/focus on the input row must not close the list.
+            // Clicks/focus on the input row must not close the list (Escape still does).
             if (
               !next &&
+              details.reason !== "escape-key" &&
               anchor.current?.contains(
                 (details.reason === "focus-out"
                   ? (details.event as FocusEvent).relatedTarget

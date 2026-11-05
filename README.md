@@ -6,7 +6,7 @@ Self-hosted, tag-based media library (server-side port of TagApp 5.0). Content i
 
 ## Stack
 
-Bun workspaces · Hono + oRPC (`/rpc`) · Vite + React + wouter (hash router) · LowDB (JSON) · Zod · Jotai + Constate + TanStack Query · Tailwind + shadcn/ui · Caddy (media + proxy) · yt-dlp via `yt-dlp-wrap-plus`, Ink TUI, p-queue (CLI) · Biome (lint/format).
+Bun workspaces · Hono + oRPC (`/rpc`) · Vite + React + wouter (hash router) · LowDB (JSON) · Zod · Jotai + Constate + TanStack Query · Tailwind + shadcn/ui on Base UI (`base-nova`, preset `b2Pg`) · Caddy (media + proxy) · yt-dlp via `yt-dlp-wrap-plus`, Ink TUI, p-queue (CLI) · Biome (lint/format).
 
 ## Repo map
 
@@ -109,6 +109,7 @@ Server port and UI prefix come only from `settings.json` (defaults `5001` and `/
 
 - Solo project: commit directly on `main`; no feature branches or PRs. Prefer several small commits over one large one.
 - Biome: 2-space indent, double quotes; fix lint before committing. TypeScript, ESM, Zod for all boundary validation.
+- `apps/web/src/components/ui/` is shadcn-generated (Base UI, not Radix: use `render={<X />}`, not `asChild`). Biome relaxes a few rules there via an override in `biome.json`; don't hand-edit for lint. `popover.tsx` has a local `anchor`/`container` customisation: re-apply it after re-running `shadcn apply`, and delete the `--radius` the CLI leaves in `.dark` and any `body { font-family }` it keeps.
 - **File operations are transactional by convention**: multi-file moves track completed steps and roll back on error (see `syncContent`, `setDoc`, `deleteData`). Keep this when editing them.
 - **Deletes are two-phase**: rename to `*.del`, then remove; rollback on failure. DB is written only after fs success.
 - Always update tag counts when changing an item's tags or removing an item.
