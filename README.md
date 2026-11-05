@@ -109,7 +109,8 @@ Server port and UI prefix come only from `settings.json` (defaults `5001` and `/
 
 - Solo project: commit directly on `main`; no feature branches or PRs. Prefer several small commits over one large one.
 - Biome: 2-space indent, double quotes; fix lint before committing. TypeScript, ESM, Zod for all boundary validation.
-- `apps/web/src/components/ui/` is shadcn-generated (Base UI, not Radix: use `render={<X />}`, not `asChild`). Biome relaxes a few rules there via an override in `biome.json`; don't hand-edit for lint. `popover.tsx` has a local `anchor`/`container` customisation: re-apply it after re-running `shadcn apply`, and delete the `--radius` the CLI leaves in `.dark` and any `body { font-family }` it keeps.
+- `apps/web/src/components/ui/` is shadcn-generated (Base UI, not Radix: use `render={<X />}`, not `asChild`). Biome ignores it. `components/craft/ui/popover` adds `anchor`/`container` props to `PopoverContent` (MultiSelect uses it). After re-running `shadcn apply`, delete the `--radius` the CLI leaves in `.dark` and any `body { font-family }` it keeps.
+- `components/ui` is immutable stock shadcn (never edit it, Biome ignores it); customisations go in `components/craft/ui`.
 - **File operations are transactional by convention**: multi-file moves track completed steps and roll back on error (see `syncContent`, `setDoc`, `deleteData`). Keep this when editing them.
 - **Deletes are two-phase**: rename to `*.del`, then remove; rollback on failure. DB is written only after fs success.
 - Always update tag counts when changing an item's tags or removing an item.
