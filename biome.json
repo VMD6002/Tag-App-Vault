@@ -6,7 +6,8 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": ["**", "!**/components/ui"]
   },
   "formatter": {
     "enabled": true,
@@ -25,21 +26,6 @@
       }
     }
   },
-  "overrides": [
-    {
-      "includes": ["**/components/ui/**"],
-      "linter": {
-        "rules": {
-          "a11y": {
-            "useSemanticElements": "off",
-            "useKeyWithClickEvents": "off",
-            "noLabelWithoutControl": "off"
-          },
-          "suspicious": { "noArrayIndexKey": "off" }
-        }
-      }
-    }
-  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
