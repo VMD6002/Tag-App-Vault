@@ -22,24 +22,24 @@ How content is named, laid out on disk, synced, and served. Written from the cod
 
 ## Core rules
 
-| Rule | Detail |
-| --- | --- |
-| **Name format** | Every item is named `<title>.<id>`. Below, `<name>` always means that full string. |
-| **Id is permanent** | Changing a title renames the files; the `id` never changes. |
-| **Ids** | From the downloader (the item's id) or generated on sync as `gen_<10 alphanumerics>`. |
-| **Title characters** | The downloader replaces `\ / : * ? " < > \| %` and control characters with `_`. The server does not sanitize titles on sync, so titles must already be filesystem-safe. |
-| **Type from extension** | File type is decided only by extension (see [Recognised extensions](#recognised-extensions)). |
-| **Folder items** | Galleries, audio lists and text groups are folders. In `Sync/` the folder name ends in the type: `<name>.gallery`, `<name>.audio`, `<name>.txt`. |
-| **Hidden folders** | Dot-folders (`.covers`, `.captions`, `.media`, `.gallery-covers`, `.audio-covers`) hold support files and are never treated as content. |
+| Rule                    | Detail                                                                                                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Name format**         | Every item is named `<title>.<id>`. Below, `<name>` always means that full string.                                                                                      |
+| **Id is permanent**     | Changing a title renames the files; the `id` never changes.                                                                                                             |
+| **Ids**                 | From the downloader (the item's id) or generated on sync as `gen_<10 alphanumerics>`.                                                                                   |
+| **Title characters**    | The downloader replaces `\ / : * ? " < > \| %` and control characters with `_`. The server does not sanitize titles on sync, so titles must already be filesystem-safe. |
+| **Type from extension** | File type is decided only by extension (see [Recognised extensions](#recognised-extensions)).                                                                           |
+| **Folder items**        | Galleries, audio lists and text groups are folders. In `Sync/` the folder name ends in the type: `<name>.gallery`, `<name>.audio`, `<name>.txt`.                        |
+| **Hidden folders**      | Dot-folders (`.covers`, `.captions`, `.media`, `.gallery-covers`, `.audio-covers`) hold support files and are never treated as content.                                 |
 
 ### Recognised extensions
 
-| Type | Extensions |
-| --- | --- |
-| `img` | `jxl` `jpg` `jpeg` `png` `webp` `svg` `avif` `apng` `gif` |
-| `video` | `mp4` `webm` `avi` |
-| `audio` | `mp3` `wav` |
-| `txt` | `txt` `md` |
+| Type    | Extensions                                                |
+| ------- | --------------------------------------------------------- |
+| `img`   | `jxl` `jpg` `jpeg` `png` `webp` `svg` `avif` `apng` `gif` |
+| `video` | `mp4` `webm` `avi`                                        |
+| `audio` | `mp3` `wav`                                               |
+| `txt`   | `txt` `md`                                                |
 
 Anything else (for example `mkv`, `m4a`, `opus`, `heic`) is not recognised and ends up in `UnSyncable/`.
 
@@ -67,13 +67,13 @@ All server paths are relative to the server's working directory.
 
 ## Content types at a glance
 
-| Type | `media/` dir | Shape in `Sync/` | Cover source | Web route |
-| --- | --- | --- | --- | --- |
-| `img` | `Images` | `<name>.<ext>` + `<name>.json`, plus optional `cover.<name>.<ext>` | `.covers/cover.<name>.<ext>`, generated if missing | `/img/:id` |
-| `video` | `Videos` | same as `img`, plus optional `caption.<name>.vtt` | `.covers/cover.<name>.<ext>` (optional) | `/video/:id` |
-| `gallery` | `Galleries` | `<name>.gallery/` + `<name>.json` | first image in the folder, else first image in `.gallery-covers/` | `/gallery/:id` |
-| `audio` | `Audios` | `<name>.audio/` + `<name>.json` | first image in `.audio-covers/` | `/audio/:id` |
-| `txt` | `Texts` | `<name>.txt/` + `<name>.json` | first image in `.media/` | `/txt/:id` |
+| Type      | `media/` dir | Shape in `Sync/`                                                   | Cover source                                                      | Web route      |
+| --------- | ------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------- | -------------- |
+| `img`     | `Images`     | `<name>.<ext>` + `<name>.json`, plus optional `cover.<name>.<ext>` | `.covers/cover.<name>.<ext>`, generated if missing                | `/img/:id`     |
+| `video`   | `Videos`     | same as `img`, plus optional `caption.<name>.vtt`                  | `.covers/cover.<name>.<ext>` (optional)                           | `/video/:id`   |
+| `gallery` | `Galleries`  | `<name>.gallery/` + `<name>.json`                                  | first image in the folder, else first image in `.gallery-covers/` | `/gallery/:id` |
+| `audio`   | `Audios`     | `<name>.audio/` + `<name>.json`                                    | first image in `.audio-covers/`                                   | `/audio/:id`   |
+| `txt`     | `Texts`      | `<name>.txt/` + `<name>.json`                                      | first image in `.media/`                                          | `/txt/:id`     |
 
 ---
 
@@ -168,18 +168,18 @@ Sync
 
 What does **not** sync:
 
-| Found in `Sync/` | Result |
-| --- | --- |
-| Image with no cover that `Bun.Image` can't decode (`svg`, `jxl`, and `avif` on Linux) | `UnSyncable/` (logged) |
-| `cover.*` or `caption.*` file with no matching media | `UnSyncable/` |
-| `cover.*` file that isn't an image, or a second cover for the same item (the alphabetically first extension wins) | `UnSyncable/` |
-| Item whose id is already in the library, or repeats another item's id in the same scan | stays in `Sync/` (logged), nothing changes |
-| Caption for an **image** | `UnSyncable/` |
-| Loose `.md`/`.txt`/`.mp3`/`.wav` file (not in a folder) | `UnSyncable/` |
-| Folder whose suffix isn't `.gallery`, `.audio` or `.txt` | `UnSyncable/` |
-| Unrecognised extension | `UnSyncable/` |
-| Item whose `<name>.json` is invalid | skipped; its files go to `UnSyncable/` |
-| `<name>.json` with no matching item | stays in `Sync/` (logged, returned as `orphanJsons`) |
+| Found in `Sync/`                                                                                                  | Result                                               |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Image with no cover that `Bun.Image` can't decode (`svg`, `jxl`, and `avif` on Linux)                             | `UnSyncable/` (logged)                               |
+| `cover.*` or `caption.*` file with no matching media                                                              | `UnSyncable/`                                        |
+| `cover.*` file that isn't an image, or a second cover for the same item (the alphabetically first extension wins) | `UnSyncable/`                                        |
+| Item whose id is already in the library, or repeats another item's id in the same scan                            | stays in `Sync/` (logged), nothing changes           |
+| Caption for an **image**                                                                                          | `UnSyncable/`                                        |
+| Loose `.md`/`.txt`/`.mp3`/`.wav` file (not in a folder)                                                           | `UnSyncable/`                                        |
+| Folder whose suffix isn't `.gallery`, `.audio` or `.txt`                                                          | `UnSyncable/`                                        |
+| Unrecognised extension                                                                                            | `UnSyncable/`                                        |
+| Item whose `<name>.json` is invalid                                                                               | skipped; its files go to `UnSyncable/`               |
+| `<name>.json` with no matching item                                                                               | stays in `Sync/` (logged, returned as `orphanJsons`) |
 
 ---
 
@@ -187,15 +187,15 @@ What does **not** sync:
 
 Sidecar `<name>.json` (validated by `ContentJsonSchema`):
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `id` | string | Permanent id |
-| `title` | string | Display title and file-name prefix |
-| `tags` | string[] | Tags (counted in `DB/tags.json`) |
-| `extraData` | string | Free text notes |
-| `cover` | string? | Cover file (see [Covers](#covers)) |
-| `added` | number | Unix seconds |
-| `lastUpdated` | number | Unix seconds |
+| Field         | Type     | Meaning                            |
+| ------------- | -------- | ---------------------------------- |
+| `id`          | string   | Permanent id                       |
+| `title`       | string   | Display title and file-name prefix |
+| `tags`        | string[] | Tags (counted in `DB/tags.json`)   |
+| `extraData`   | string   | Free text notes                    |
+| `cover`       | string?  | Cover file (see [Covers](#covers)) |
+| `added`       | number   | Unix seconds                       |
+| `lastUpdated` | number   | Unix seconds                       |
 
 - Unknown keys are dropped by validation. The downloader's `url`, `scraper`, `download`, `contentUrl` do **not** survive sync.
 - **No JSON present**: metadata is generated: `id = gen_<10 chars>`, `title = <file/folder name>`, `tags = []`, `extraData = "Generated Data"`, `added = lastUpdated = modified time` of the file (or folder).
@@ -227,12 +227,12 @@ Sidecar `<name>.json` (validated by `ContentJsonSchema`):
    4. Move everything left over to `UnSyncable/`.
 3. **Commit** (`services/syncContent.ts`), per item:
 
-| Type | Moves (`Sync/` → `media/`) |
-| --- | --- |
-| `img` / `video` | `cover.<name>.<ext>` (if any) → `<Dir>/.covers/` · `<name>.<ext>` → `<Dir>/` · `caption.<name>.vtt` → `Videos/.captions/` |
-| `gallery` / `audio` / `txt` | `<name>.<type>/` → `<Dir>/<name>/` (suffix dropped) |
+| Type                        | Moves (`Sync/` → `media/`)                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `img` / `video`             | `cover.<name>.<ext>` (if any) → `<Dir>/.covers/` · `<name>.<ext>` → `<Dir>/` · `caption.<name>.vtt` → `Videos/.captions/` |
+| `gallery` / `audio` / `txt` | `<name>.<type>/` → `<Dir>/<name>/` (suffix dropped)                                                                       |
 
-   Then the item is added to `DB/contentData.json`, tag counts are incremented, both are written to disk, and only then is the sidecar `<name>.json` deleted. If a move or a DB write fails, the item's moves are rolled back and it stays in `Sync/`. A crash after the moves but before the DB write leaves the files in `media/` with the sidecar reported as an orphan, so its metadata is still there to recover by hand.
+Then the item is added to `DB/contentData.json`, tag counts are incremented, both are written to disk, and only then is the sidecar `<name>.json` deleted. If a move or a DB write fails, the item's moves are rolled back and it stays in `Sync/`. A crash after the moves but before the DB write leaves the files in `media/` with the sidecar reported as an orphan, so its metadata is still there to recover by hand.
 
 The downloader (`apps/cli`) feeds this step: it downloads into `./tmp`, then moves all `*.<id>.*` files into `Sync/` and writes `<title>.<id>.json` last.
 
@@ -242,12 +242,12 @@ The downloader (`apps/cli`) feeds this step: it downloads into `./tmp`, then mov
 
 The `cover` field in the DB depends on type:
 
-| Type | How the cover is found | `cover` value stored |
-| --- | --- | --- |
-| `img` / `video` | By naming convention: `.covers/cover.<name>.<ext>`. Images get a generated one if missing. Videos may have none, and the library card then shows the type icon | not used by the UI (path is built from title + id) |
-| `gallery` | First image (natural order) in the gallery root; if none, first image in `.gallery-covers/`; if none, no cover | path relative to the gallery folder, e.g. `pic.jpg` or `.gallery-covers/cover.clip.jpg` |
-| `audio` | First image (natural order) in `.audio-covers/`; if none, no cover | file name in `.audio-covers/` |
-| `txt` | First image (natural order) in `.media/` | file name in `.media/` |
+| Type            | How the cover is found                                                                                                                                         | `cover` value stored                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `img` / `video` | By naming convention: `.covers/cover.<name>.<ext>`. Images get a generated one if missing. Videos may have none, and the library card then shows the type icon | not used by the UI (path is built from title + id)                                      |
+| `gallery`       | First image (natural order) in the gallery root; if none, first image in `.gallery-covers/`; if none, no cover                                                 | path relative to the gallery folder, e.g. `pic.jpg` or `.gallery-covers/cover.clip.jpg` |
+| `audio`         | First image (natural order) in `.audio-covers/`; if none, no cover                                                                                             | file name in `.audio-covers/`                                                           |
+| `txt`           | First image (natural order) in `.media/`                                                                                                                       | file name in `.media/`                                                                  |
 
 Changing covers later:
 
@@ -261,12 +261,12 @@ Changing covers later:
 
 Tags starting with `meta:` change behaviour rather than describing content.
 
-| Meta tag | Used by | Effect |
-| --- | --- | --- |
-| `meta:caption` | Sync | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten. |
-| `meta:autoplay` | Web (gallery) | Enables gallery autoplay. |
-| `meta:yt-cookie` | CLI | Download with `./cookies/<Site>.txt`. Requires a `Site:<name>` tag and that cookie file, otherwise the download fails. |
-| `meta:different-cover` | CLI | Download the cover from the item's `cover` URL (with `curl`-style download) instead of yt-dlp's thumbnail. Requires `cover` to be set. |
+| Meta tag               | Used by       | Effect                                                                                                                                 |
+| ---------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `meta:caption`         | Sync          | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten.                        |
+| `meta:autoplay`        | Web (gallery) | Enables gallery autoplay.                                                                                                              |
+| `meta:yt-cookie`       | CLI           | Download with `./cookies/<Site>.txt`. Requires a `Site:<name>` tag and that cookie file, otherwise the download fails.                 |
+| `meta:different-cover` | CLI           | Download the cover from the item's `cover` URL (with `curl`-style download) instead of yt-dlp's thumbnail. Requires `cover` to be set. |
 
 ---
 
@@ -274,11 +274,11 @@ Tags starting with `meta:` change behaviour rather than describing content.
 
 Created and refreshed by the server; safe to delete (they are rebuilt), and ignored when listing content.
 
-| File | Location | Content |
-| --- | --- | --- |
+| File                 | Location            | Content                                                                               |
+| -------------------- | ------------------- | ------------------------------------------------------------------------------------- |
 | `.gallery-data.json` | `Galleries/<name>/` | Cached listing: per file `name`, `type`, `createdAt`, `modifiedAt`, `cover?`, `tags?` |
-| `.tags.json` | `Galleries/<name>/` | `Record<file name, tags[]>`: tags of individual gallery files |
-| `txt-data.json` | `Texts/<name>/` | `{ Texts: string[] (chapter files), Media: {name, type}[] }` |
+| `.tags.json`         | `Galleries/<name>/` | `Record<file name, tags[]>`: tags of individual gallery files                         |
+| `txt-data.json`      | `Texts/<name>/`     | `{ Texts: string[] (chapter files), Media: {name, type}[] }`                          |
 
 Rebuild with the `refreshGalleryData` / `refreshTxtData` procedures.
 
@@ -286,11 +286,11 @@ Rebuild with the `refreshGalleryData` / `refreshTxtData` procedures.
 
 ## Rename and delete behaviour
 
-| Action | What happens on disk |
-| --- | --- |
+| Action                               | What happens on disk                                                                                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Change title** (`main.setContent`) | Files renamed `<oldTitle>.<id>` → `<newTitle>.<id>` (cover, media, caption, or the folder). Rolled back on error. Tag diffs update `DB/tags.json`. |
-| **Delete** (`main.removeContents`) | Two phases: files are renamed to `*.del`, then removed. Rolled back if a step fails. Tag counts are decremented; the DB entry is deleted. |
-| **Tag count repair** | `fix.hardResetTagCount` / `fix.softResetTagCount` recompute `DB/tags.json`. |
+| **Delete** (`main.removeContents`)   | Two phases: files are renamed to `*.del`, then removed. Rolled back if a step fails. Tag counts are decremented; the DB entry is deleted.          |
+| **Tag count repair**                 | `fix.hardResetTagCount` / `fix.softResetTagCount` recompute `DB/tags.json`.                                                                        |
 
 ---
 
@@ -298,13 +298,13 @@ Rebuild with the `refreshGalleryData` / `refreshTxtData` procedures.
 
 Caddy listens on `:5000`; everything outside `/media/*` is proxied to the app on `localhost:5001`.
 
-| Request | Behaviour |
-| --- | --- |
+| Request                                              | Behaviour                                                                                             |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `/media/Images/.covers/*`, `/media/Videos/.covers/*` | `Cache-Control: no-store`; tries `<path>.avif`, `.jpg`, `.jpeg`, `.png`, `.webp`, then the exact path |
-| `/media/Images/*` | tries the same image extensions, then exact path |
-| `/media/Videos/*` | tries exact path, then `.mp4`, `.webm` |
-| other `/media/*` | plain static file |
-| CORS | `Access-Control-Allow-Origin: *`, GET/OPTIONS only |
+| `/media/Images/*`                                    | tries the same image extensions, then exact path                                                      |
+| `/media/Videos/*`                                    | tries exact path, then `.mp4`, `.webm`                                                                |
+| other `/media/*`                                     | plain static file                                                                                     |
+| CORS                                                 | `Access-Control-Allow-Origin: *`, GET/OPTIONS only                                                    |
 
 ---
 
