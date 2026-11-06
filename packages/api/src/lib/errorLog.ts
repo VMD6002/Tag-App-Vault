@@ -4,9 +4,7 @@ export default function errorLog(error: Error | any) {
   console.error("Error Message:", error?.message);
 
   // Log Node.js specific error code if present
-  // @ts-expect-error
   if (error?.code) {
-    // @ts-expect-error
     console.error("Error Code (Node.js):", error?.code);
   }
 

@@ -16,7 +16,7 @@
     "build:cli": "cd apps/cli && bun run build && cd -",
     "build:caddy": "cp apps/Caddyfile apps/server/dist",
     "build:serverFull": "rm -rf apps/server/dist && bun build:server && bun build:cli && bun build:web && bun build:caddy",
-    "type:check": "bun run -r type:check",
+    "type:check": "biome check && bun --cwd apps/web check",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
     "format": "biome format",

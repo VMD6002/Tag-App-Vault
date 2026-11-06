@@ -107,7 +107,7 @@ Add an endpoint: export `os.input(zod).handler(...)` from a router file; it is a
 bun install
 bun dev:server      # cd apps/server && bun --watch src/index.ts (cwd = runtime root)
 bun dev:web         # Vite
-bun type:check      # all workspaces
+bun type:check      # biome check, then tsc -b in apps/web (which also type-checks packages/api and packages/utils)
 bun check           # Biome lint+format (check:fix / lint:fix / format:fix to apply)
 bun test packages/api  # sync tests (scratch dir, needs Bun >= 1.4.2 for Bun.Image)
 bun build:serverFull  # → apps/server/dist: index.js, WebUI/, Download/index.js (CLI), Caddyfile
