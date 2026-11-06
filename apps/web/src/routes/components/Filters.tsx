@@ -1,22 +1,28 @@
 import { contentTypes } from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Pencil, Trash2 } from "lucide-react";
+import { ListChecks, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import {
   allAtom,
   anyAtom,
   noneAtom,
   orderByLatestAtom,
+  resetFilterAtom,
   searchAtom,
   tagsAtom,
   typesAtom,
 } from "@/atom";
 import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
 import { confirm } from "@/components/craft/confirm-dialog";
+import { typeInfo } from "@/components/craft/library/ContentCard";
+import {
+  FilterField,
+  FilterPanel,
+  ResultsBar,
+} from "@/components/craft/library/FilterPanel";
 import MultiSelect from "@/components/craft/MultiSelect";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { filteredAtom, serverTagsAtom } from "../atom";
@@ -32,8 +38,7 @@ import {
 import { useServerActions } from "../contexts/Server.Context";
 
 export default function Filters() {
-  const { setFiltered, removeContents, filterData, serverSyncFunc } =
-    useServerActions();
+  const { setFiltered, removeContents, filterData } = useServerActions();
 
   const tags = useAtomValue(tagsAtom);
 
@@ -47,6 +52,7 @@ export default function Filters() {
   const [any, setAny] = useAtom(anyAtom);
   const [none, setNone] = useAtom(noneAtom);
   const [orderByLatest, setOrderByLatest] = useAtom(orderByLatestAtom);
+  const reset = useSetAtom(resetFilterAtom);
 
   const selectedEntries = useAtomValue(selectionEntriesAtom);
   const selectionOn = useAtomValue(selectionOnAtom);
@@ -64,9 +70,12 @@ export default function Filters() {
   const deleteSelected = useCallback(
     () =>
       confirm
-        .destructive(
-          `U sure u want to delete ${selectedEntries.length} items ?`,
-        )
+        .destructive({
+          title: `Remove ${selectedEntries.length} ${selectedEntries.length === 1 ? "item" : "items"}?`,
+          description:
+            "The selected items and their files will be deleted from the server. This can't be undone.",
+          confirmText: "Remove",
+        })
         .then((ok) => {
           if (ok) removeContents(selectedEntries);
         }),
@@ -120,97 +129,91 @@ export default function Filters() {
     ];
   }, [tagsForMultiSelectComponent, serverTags]);
 
+  const typeOptions = useMemo(
+    () => contentTypes.map((o) => ({ label: typeInfo[o].label, value: o })),
+    [],
+  );
+
+  const activeCount =
+    any.length +
+    none.length +
+    all.length +
+    types.length +
+    (search.trim() ? 1 : 0);
+
+  const noneSelected = selectedEntries.length < 1;
+
   return (
     <>
-      <Input
-        value={search}
-        onChange={(a) => setSearch(a.target.value)}
-        placeholder="Search"
-        className="mb-4"
-      />
-      <div className="grid md:grid-cols-2 gap-4 mb-4">
-        <MultiSelect
-          value={types}
-          onChange={setTypes}
-          options={contentTypes.map((o) => ({ label: o, value: o }))}
-          placeholder={"All of these Content Types"}
-        />
-        <MultiSelect
-          value={any}
-          onChange={setAny}
-          options={anyAndNoneTagsForMuliSelectComponent}
-          placeholder={"Any of these tags"}
-        />
-        <MultiSelect
-          value={none}
-          onChange={setNone}
-          options={anyAndNoneTagsForMuliSelectComponent}
-          placeholder={"None of these tags"}
-        />
-        <MultiSelect
-          value={all}
-          onChange={setAll}
-          options={tagsForMultiSelectComponent}
-          placeholder={"All of these tags"}
-        />
-      </div>
-      <div className="mb-4 gap-2 flex justify-between flex-wrap items-center">
-        <Button onClick={filterData} className="w-full max-w-2xs">
-          Filter
-        </Button>
-        {tags ? (
-          <Button onClick={serverSyncFunc} className="w-fit">
-            Sync
-          </Button>
-        ) : (
+      <FilterPanel
+        search={search}
+        onSearchChange={setSearch}
+        onApply={() => filterData()}
+        onClear={reset}
+        activeCount={activeCount}
+      >
+        <FilterField label="Type" hint="any of these">
+          <MultiSelect
+            value={types}
+            onChange={setTypes}
+            options={typeOptions}
+            placeholder="All types"
+            label="Content types"
+          />
+        </FilterField>
+        <FilterField label="Any of" hint="at least one">
+          <MultiSelect
+            value={any}
+            onChange={setAny}
+            options={anyAndNoneTagsForMuliSelectComponent}
+            placeholder="Choose tags"
+            label="Any of these tags"
+          />
+        </FilterField>
+        <FilterField label="None of" hint="exclude these">
+          <MultiSelect
+            value={none}
+            onChange={setNone}
+            options={anyAndNoneTagsForMuliSelectComponent}
+            placeholder="Choose tags"
+            label="None of these tags"
+          />
+        </FilterField>
+        <FilterField label="All of" hint="must have every one">
+          <MultiSelect
+            value={all}
+            onChange={setAll}
+            options={tagsForMultiSelectComponent}
+            placeholder="Choose tags"
+            label="All of these tags"
+          />
+        </FilterField>
+      </FilterPanel>
+
+      <ResultsBar
+        left={
           <>
-            <span className="font-mono text-base">{filtered.length}</span>
-            <div className="flex space-x-3">
-              <Label>Order By Latest</Label>
-              <Switch
-                checked={orderByLatest}
-                onCheckedChange={(a) => {
-                  setFiltered((old) => [...old].reverse());
-                  setOrderByLatest(a);
-                }}
-              />
-            </div>
-          </>
-        )}
-      </div>
-      {!!tags && (
-        <div className="sticky top-[4.8rem] z-10 bg-background py-2 mb-4 flex justify-between items-center flex-wrap-reverse gap-y-3">
-          <div className="flex items-center space-x-3">
-            <Button
-              onClick={toggleSelectionMode}
-              variant={selectionOn ? "default" : "outline"}
-            >
-              Toggle Selection
-            </Button>
-
-            {selectionOn && (
+            <p aria-live="polite" className="text-sm text-muted-foreground">
+              {selectionOn ? (
+                <>
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {selectedEntries.length}
+                  </span>{" "}
+                  of <span className="tabular-nums">{filtered.length}</span>{" "}
+                  selected
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {filtered.length}
+                  </span>{" "}
+                  {filtered.length === 1 ? "item" : "items"}
+                </>
+              )}
+            </p>
+            {!!tags && selectionOn && (
               <>
-                <Button
-                  disabled={selectedEntries.length < 1}
-                  onClick={openBulkUpdateModal}
-                  variant="outline"
-                  size="icon"
-                  title="Update Selected"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  disabled={selectedEntries.length < 1}
-                  onClick={deleteSelected}
-                  variant="outline"
-                  size="icon"
-                  title="Delete Selected"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-
-                <div className="flex items-center space-x-2 pl-2">
-                  <Label>Select All</Label>
+                <Label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={
                       filtered.length > 0 &&
@@ -218,31 +221,73 @@ export default function Filters() {
                     }
                     onCheckedChange={onSelectAllCheckedChange}
                   />
-                </div>
-                <span className="font-mono text-sm">
-                  ({selectedEntries.length}/{filtered.length})
-                </span>
+                  Select all
+                </Label>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={noneSelected}
+                  onClick={openBulkUpdateModal}
+                  title={
+                    noneSelected
+                      ? "Select items first"
+                      : "Add or remove tags on every selected item"
+                  }
+                >
+                  <Pencil />
+                  Edit tags
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={noneSelected}
+                  onClick={deleteSelected}
+                  title={
+                    noneSelected
+                      ? "Select items first"
+                      : "Delete the selected items from the server"
+                  }
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 />
+                  Remove
+                </Button>
               </>
             )}
-
-            {!selectionOn && (
-              <span className="font-mono text-base">{filtered.length}</span>
+          </>
+        }
+        right={
+          <>
+            {!!tags && (
+              <Button
+                size="sm"
+                variant={selectionOn ? "default" : "outline"}
+                aria-pressed={selectionOn}
+                onClick={toggleSelectionMode}
+                title={
+                  selectionOn
+                    ? "Stop selecting and clear the selection"
+                    : "Pick several items to edit their tags or remove them together"
+                }
+              >
+                <ListChecks />
+                {selectionOn ? "Done selecting" : "Select items"}
+              </Button>
             )}
-          </div>
-
-          <div className="flex space-x-3 items-center">
-            <Label>Order By Latest</Label>
+            <Label htmlFor="order-latest-switch" className="text-sm">
+              Newest first
+            </Label>
             <Switch
+              id="order-latest-switch"
               checked={orderByLatest}
               onCheckedChange={(a) => {
                 setFiltered((old) => [...old].reverse());
                 setOrderByLatest(a);
               }}
             />
-          </div>
-        </div>
-      )}
-      <div className="mb-10" />
+          </>
+        }
+      />
     </>
   );
 }

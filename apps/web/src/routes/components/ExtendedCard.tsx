@@ -1,17 +1,10 @@
 import { CTypeDir } from "@tagapp/utils";
-import type { ContentServerType, CType } from "@tagapp/utils/types";
+import type { ContentServerType } from "@tagapp/utils/types";
 import { useAtomValue, useSetAtom } from "jotai";
-import {
-  Check,
-  GalleryVerticalEnd,
-  Headphones,
-  Image,
-  ScrollText,
-  SquarePlay,
-} from "lucide-react";
 import { memo, useCallback, useMemo, useState } from "react";
 import { tagsAtom } from "@/atom";
 import { confirm } from "@/components/craft/confirm-dialog";
+import ContentCard from "@/components/craft/library/ContentCard";
 import {
   updateExtraDataAtom,
   updateIdAtom,
@@ -19,11 +12,8 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { selectEntryAtom, selectionOnAtom } from "../atom.selection";
 import { useServerActions } from "../contexts/Server.Context";
-import { TagParentChildList } from "./DocInfoSection";
 
 function getCoverUrl(Content: ContentServerType) {
   const pathPrefix = `media/${CTypeDir[Content.type]}`;
@@ -46,18 +36,6 @@ function getCoverUrl(Content: ContentServerType) {
 }
 
 const getUrl = (id: string, Type: string) => `#/${Type}/${id}`;
-
-const contentTypeIconsClassName =
-  "absolute bg-background p-1.5 -top-5 right-2 rounded";
-const contentTypeColor: Record<CType, ReturnType<typeof Image>> = {
-  img: <Image size={"2rem"} className={contentTypeIconsClassName} />,
-  video: <SquarePlay size={"2rem"} className={contentTypeIconsClassName} />,
-  gallery: (
-    <GalleryVerticalEnd size={"2rem"} className={contentTypeIconsClassName} />
-  ),
-  audio: <Headphones size={"2rem"} className={contentTypeIconsClassName} />,
-  txt: <ScrollText size={"2rem"} className={contentTypeIconsClassName} />,
-};
 
 const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
   const { removeContents, isSelected } = useServerActions();
@@ -83,10 +61,16 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
   }, [Content]);
 
   const removeContent = useCallback(() => {
-    confirm.destructive("Confirm Deletion?").then((ok) => {
-      if (ok) removeContents([Content.id]);
-    });
-  }, [Content.id]);
+    confirm
+      .destructive({
+        title: "Remove this item?",
+        description: `"${Content.title}" and its files will be deleted from the server. This can't be undone.`,
+        confirmText: "Remove",
+      })
+      .then((ok) => {
+        if (ok) removeContents([Content.id]);
+      });
+  }, [Content.id, Content.title]);
 
   const Selected = useMemo(
     () => isSelected(Content.id),
@@ -99,86 +83,19 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
   const coverUrl = fullCoverUrl !== failedCoverUrl ? fullCoverUrl : null;
 
   return (
-    <div
-      onClick={() => selectionOn && selectEntry(Content.id)}
-      className={cn(
-        "block p-2 h-fit text-left relative",
-        selectionOn && "border-2 rounded-sm cursor-pointer",
-        selectionOn && Selected && "border-white opacity-80",
-      )}
-    >
-      {coverUrl && (
-        <>
-          <div className="w-full bg-input/50 overflow-hidden rounded-sm">
-            <img
-              loading="lazy"
-              className="object-contain m-auto max-h-[max(8.25rem,55vh)] w-full min-h-33"
-              src={`/${coverUrl}`}
-              onError={() => setFailedCoverUrl(coverUrl)}
-            />
-          </div>
-          <div className="relative h-5">{contentTypeColor[Content.type]}</div>
-        </>
-      )}
-      <div className="w-[95%] ml-[2.5%] break-all">
-        {!!tags && (
-          <div className="mb-3">
-            <Button
-              disabled={selectionOn}
-              onClick={updateSetupFunc}
-              className="w-1/2 rounded-r-none hover:bg-neutral-300/20 bg-neutral-300/10 dark:bg-neutral-800/30! dark:hover:bg-neutral-700/30!"
-              variant="outline"
-            >
-              Edit
-            </Button>
-            <Button
-              disabled={selectionOn}
-              onClick={removeContent}
-              className="w-1/2 rounded-l-none text-red-500 bg-red-600/10! dark:bg-red-950/20!"
-              variant="outline"
-            >
-              Remove
-            </Button>
-          </div>
-        )}
-        <a
-          href={getUrl(Content.id, Content.type)}
-          target="_blank"
-          rel="noopener"
-        >
-          <h1 className="mb-1 text-lg font-semibold font-stretch-condensed">
-            {Content.title}
-          </h1>
-        </a>
-        <div className="text-muted-foreground text-xs mb-4">
-          {new Date(Content.added * 1000).toLocaleString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
-          {!coverUrl && (
-            <div className="relative text-foreground">
-              {contentTypeColor[Content.type]}
-            </div>
-          )}
-        </div>
-        <div className="text-sm space-y-1">
-          <div>
-            ID: <span className="text-muted-foreground">{Content.id}</span>
-          </div>
-          <TagParentChildList tags={Content.tags} />
-        </div>
-      </div>
-      {selectionOn ? (
-        Selected ? (
-          <Check className="bg-foreground border-background border top-4 left-4 text-background absolute rounded-sm" />
-        ) : (
-          <div className="bg-background border-foreground border aspect-square h-5 top-4 left-4 text-background absolute rounded-sm" />
-        )
-      ) : null}
-    </div>
+    <ContentCard
+      content={Content}
+      url={getUrl(Content.id, Content.type)}
+      cover={coverUrl ? `/${coverUrl}` : null}
+      onCoverError={() => setFailedCoverUrl(fullCoverUrl)}
+      selection={{
+        on: selectionOn,
+        selected: Selected,
+        onToggle: () => selectEntry(Content.id),
+      }}
+      onEdit={tags ? updateSetupFunc : undefined}
+      onRemove={tags ? removeContent : undefined}
+    />
   );
 });
 

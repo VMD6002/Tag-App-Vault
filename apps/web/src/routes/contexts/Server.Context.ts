@@ -191,6 +191,18 @@ const useServer = () => {
   );
 
   return {
+    // Status for the loading / error / sync states in the UI
+    loadState: {
+      isPending:
+        getFilteredDataMutation.isPending || getFilteredDataMutation.isIdle,
+      isError: getFilteredDataMutation.isError,
+      message: getFilteredDataMutation.error?.message,
+    },
+    syncState: {
+      isPending: syncContentsModified.isPending,
+      isError: syncContentsModified.isError,
+      message: syncContentsModified.error?.message,
+    },
     removeContents,
     setFiltered,
     updateContentFunc,
