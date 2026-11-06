@@ -1,14 +1,13 @@
-import { Link } from "wouter";
-import { useHashLocation } from "wouter/use-hash-location";
+import { Menu } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { ModeToggle } from "./mode-toggle";
 
 const Links = [
@@ -19,65 +18,55 @@ const Links = [
 ];
 
 export default function NavBarLinks() {
-  const currentUrl = useHashLocation()[0];
+  const [currentUrl] = useLocation();
+
   return (
-    <NavigationMenu>
-      <NavigationMenuList>
+    <div className="flex items-center gap-1.5">
+      <nav aria-label="Main" className="hidden items-center gap-1 sm:flex">
         {Links.map((link) => (
-          <NavigationMenuItem
+          <Link
             key={`Desktop-Nav-Link-${link.Name}`}
-            className={"hidden sm:block"}
+            href={link.Path}
+            aria-current={currentUrl === link.Path ? "page" : undefined}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "h-8 px-3",
+              currentUrl === link.Path
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground",
+            )}
           >
-            <NavigationMenuLink
-              className={navigationMenuTriggerStyle()}
-              render={
-                <Link
-                  className={
-                    currentUrl === link.Path
-                      ? "underline underline-offset-2"
-                      : ""
-                  }
-                  href={link.Path}
-                />
-              }
-            >
-              {link.Name}
-            </NavigationMenuLink>
-          </NavigationMenuItem>
+            {link.Name}
+          </Link>
         ))}
-        <div className={"hidden sm:block"}>
-          <ModeToggle />
-        </div>
-        <NavigationMenuItem className={"w-32 sm:hidden"}>
-          <NavigationMenuTrigger className="ml-11">Menu</NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <ul className="grid gap-4">
-              <li>
-                {Links.map((link) => (
-                  <NavigationMenuLink
-                    key={`Mobile-Nav-Link-${link.Name}`}
-                    render={
-                      <Link
-                        className={`whitespace-nowrap ${
-                          currentUrl === link.Path
-                            ? "underline underline-offset-2"
-                            : ""
-                        }`}
-                        href={link.Path}
-                      />
-                    }
-                  >
-                    {link.Name}
-                  </NavigationMenuLink>
-                ))}
-              </li>
-            </ul>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-        <div className={"ml-2 sm:hidden"}>
-          <ModeToggle />
-        </div>
-      </NavigationMenuList>
-    </NavigationMenu>
+      </nav>
+      <div className="sm:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
+            <Menu aria-hidden />
+            Menu
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            {Links.map((link) => (
+              <DropdownMenuItem
+                key={`Mobile-Nav-Link-${link.Name}`}
+                render={
+                  <Link
+                    href={link.Path}
+                    aria-current={currentUrl === link.Path ? "page" : undefined}
+                  />
+                }
+                className={
+                  currentUrl === link.Path ? "bg-muted font-medium" : ""
+                }
+              >
+                {link.Name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <ModeToggle />
+    </div>
   );
 }

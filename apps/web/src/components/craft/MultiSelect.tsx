@@ -16,12 +16,15 @@ export default function MultiSelect({
   options,
   placeholder,
   className,
+  label,
 }: {
   value: MultiSelectOption[];
   onChange: (value: MultiSelectOption[]) => void;
   options: MultiSelectOption[];
   placeholder?: string;
   className?: string;
+  /** Accessible name for the text input. */
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -88,6 +91,7 @@ export default function MultiSelect({
                   remove(value[value.length - 1]);
               }}
               placeholder={placeholder}
+              aria-label={label ?? placeholder}
               className="min-w-16 flex-1 bg-transparent px-1 outline-none placeholder:text-muted-foreground"
             />
           </div>
