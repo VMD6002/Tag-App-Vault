@@ -14,7 +14,7 @@ export default function FloatingButtons() {
   const [mode, setMode] = useAtom(currentModeAtom);
 
   const removeContentMutation = useMutation(
-    orpc.gallery.removeGalleryContents.mutationOptions({
+    orpc.audio.removeAudioContents.mutationOptions({
       onSuccess: (res) => {
         setGalleryData(res);
         setSelected([]);
@@ -22,7 +22,7 @@ export default function FloatingButtons() {
     }),
   );
 
-  const removeGalleryContents = () => {
+  const removeAudioContents = () => {
     if (!selected.length) {
       toast.warning("No items selected");
       return;
@@ -70,7 +70,7 @@ export default function FloatingButtons() {
           if (ok) setSelected(galleryData.map((e) => e.name));
         });
       }}
-      onDelete={removeGalleryContents}
+      onDelete={removeAudioContents}
     />
   );
 }
