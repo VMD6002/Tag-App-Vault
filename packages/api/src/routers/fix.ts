@@ -18,6 +18,7 @@ export const softResetTagCount = os.handler(async () => {
   for (const tag in tagDB.data) {
     if (!tagDB.data[tag]) delete tagDB.data[tag];
   }
+  await tagDB.write();
   console.log("Tag with zero count removed");
   return tagDB.data;
 });
