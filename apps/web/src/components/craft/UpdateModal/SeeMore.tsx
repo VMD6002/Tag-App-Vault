@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -6,25 +7,18 @@ export default function SeeMore({ children }: { children: ReactNode }) {
 
   const toggleSeeMore = useCallback(() => setSeeMore((old) => !old), []);
 
-  if (!seeMore)
-    return (
-      <Button
-        className="mb-4 underline"
-        variant="ghost"
-        onClick={toggleSeeMore}
-      >
-        More ...
-      </Button>
-    );
   return (
     <>
-      {children}
+      {seeMore && <div className="grid gap-4">{children}</div>}
       <Button
-        className="mb-4 underline"
+        className="w-fit text-muted-foreground"
         variant="ghost"
+        size="sm"
+        aria-expanded={seeMore}
         onClick={toggleSeeMore}
       >
-        See Less ...
+        {seeMore ? <ChevronUp /> : <ChevronDown />}
+        {seeMore ? "Fewer fields" : "More fields"}
       </Button>
     </>
   );

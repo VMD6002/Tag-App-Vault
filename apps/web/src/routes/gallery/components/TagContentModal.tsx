@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -130,13 +131,17 @@ export default function TagContentModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit</DialogTitle>
+          <DialogTitle>Edit file</DialogTitle>
+          <DialogDescription className="text-xs [overflow-wrap:anywhere]">
+            Rename the file and set its tags. Renaming changes the file's name
+            on the server.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* File Name Field */}
           <div className="space-y-2">
-            <Label htmlFor="filename">File Name</Label>
+            <Label htmlFor="filename">File name</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="filename"
@@ -147,6 +152,7 @@ export default function TagContentModal() {
                 }}
                 className={nameError ? "border-destructive" : ""}
                 placeholder="File name"
+                aria-invalid={!!nameError}
               />
               {fileExt && (
                 <Badge variant="outline" className="h-9 px-2 text-xs font-mono">
@@ -166,7 +172,8 @@ export default function TagContentModal() {
               value={selectedTags}
               onChange={setSelectedTags}
               options={tagOptions}
-              placeholder="Select tags..."
+              placeholder="Choose tags"
+              label="Tags for this file"
             />
           </div>
         </div>
@@ -180,7 +187,7 @@ export default function TagContentModal() {
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "Saving..." : "Save Changes"}
+            {isPending ? "Saving…" : "Save changes"}
           </Button>
         </DialogFooter>
       </DialogContent>

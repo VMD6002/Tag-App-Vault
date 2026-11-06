@@ -1,13 +1,14 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtom, useAtomValue } from "jotai";
 import { Redo2 } from "lucide-react";
+import { type ReactNode, useCallback } from "react";
 import { tagsAtom } from "@/atom";
+import ModalShell from "@/components/craft/ModalShell";
 import MultiSelect from "@/components/craft/MultiSelect";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import {
   updateContentUrlAtom,
   updateCoverAtom,
@@ -21,6 +22,39 @@ import {
 } from "./atom";
 import SeeMore from "./SeeMore";
 
+/** Label row with the optional "reset to the original value" button. */
+function Field({
+  label,
+  htmlFor,
+  onReset,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  onReset?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid gap-2">
+      <div className="flex min-h-6 items-center justify-between">
+        <Label htmlFor={htmlFor}>{label}</Label>
+        {onReset && (
+          <Button
+            onClick={onReset}
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`Reset ${label.toLowerCase()}`}
+            title="Reset to the original value"
+          >
+            <Redo2 />
+          </Button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function UpdateModal({
   className = "",
   updateContentFunc,
@@ -28,7 +62,7 @@ export default function UpdateModal({
   updateContentFunc: () => void;
   className?: string;
 }) {
-  const tags = useAtomValue(tagsAtom)!;
+  const tags = useAtomValue(tagsAtom);
   const { theme } = useTheme();
   const [modalOpen, setModalOpen] = useAtom(updateModalOpenAtom);
   const [title, setTitle] = useAtom(updateTitleAtom);
@@ -39,137 +73,117 @@ export default function UpdateModal({
   const isDisabled = useAtomValue(updateInputDisabledAtom);
   const exists = useAtomValue(updateExistsAtom);
   const resetFuntions = useAtomValue(updateResetOptionsAtom);
-
-  if (!modalOpen) return null;
+  const close = useCallback(() => setModalOpen(false), [setModalOpen]);
 
   return (
-    <div
-      style={{ zIndex: 2147483647 }}
-      className="grid fixed min-h-screen top-0 right-0 w-full place-items-center overflow-y-auto overflow-x-clip"
+    <ModalShell
+      open={modalOpen}
+      onClose={close}
+      title={exists ? "Edit item" : "Add to library"}
+      description="Renaming also renames the item's files on the server."
+      className={className}
+      footer={
+        <>
+          <Button variant="outline" onClick={close}>
+            Cancel
+          </Button>
+          <Button disabled={isDisabled} onClick={updateContentFunc}>
+            {isDisabled
+              ? "Saving…"
+              : exists
+                ? "Save changes"
+                : "Add to library"}
+          </Button>
+        </>
+      }
     >
-      <button
-        type="button"
-        aria-label="Close modal backdrop"
-        onClick={() => setModalOpen(false)}
-        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs border-0 cursor-default"
-      />
-      <div
-        className={cn(
-          "max-w-md absolute w-full grid bg-secondary rounded shadow px-8 py-10",
-          className,
-        )}
+      <Field
+        label="Title"
+        htmlFor="update-title"
+        onReset={
+          resetFuntions?.title
+            ? () => setTitle(resetFuntions.title!())
+            : undefined
+        }
       >
-        <div className="flex justify-between mb-2 items-center">
-          <Label>Name</Label>
-          {resetFuntions?.title && (
-            <Button
-              onClick={() => setTitle(resetFuntions.title!())}
-              size="icon"
-              variant="outline"
-              className="scale-80"
-            >
-              <Redo2 />
-            </Button>
-          )}
-        </div>
         <Input
+          id="update-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Name"
-          className="mb-4"
+          placeholder="Title"
         />
-        <div className="flex justify-between mb-2 items-center">
-          <Label>Tags</Label>
-          {resetFuntions?.tags && (
-            <Button
-              onClick={() => setUpdateTags(resetFuntions.tags!())}
-              size="icon"
-              variant="outline"
-              className="scale-80"
-            >
-              <Redo2 />
-            </Button>
-          )}
-        </div>
+      </Field>
+      <Field
+        label="Tags"
+        onReset={
+          resetFuntions?.tags
+            ? () => setUpdateTags(resetFuntions.tags!())
+            : undefined
+        }
+      >
         <MultiSelect
-          options={tags.map((o) => ({
+          options={(tags ?? []).map((o) => ({
             label: o,
             value: o,
           }))}
-          className="mb-4"
-          placeholder="Tags"
+          placeholder="Choose tags"
+          label="Tags"
           value={updateTags}
           onChange={setUpdateTags}
         />
-        <SeeMore>
-          {cover && (
-            <>
-              <div className="flex justify-between mb-2 items-center">
-                <Label>Cover</Label>
-                {resetFuntions?.cover && (
-                  <Button
-                    onClick={() => setCover(resetFuntions.cover!())}
-                    size="icon"
-                    variant="outline"
-                    className="scale-80"
-                  >
-                    <Redo2 />
-                  </Button>
-                )}
-              </div>
-              <Input
-                value={cover}
-                onChange={(e) => setCover(e.target.value)}
-                placeholder="Name"
-                className="mb-4"
-              />
-            </>
-          )}
-          {contentUrl && (
-            <>
-              <div className="flex justify-between mb-2 items-center">
-                <Label>Content Url</Label>
-                {resetFuntions?.contentUrl && (
-                  <Button
-                    onClick={() => setContentUrl(resetFuntions.contentUrl!())}
-                    size="icon"
-                    variant="outline"
-                    className="scale-80"
-                  >
-                    <Redo2 />
-                  </Button>
-                )}
-              </div>
-              <Input
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
-                placeholder="Content Url"
-                className="mb-4"
-              />
-            </>
-          )}
-          {extraData && (
-            <div className="flex justify-between mb-2 items-center">
-              <Label>Extra Data</Label>
-              {resetFuntions?.extraData && (
-                <Button
-                  onClick={() => setExtraData(resetFuntions.extraData!())}
-                  size="icon"
-                  variant="outline"
-                  className="scale-80"
-                >
-                  <Redo2 />
-                </Button>
-              )}
-            </div>
-          )}
-          <div className="max-h-36 overflow-y-scroll mb-4">
+      </Field>
+      <SeeMore>
+        {cover && (
+          <Field
+            label="Cover"
+            htmlFor="update-cover"
+            onReset={
+              resetFuntions?.cover
+                ? () => setCover(resetFuntions.cover!())
+                : undefined
+            }
+          >
+            <Input
+              id="update-cover"
+              value={cover}
+              onChange={(e) => setCover(e.target.value)}
+              placeholder="Cover image"
+            />
+          </Field>
+        )}
+        {contentUrl && (
+          <Field
+            label="Content URL"
+            htmlFor="update-content-url"
+            onReset={
+              resetFuntions?.contentUrl
+                ? () => setContentUrl(resetFuntions.contentUrl!())
+                : undefined
+            }
+          >
+            <Input
+              id="update-content-url"
+              value={contentUrl}
+              onChange={(e) => setContentUrl(e.target.value)}
+              placeholder="Content URL"
+            />
+          </Field>
+        )}
+        <Field
+          label="Notes"
+          onReset={
+            resetFuntions?.extraData
+              ? () => setExtraData(resetFuntions.extraData!())
+              : undefined
+          }
+        >
+          <div className="max-h-40 overflow-y-auto border border-input">
             <CodeEditor
               value={extraData}
               language="md"
-              placeholder="Extra data."
+              placeholder="Notes (markdown)"
               onChange={(evn) => setExtraData(evn.target.value)}
-              padding={15}
+              padding={12}
               className="bg-background/80"
               style={{
                 fontFamily:
@@ -178,15 +192,8 @@ export default function UpdateModal({
               data-color-mode={theme === "system" ? "dark" : theme}
             />
           </div>
-        </SeeMore>
-        <Button
-          disabled={isDisabled}
-          onClick={updateContentFunc}
-          className="max-w-sm w-11/12 mx-auto"
-        >
-          {exists ? "Update" : "Add"}
-        </Button>
-      </div>
-    </div>
+        </Field>
+      </SeeMore>
+    </ModalShell>
   );
 }
