@@ -1,90 +1,92 @@
 import { useSetAtom } from "jotai";
-import { useMemo } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { confirm } from "@/components/craft/confirm-dialog";
+import TagChips from "@/components/craft/library/TagChips";
 import { updateModalOpenAtom } from "@/components/craft/UpdateModal/atom";
 import { Button } from "@/components/ui/button";
 import { useDoc } from "../contexts/Doc.Context";
 
-export function TagParentChildList({ tags }: { tags: string[] }) {
-  const parentTags = useMemo(
-    () => [...new Set([...tags.map((k) => k.split(":")[0])])],
-    [tags],
-  );
-
-  return (
-    <>
-      {parentTags.sort().map((parent) => (
-        <div key={parent}>
-          {parent}:{" "}
-          <span className="text-muted-foreground">
-            {tags
-              .filter((k) => k.split(":")[0] === parent)
-              .sort()
-              .map((e) => e.replace(`${parent}:`, "").replaceAll("_", " "))
-              .join(", ")}
-          </span>
-        </div>
-      ))}
-    </>
-  );
-}
-
 export default function DocInfoSection() {
   const setUpdateModalOpen = useSetAtom(updateModalOpenAtom);
   const { tags, removeContent, doc } = useDoc();
+  const added = new Date(doc.added * 1000);
   return (
-    <div className="w-full sm:w-[calc(40%-1rem)] sm:max-h-96 sm:overflow-y-auto">
+    <aside
+      aria-label="Item details"
+      className="grid w-full grid-cols-1 content-start gap-4 sm:w-[calc(40%-1rem)]"
+    >
+      <div className="min-w-0">
+        <h2 className="text-base leading-snug font-semibold [overflow-wrap:anywhere]">
+          {doc.title}
+        </h2>
+        <p
+          title={`ID: ${doc.id}`}
+          className="mt-1 truncate font-mono text-[11px] text-muted-foreground"
+        >
+          {doc.id}
+        </p>
+        <time
+          dateTime={added.toISOString()}
+          className="mt-1 block text-xs text-muted-foreground"
+        >
+          Added{" "}
+          {added.toLocaleString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+        </time>
+      </div>
       {!!tags && (
-        <div className="mb-5 sm:mb-3">
+        <div className="flex items-center gap-1">
           <Button
-            className="w-1/2 rounded-r-none bg-neutral-300/10 dark:bg-neutral-800/30!"
             variant="outline"
+            size="sm"
             onClick={() => setUpdateModalOpen(true)}
+            title="Edit the title, tags and notes"
           >
+            <Pencil />
             Edit
           </Button>
           <Button
-            className="w-1/2 rounded-l-none text-red-500 bg-red-600/10! dark:bg-red-950/20!"
-            variant="outline"
+            variant="ghost"
+            size="sm"
+            title="Delete this item and its files from the server"
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             onClick={() =>
-              confirm.destructive("Confirm Deletion?").then((ok) => {
-                if (ok) removeContent();
-              })
+              confirm
+                .destructive({
+                  title: "Remove this item?",
+                  description: `"${doc.title}" and its files will be deleted from the server. This can't be undone.`,
+                  confirmText: "Remove",
+                })
+                .then((ok) => {
+                  if (ok) removeContent();
+                })
             }
           >
+            <Trash2 />
             Remove
           </Button>
         </div>
       )}
-      <h1 className="mb-1 text-lg font-semibold font-stretch-condensed">
-        {doc.title}
-      </h1>
-      <div className="text-muted-foreground text-xs">
-        {new Date(doc.added * 1000).toLocaleString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        })}
-      </div>
-      {doc.tags.length ? (
-        <>
-          <hr className="my-4" />
-          <div className="text-sm space-y-1">
-            <TagParentChildList tags={doc.tags} />
+      <section aria-label="Tags" className="border-t pt-3">
+        <TagChips tags={doc.tags} />
+      </section>
+      {doc.extraData.trim() && (
+        <section aria-label="Notes" className="border-t pt-3">
+          <div className="prose prose-sm dark:prose-invert max-w-none [overflow-wrap:anywhere]">
+            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              {doc.extraData}
+            </Markdown>
           </div>
-        </>
-      ) : null}
-      <hr className="my-4" />
-      <div className="w-11/12 typography max-w-full break-all mb-4">
-        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-          {doc.extraData}
-        </Markdown>
-      </div>
-    </div>
+        </section>
+      )}
+    </aside>
   );
 }

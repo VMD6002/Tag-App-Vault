@@ -1,16 +1,27 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
-import { Edit, Trash } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  FileText,
+  Pencil,
+  RefreshCw,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useSearchParams } from "wouter";
-import { confirm } from "@/components/craft/confirm-dialog";
-import TitleHeader from "@/components/craft/TitleHeader";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/craft/EmptyState";
 import { Button } from "@/components/ui/button";
+import CoverPanel, { confirmCover } from "../components/CoverPanel";
 import DocInfoSection from "../components/DocInfoSection";
+import ItemHeader from "../components/ItemHeader";
 import { useDoc } from "../contexts/Doc.Context";
 import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
 import UpdateTxtModal from "./UpdateTxtModal";
@@ -105,7 +116,7 @@ export default function TextPage() {
 
   useEffect(() => {
     getTxtDataMutation.mutate({ name: doc.title, id: doc.id });
-  }, [doc]);
+  }, [doc, getTxtDataMutation.mutate]);
 
   const currentTxt = getTxtQuery.data ?? "";
 
@@ -132,17 +143,17 @@ export default function TextPage() {
           "https://<SERVER_URL>",
         ),
       }),
-    [current, doc],
+    [current, doc, updateTxtMutation.mutate],
   );
 
   const openModal = useCallback(() => {
     setUpdateTxt(currentTxt);
     setModalOpen(true);
-  }, [currentTxt]);
+  }, [currentTxt, setModalOpen, setUpdateTxt]);
 
   const setCover = useCallback(
     (img?: string) =>
-      confirm("Confirm Cover Update").then(
+      confirmCover(img).then(
         (ok) =>
           ok &&
           setCoverMutation.mutate({
@@ -151,125 +162,182 @@ export default function TextPage() {
             name: doc.title,
           }),
       ),
-    [doc.id, doc.title],
+    [doc.id, doc.title, setCoverMutation.mutate],
   );
+
+  const chapterLabel = (txt: string) => txt.replace(/\.[^.]+$/, "");
+  const loadingData = getTxtDataMutation.isPending || getTxtDataMutation.isIdle;
+  const nothingToShow = !loadingData && txts.length === 0 && media.length === 0;
 
   return (
     <>
-      <UpdateTxtModal updateFunc={updateFunc} />
-      <button
-        className="w-fit grid mx-auto hover:cursor-pointer"
-        onClick={() =>
-          refreshTxtDataMutation.mutate({ name: doc.title, id: doc.id })
-        }
+      <UpdateTxtModal
+        updateFunc={updateFunc}
+        fileName={current}
+        saving={updateTxtMutation.isPending}
+      />
+      <ItemHeader
+        Title="Text"
+        description="Pick a chapter to read it. Media shows the images and videos that come with it."
       >
-        <TitleHeader Title="Text" Suffix={doc.title} />
-      </button>
-      <div
-        className={
-          "grid place-items-center " +
-          (coverUrl
-            ? "sm:place-items-start place-content-center sm:flex gap-4"
-            : "")
-        }
-      >
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={refreshTxtDataMutation.isPending}
+          onClick={() =>
+            refreshTxtDataMutation.mutate({ name: doc.title, id: doc.id })
+          }
+          title="Rescan this item's folder on the server for added or removed files"
+        >
+          <RefreshCw
+            className={refreshTxtDataMutation.isPending ? "animate-spin" : ""}
+          />
+          {refreshTxtDataMutation.isPending ? "Refreshing…" : "Refresh files"}
+        </Button>
+      </ItemHeader>
+      <div className="mb-6 grid place-items-center gap-4 sm:flex sm:place-items-start sm:justify-center">
         {coverUrl && (
-          <div className="relative w-full sm:w-2/5 rounded-sm bg-input/50 max-h-[max(30vh,25rem)] min-h-30 overflow-hidden">
-            {!!tags && (
-              <Button
-                variant="destructive"
-                className="absolute top-0 right-0 rounded-none rounded-bl backdrop-blur-xs"
-                size="icon-lg"
-                onClick={() => setCover()}
-              >
-                <Trash />
-              </Button>
-            )}
-
-            <img
-              className="w-full h-full max-h-[max(30vh,25rem)] object-contain"
-              src={coverUrl}
-              alt="Cover"
-            />
-          </div>
+          <CoverPanel
+            src={coverUrl}
+            onRemove={tags ? () => setCover() : undefined}
+          />
         )}
         <DocInfoSection />
       </div>
-      <div className="flex flex-wrap gap-3 w-full mx-auto my-6 mb-10">
-        {txts.map((txt) => (
-          <div className="flex flex-1" key={txt}>
-            <Button
-              variant={txt === current ? "default" : "secondary"}
-              className="justify-start rounded-none flex-1"
-              onClick={() => setCurrent(txt)}
-            >
-              {txt.slice(0, -3)}
-            </Button>
-            {!!tags && txt === current && (
+      {getTxtDataMutation.isError ? (
+        <ErrorState
+          title="Couldn't load the chapters"
+          message={getTxtDataMutation.error?.message}
+          onRetry={() =>
+            getTxtDataMutation.mutate({ name: doc.title, id: doc.id })
+          }
+        />
+      ) : loadingData && txts.length === 0 ? (
+        <LoadingState label="Loading chapters…" />
+      ) : nothingToShow ? (
+        <EmptyState
+          icon={FileText}
+          title="This item has no text files"
+          description="Add .md or .txt files to its folder on the server, then press Refresh files."
+        />
+      ) : (
+        <>
+          <nav
+            aria-label="Chapters"
+            className="mx-auto mb-8 flex w-full flex-wrap gap-2"
+          >
+            {txts.map((txt) => (
+              <div className="flex flex-1 basis-40" key={txt}>
+                <Button
+                  variant={txt === current ? "default" : "secondary"}
+                  aria-current={txt === current ? "true" : undefined}
+                  className="min-w-0 flex-1 justify-start"
+                  onClick={() => setCurrent(txt)}
+                  title={txt}
+                >
+                  <span className="truncate">{chapterLabel(txt)}</span>
+                </Button>
+                {!!tags && txt === current && (
+                  <Button
+                    variant="outline"
+                    onClick={openModal}
+                    title="Edit the text of this chapter"
+                    aria-label={`Edit ${chapterLabel(txt)}`}
+                  >
+                    <Pencil />
+                    Edit
+                  </Button>
+                )}
+              </div>
+            ))}
+            {!!media.length && (
               <Button
-                className="rounded-none"
-                variant="secondary"
-                onClick={openModal}
+                variant={"/media" === current ? "default" : "secondary"}
+                aria-current={"/media" === current ? "true" : undefined}
+                className="flex-1 basis-40 justify-start"
+                onClick={() => setCurrent("/media")}
               >
-                <Edit />
+                Media ({media.length})
               </Button>
             )}
-          </div>
-        ))}
-        {!!media.length && (
-          <Button
-            variant={"/media" === current ? "default" : "secondary"}
-            className="justify-start rounded-none flex-1"
-            onClick={() => setCurrent("/media")}
-          >
-            Media
-          </Button>
-        )}
-      </div>
-      {currentTxt && (
-        <article className="prose prose-lg dark:prose-invert mx-auto max-w-[68ch] break-words mb-8">
-          <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-            {currentTxt.replaceAll("https://<SERVER_URL>", "/")}
-          </Markdown>
-        </article>
-      )}
-      {currentTxt && (prev || next) && (
-        <div className="flex justify-between gap-3 mx-auto max-w-[68ch] mb-10">
-          {prev ? (
-            <Button variant="secondary" onClick={() => goTo(prev)}>
-              ← {prev.slice(0, -3)}
-            </Button>
-          ) : (
-            <span />
+          </nav>
+          {getTxtQuery.isError && current !== "/media" ? (
+            <ErrorState
+              title="Couldn't load this chapter"
+              message={getTxtQuery.error?.message}
+              onRetry={() => getTxtQuery.refetch()}
+            />
+          ) : getTxtQuery.isPending && current && current !== "/media" ? (
+            <LoadingState label="Loading chapter…" />
+          ) : null}
+          {currentTxt && (
+            <article className="prose prose-lg dark:prose-invert mx-auto mb-8 max-w-[68ch] break-words">
+              <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {currentTxt.replaceAll("https://<SERVER_URL>", "/")}
+              </Markdown>
+            </article>
           )}
-          {next && (
-            <Button variant="secondary" onClick={() => goTo(next)}>
-              {next.slice(0, -3)} →
-            </Button>
+          {currentTxt && (prev || next) && (
+            <div className="mx-auto mb-10 flex max-w-[68ch] justify-between gap-3">
+              {prev ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => goTo(prev)}
+                  title={`Previous chapter: ${chapterLabel(prev)}`}
+                >
+                  <ArrowLeft />
+                  <span className="truncate">{chapterLabel(prev)}</span>
+                </Button>
+              ) : (
+                <span />
+              )}
+              {next && (
+                <Button
+                  variant="secondary"
+                  onClick={() => goTo(next)}
+                  title={`Next chapter: ${chapterLabel(next)}`}
+                >
+                  <span className="truncate">{chapterLabel(next)}</span>
+                  <ArrowRight />
+                </Button>
+              )}
+            </div>
           )}
-        </div>
-      )}
-      {current === "/media" && !!media.length && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {media.map((entry) =>
-            entry.type === "img" ? (
-              <button
-                key={entry.name}
-                onClick={() => setCover(entry.name)}
-                className="w-full my-auto"
-              >
-                <img src={getMediaURL(entry.name)} className="w-full" />
-              </button>
-            ) : (
-              <video
-                key={entry.name}
-                src={getMediaURL(entry.name)}
-                controls
-                className="w-full my-auto"
-              />
-            ),
+          {current === "/media" && !!media.length && (
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Click an image to use it as this item's cover.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {media.map((entry) =>
+                  entry.type === "img" ? (
+                    <button
+                      type="button"
+                      key={entry.name}
+                      onClick={() => setCover(entry.name)}
+                      title="Use as cover"
+                      aria-label={`Use ${entry.name} as the cover`}
+                      className="my-auto w-full cursor-pointer border bg-muted/40"
+                    >
+                      <img
+                        src={getMediaURL(entry.name)}
+                        alt=""
+                        className="w-full"
+                      />
+                    </button>
+                  ) : (
+                    <video
+                      key={entry.name}
+                      src={getMediaURL(entry.name)}
+                      controls
+                      className="my-auto w-full border bg-muted/40"
+                    />
+                  ),
+                )}
+              </div>
+            </>
           )}
-        </div>
+        </>
       )}
     </>
   );

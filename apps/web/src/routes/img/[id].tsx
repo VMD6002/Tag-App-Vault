@@ -1,6 +1,6 @@
-import TitleHeader from "@/components/craft/TitleHeader";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import DocInfoSection from "../components/DocInfoSection";
+import ItemHeader from "../components/ItemHeader";
 import { useDoc } from "../contexts/Doc.Context";
 
 export default function ImagePage() {
@@ -11,22 +11,27 @@ export default function ImagePage() {
 
   return (
     <>
-      <TitleHeader Title="Image" Suffix={doc.title} />
-      <div className="grid place-items-center sm:place-items-start sm:flex gap-4">
+      <ItemHeader
+        Title="Image"
+        description="Click the image to see it full size."
+      />
+      <div className="grid place-items-center gap-4 sm:flex sm:place-items-start">
         <Dialog>
           <DialogTrigger
-            nativeButton={false}
-            render={
-              <img
-                className="w-full min-h-60 sm:w-3/5 rounded-sm object-contain bg-input/50 max-h-[60vh]"
-                src={coverUrl}
-              />
-            }
-          />
-          <DialogContent className="max-w-[80vw] sm:max-w-[80vw] md:max-w-[80vw] lg:max-w-[80vw] xl:max-w-[80vw] border-0 bg-secondary/60 backdrop-blur p-0">
+            title="View full size"
+            className="block min-h-60 w-full cursor-zoom-in border bg-muted/40 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:w-3/5"
+          >
             <img
-              className="size-full object-contain max-h-[90vh]"
+              className="max-h-[60vh] w-full object-contain"
+              src={coverUrl}
+              alt={doc.title}
+            />
+          </DialogTrigger>
+          <DialogContent className="max-w-[80vw] border-0 bg-secondary/60 p-0 backdrop-blur sm:max-w-[80vw] md:max-w-[80vw] lg:max-w-[80vw] xl:max-w-[80vw]">
+            <img
+              className="size-full max-h-[90vh] object-contain"
               src={imgUrl}
+              alt={doc.title}
             />
           </DialogContent>
         </Dialog>

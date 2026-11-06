@@ -1,54 +1,64 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtom } from "jotai";
+import { useCallback } from "react";
+import ModalShell from "@/components/craft/ModalShell";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { updateTxtAtom, updateTxtModalOpenAtom } from "./atom";
 
 export default function UpdateTxtModal({
   updateFunc,
+  fileName,
+  saving = false,
 }: {
   updateFunc: (content: string) => void;
+  /** Name of the chapter file being edited. */
+  fileName: string;
+  saving?: boolean;
 }) {
   const [txt, setTxt] = useAtom(updateTxtAtom);
   const [modalOpen, setModalOpen] = useAtom(updateTxtModalOpenAtom);
   const { theme } = useTheme();
-
-  if (!modalOpen) return null;
+  const close = useCallback(() => setModalOpen(false), [setModalOpen]);
 
   return (
-    <div
-      style={{ zIndex: 2147483647 }}
-      className="grid fixed min-h-screen top-0 right-0 w-full place-items-center overflow-y-auto overflow-x-clip"
+    <ModalShell
+      open={modalOpen}
+      onClose={close}
+      title="Edit chapter text"
+      description={
+        <>
+          Editing <span className="[overflow-wrap:anywhere]">{fileName}</span>.
+          Markdown is supported. Saving overwrites the file on the server.
+        </>
+      }
+      className="sm:max-w-3xl"
+      footer={
+        <>
+          <Button variant="outline" onClick={close}>
+            Cancel
+          </Button>
+          <Button disabled={saving} onClick={() => updateFunc(txt)}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </>
+      }
     >
-      <button
-        type="button"
-        aria-label="Close modal backdrop"
-        onClick={() => setModalOpen(false)}
-        className="h-screen absolute w-full bg-black/10 backdrop-blur-xs border-0 cursor-default"
-      />
-      <div className="max-w-3xl absolute w-full grid bg-secondary rounded shadow px-8 py-10">
-        <div className="max-h-[max(80vh,20rem)] h-full overflow-y-scroll mb-4">
-          <CodeEditor
-            value={txt}
-            language="md"
-            placeholder="Extra data."
-            onChange={(evn) => setTxt(evn.target.value)}
-            padding={15}
-            className="bg-background/80 text-base!"
-            style={{
-              fontFamily:
-                "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-            }}
-            data-color-mode={theme === "system" ? "dark" : theme}
-          />
-        </div>
-        <Button
-          onClick={() => updateFunc(txt)}
-          className="max-w-sm w-11/12 mx-auto"
-        >
-          Update
-        </Button>
+      <div className="max-h-[max(60vh,16rem)] overflow-y-auto border border-input">
+        <CodeEditor
+          value={txt}
+          language="md"
+          placeholder="Write markdown here"
+          onChange={(evn) => setTxt(evn.target.value)}
+          padding={15}
+          className="bg-background/80 text-base!"
+          style={{
+            fontFamily:
+              "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+          }}
+          data-color-mode={theme === "system" ? "dark" : theme}
+        />
       </div>
-    </div>
+    </ModalShell>
   );
 }

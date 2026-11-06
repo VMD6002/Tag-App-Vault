@@ -3,12 +3,16 @@ import type { ContentServerType } from "@tagapp/utils/types";
 import { useMutation } from "@tanstack/react-query";
 import constate from "constate";
 import { useAtomValue, useSetAtom } from "jotai";
-import { Disc3 } from "lucide-react";
+import { FileQuestion } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useRoute } from "wouter";
-import { navigate } from "wouter/use-hash-location";
+import { Link, useLocation, useRoute } from "wouter";
 import { tagsAtom } from "@/atom";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/craft/EmptyState";
 import UpdateModal from "@/components/craft/UpdateModal";
 import {
   updateDataAtom,
@@ -19,6 +23,7 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
+import { buttonVariants } from "@/components/ui/button";
 import { orpc } from "@/lib/orpc";
 
 const docPlaceholderData: ContentServerType = {
@@ -36,6 +41,7 @@ function useDocContext() {
   const tags = useAtomValue(tagsAtom);
 
   const { id } = useRoute("/:contentType/:id")[1] as { id: string };
+  const [, navigate] = useLocation();
   const [doc, setDoc] = useState<ContentServerType>(docPlaceholderData);
   const setInputDisabled = useSetAtom(updateInputDisabledAtom);
 
@@ -141,15 +147,41 @@ export function Child({ children }: { children: React.ReactNode }) {
     getContentMutation.mutate({ id });
   }, [id]);
 
-  if (getContentMutation.isError)
-    return <p className="text-center my-20">Couldn't load this item.</p>;
+  if (getContentMutation.isError) {
+    const notFound =
+      (getContentMutation.error as { code?: string }).code === "NOT_FOUND";
+    return notFound ? (
+      <EmptyState
+        icon={FileQuestion}
+        title="Item not found"
+        description="It may have been removed, or the link is wrong."
+        className="py-24"
+      >
+        <Link
+          href="/"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          Back to library
+        </Link>
+      </EmptyState>
+    ) : (
+      <ErrorState
+        title="Couldn't load this item"
+        message={getContentMutation.error?.message}
+        onRetry={() => getContentMutation.mutate({ id })}
+      >
+        <Link
+          href="/"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          Back to library
+        </Link>
+      </ErrorState>
+    );
+  }
 
   if (getContentMutation.isPending || !doc.title)
-    return (
-      <div className="h-[calc(100vh-8rem)] grid place-items-center">
-        <Disc3 className="animate-spin" size={"4rem"} />
-      </div>
-    );
+    return <LoadingState label="Loading item…" />;
 
   return (
     <>

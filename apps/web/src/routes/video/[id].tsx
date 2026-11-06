@@ -3,10 +3,10 @@ import { Image } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
-import TitleHeader from "@/components/craft/TitleHeader";
 import { Button } from "@/components/ui/button";
 import { useCaptureFrame } from "@/hooks/useCaptureFrame";
 import DocInfoSection from "../components/DocInfoSection";
+import ItemHeader from "../components/ItemHeader";
 import { useDoc } from "../contexts/Doc.Context";
 
 export default function VideoPage() {
@@ -29,7 +29,15 @@ export default function VideoPage() {
   );
 
   const setCover = useCallback(async () => {
-    if (!(await confirm("U sure u want to set new cover ??"))) return;
+    if (
+      !(await confirm({
+        title: "Use this frame as the cover?",
+        description:
+          "The frame the video is paused on replaces this video's cover image.",
+        confirmText: "Set cover",
+      }))
+    )
+      return;
     const file = await captureFrame(`cover.${doc.title}.${doc.id}`);
     if (!file) return;
     setCoverGivenFileMuation.mutate({
@@ -41,33 +49,44 @@ export default function VideoPage() {
 
   return (
     <>
-      <TitleHeader Title="Video" Suffix={doc.title} />
-      <div className="grid place-items-center sm:place-items-start sm:flex gap-4">
-        <div className="w-full sm:w-3/5 rounded-sm max-h-[60vh] relative min-h-64 bg-input/50">
-          <video
-            ref={videoRef}
-            className="object-contain max-h-[60vh] min-h-64 w-full mx-auto"
-            src={videoUrl}
-            poster={posterUrl}
-            controls
-          >
-            {captionUrl ? (
-              <track
-                src={captionUrl}
-                kind="subtitles"
-                srcLang="en"
-                label="English"
-              />
-            ) : null}
-          </video>
+      <ItemHeader
+        Title="Video"
+        description={
+          tags
+            ? "Pause on a frame, then use it as the cover."
+            : "Play the video here."
+        }
+      />
+      <div className="grid place-items-center gap-4 sm:flex sm:place-items-start">
+        <div className="grid w-full gap-2 sm:w-3/5">
+          <div className="min-h-64 w-full border bg-muted/40">
+            <video
+              ref={videoRef}
+              className="mx-auto max-h-[60vh] min-h-64 w-full object-contain"
+              src={videoUrl}
+              poster={posterUrl}
+              controls
+            >
+              {captionUrl ? (
+                <track
+                  src={captionUrl}
+                  kind="subtitles"
+                  srcLang="en"
+                  label="English"
+                />
+              ) : null}
+            </video>
+          </div>
           {!!tags && (
             <Button
               onClick={setCover}
-              size="icon-lg"
+              size="sm"
               variant="outline"
-              className="rounded-none rounded-bl absolute top-0 right-0"
+              className="w-fit"
+              title="Pause the video on a frame first, then use that frame as the cover"
             >
               <Image />
+              Use current frame as cover
             </Button>
           )}
         </div>

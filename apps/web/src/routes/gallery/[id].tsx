@@ -1,11 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
-import { useSetAtom } from "jotai";
-import { Trash } from "lucide-react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { Images, RefreshCw } from "lucide-react";
 import { useCallback, useEffect } from "react";
-import { confirm } from "@/components/craft/confirm-dialog";
-import TitleHeader from "@/components/craft/TitleHeader";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/craft/EmptyState";
 import { Button } from "@/components/ui/button";
+import CoverPanel, { confirmCover } from "../components/CoverPanel";
 import DocInfoSection from "../components/DocInfoSection";
+import ItemHeader from "../components/ItemHeader";
 import { useDoc } from "../contexts/Doc.Context";
 import { galleryDataAtom } from "./components/atom";
 import FloatingButtons from "./components/FloatingButton";
@@ -17,6 +22,7 @@ export default function GalleryPage() {
   const { doc, encodedTitle, setCoverMutation, tags, orpc } = useDoc();
 
   const setGalleryData = useSetAtom(galleryDataAtom);
+  const galleryData = useAtomValue(galleryDataAtom);
 
   const getGalleryDataMutation = useMutation(
     orpc.gallery.getGalleryData.mutationOptions({
@@ -44,7 +50,7 @@ export default function GalleryPage() {
 
   const setCover = useCallback(
     (img?: string) =>
-      confirm("Confirm Cover Update").then((ok) => {
+      confirmCover(img).then((ok) => {
         if (ok)
           setCoverMutation.mutate({
             coverPath: img,
@@ -56,42 +62,68 @@ export default function GalleryPage() {
     [doc.id, doc.title],
   );
 
+  const loading =
+    getGalleryDataMutation.isPending || getGalleryDataMutation.isIdle;
+  const refresh = () =>
+    refreshGalleryDataMutation.mutate({ name: doc.title, id: doc.id });
+
   return (
     <div className="relative">
       <GaleryContentModal />
-      <button
-        className="w-fit grid mx-auto hover:cursor-pointer"
-        onClick={() =>
-          refreshGalleryDataMutation.mutate({ name: doc.title, id: doc.id })
-        }
+      <ItemHeader
+        Title="Gallery"
+        description="Open a file to view it, or tag and rename it from its card."
       >
-        <TitleHeader Title="Gallery" Suffix={doc.title} />
-      </button>
-      <div className="grid place-items-center sm:place-items-start justify-center sm:flex gap-4 mb-6">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={refreshGalleryDataMutation.isPending}
+          onClick={refresh}
+          title="Rescan this gallery's folder on the server for added or removed files"
+        >
+          <RefreshCw
+            className={
+              refreshGalleryDataMutation.isPending ? "animate-spin" : ""
+            }
+          />
+          {refreshGalleryDataMutation.isPending
+            ? "Refreshing…"
+            : "Refresh files"}
+        </Button>
+      </ItemHeader>
+      <div className="mb-6 grid place-items-center justify-center gap-4 sm:flex sm:place-items-start">
         {coverUrl && (
-          <div className="relative w-full sm:w-2/5 rounded-sm bg-input/50 max-h-[max(30vh,25rem)] min-h-30 overflow-hidden">
-            {!!tags && (
-              <Button
-                variant="destructive"
-                className="absolute top-0 right-0 rounded-none rounded-bl backdrop-blur-xs"
-                size="icon-lg"
-                onClick={() => setCover()}
-              >
-                <Trash />
-              </Button>
-            )}
-            <img
-              className="w-full h-full max-h-[max(30vh,25rem)] object-contain"
-              src={coverUrl}
-              alt="Cover"
-            />
-          </div>
+          <CoverPanel
+            src={coverUrl}
+            onRemove={tags ? () => setCover() : undefined}
+          />
         )}
         <DocInfoSection />
       </div>
-      {!!tags && <FloatingButtons />}
-      <GalleryOptions />
-      <Gallery />
+      {getGalleryDataMutation.isError ? (
+        <ErrorState
+          title="Couldn't load the gallery files"
+          message={getGalleryDataMutation.error?.message}
+          onRetry={() =>
+            getGalleryDataMutation.mutate({ name: doc.title, id: doc.id })
+          }
+        />
+      ) : loading && galleryData.length === 0 ? (
+        <LoadingState label="Loading files…" />
+      ) : galleryData.length === 0 ? (
+        <EmptyState
+          icon={Images}
+          title="This gallery has no files"
+          description="Add files to its folder on the server, then press Refresh files."
+        />
+      ) : (
+        <>
+          {!!tags && <FloatingButtons />}
+          <GalleryOptions />
+          <Gallery />
+          <div className="h-16" />
+        </>
+      )}
     </div>
   );
 }

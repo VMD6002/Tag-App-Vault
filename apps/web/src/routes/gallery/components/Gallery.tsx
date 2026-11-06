@@ -3,6 +3,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
+import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useDoc } from "../../contexts/Doc.Context";
 import {
@@ -75,25 +76,31 @@ export default function Gallery() {
 
   const removeContentCover = useCallback(
     (cover: string) =>
-      confirm.destructive(`Confirm ${cover} removal`).then((ok) => {
-        if (ok)
-          removeContentMutation.mutate({
-            name: doc.title,
-            id: doc.id,
-            contents: [`.gallery-covers/${cover}`],
-          });
-      }),
+      confirm
+        .destructive({
+          title: "Delete this cover image?",
+          description: `${cover} will be deleted from the server. The file it belongs to is kept.`,
+          confirmText: "Delete cover",
+        })
+        .then((ok) => {
+          if (ok)
+            removeContentMutation.mutate({
+              name: doc.title,
+              id: doc.id,
+              contents: [`.gallery-covers/${cover}`],
+            });
+        }),
     [doc],
   );
 
   const isList = galleryViewMode === "list";
 
   const layoutClasses = {
-    list: "flex flex-col mx-auto gap-8",
+    list: "flex flex-col mx-auto gap-6",
     responsive:
       "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3",
-    "grid-2": "grid grid-cols-2 gap-8",
-    "grid-3": "grid grid-cols-3 gap-6",
+    "grid-2": "grid grid-cols-2 gap-4",
+    "grid-3": "grid grid-cols-3 gap-4",
     "grid-4": "grid grid-cols-4 gap-3",
   };
 
@@ -104,9 +111,16 @@ export default function Gallery() {
   return (
     <>
       {isList && (
-        <div className="h-10 sticky top-19 grid bg-background z-10">
+        <div className="sticky top-[6.75rem] z-10 mb-4 flex items-center gap-3 border-b bg-background/95 py-2">
+          <Label
+            id="gallery-width-label"
+            className="shrink-0 text-xs text-muted-foreground"
+          >
+            Column width
+          </Label>
           <Slider
-            className="w-[calc(100%-2rem)] m-auto"
+            aria-labelledby="gallery-width-label"
+            className="flex-1"
             value={[Number(galleryListWidth)]}
             onValueChange={(o) => setGalleryListWidth([o].flat()[0])}
             max={100}

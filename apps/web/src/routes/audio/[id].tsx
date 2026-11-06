@@ -1,11 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { Trash } from "lucide-react";
+import { Music } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { confirm } from "@/components/craft/confirm-dialog";
-import TitleHeader from "@/components/craft/TitleHeader";
-import { Button } from "@/components/ui/button";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/craft/EmptyState";
+import CoverPanel, { confirmCover } from "../components/CoverPanel";
 import DocInfoSection from "../components/DocInfoSection";
+import ItemHeader from "../components/ItemHeader";
 import { useDoc } from "../contexts/Doc.Context";
 import AudioCard from "./AudioCard";
 import { audiosAtom, currentAtom } from "./atom";
@@ -36,7 +41,7 @@ export default function AudioPage() {
 
   const setCover = useCallback(
     (img?: string) => {
-      confirm("Confirm Cover Update?").then((ok) => {
+      confirmCover(img).then((ok) => {
         if (ok)
           setCoverMutation.mutate({
             coverPath: img,
@@ -58,14 +63,20 @@ export default function AudioPage() {
 
   const removeContentCover = useCallback(
     (cover: string) => {
-      confirm.destructive(`Confirm ${cover} removal`).then((ok) => {
-        if (ok)
-          removeContentMutation.mutate({
-            name: doc.title,
-            id: doc.id,
-            contents: [`.audio-covers/${cover}`],
-          });
-      });
+      confirm
+        .destructive({
+          title: "Delete this cover image?",
+          description: `${cover} will be deleted from the server. The track it belongs to is kept.`,
+          confirmText: "Delete cover",
+        })
+        .then((ok) => {
+          if (ok)
+            removeContentMutation.mutate({
+              name: doc.title,
+              id: doc.id,
+              contents: [`.audio-covers/${cover}`],
+            });
+        });
     },
     [doc],
   );
@@ -74,51 +85,62 @@ export default function AudioPage() {
     getAudioDataMutation.mutate({ name: doc.title, id: doc.id });
   }, [doc]);
 
+  const loading = getAudioDataMutation.isPending || getAudioDataMutation.isIdle;
+
   return (
     <>
-      <TitleHeader Title="Audio" Suffix={doc.title} />
-      <div
-        className={
-          "grid place-items-center " +
-          (coverUrl
-            ? "sm:place-items-start place-content-center sm:flex gap-4"
-            : "")
-        }
-      >
+      <ItemHeader Title="Audio" description="Choose a track to play it." />
+      <div className="mb-6 grid place-items-center gap-4 sm:flex sm:place-items-start sm:justify-center">
         {coverUrl && (
-          <div className="relative w-full sm:w-2/5 rounded-sm bg-input/50 max-h-[max(30vh,25rem)] min-h-30 overflow-hidden">
-            {!!tags && (
-              <Button
-                variant="destructive"
-                className="absolute top-0 right-0 rounded-none rounded-bl backdrop-blur-xs"
-                size="icon-lg"
-                onClick={() => setCover()}
-              >
-                <Trash />
-              </Button>
-            )}
-            <img
-              className="w-full h-full max-h-[max(30vh,25rem)] object-contain"
-              src={coverUrl}
-              alt="Cover"
-            />
-          </div>
+          <CoverPanel
+            src={coverUrl}
+            onRemove={tags ? () => setCover() : undefined}
+          />
         )}
         <DocInfoSection />
       </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 w-full my-6 gap-3 mb-10">
-        {audios.map((audio) => (
-          <AudioCard
-            key={audio.name}
-            data={audio}
-            updateCover={setCover}
-            removeContentCover={removeContentCover}
-          />
-        ))}
-      </div>
-      <div className="mb-16">
-        <audio className="w-full" controls src={getAudioURL(current)} />
-      </div>
+      {getAudioDataMutation.isError ? (
+        <ErrorState
+          title="Couldn't load the tracks"
+          message={getAudioDataMutation.error?.message}
+          onRetry={() =>
+            getAudioDataMutation.mutate({ name: doc.title, id: doc.id })
+          }
+        />
+      ) : loading && audios.length === 0 ? (
+        <LoadingState label="Loading tracks…" />
+      ) : audios.length === 0 ? (
+        <EmptyState
+          icon={Music}
+          title="This item has no audio files"
+          description="Add audio files to its folder on the server and reload the page."
+        />
+      ) : (
+        <>
+          <div className="mb-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {audios.map((audio) => (
+              <AudioCard
+                key={audio.name}
+                data={audio}
+                updateCover={setCover}
+                removeContentCover={removeContentCover}
+              />
+            ))}
+          </div>
+          <section
+            aria-label="Player"
+            className="mb-20 grid gap-1 border bg-card/40 p-3"
+          >
+            <p
+              className="truncate text-xs text-muted-foreground"
+              title={current}
+            >
+              Now playing: <span className="text-foreground">{current}</span>
+            </p>
+            <audio className="w-full" controls src={getAudioURL(current)} />
+          </section>
+        </>
+      )}
       {!!tags && <FloatingButtons />}
     </>
   );

@@ -1,9 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { Grid2X2Check, Image, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
-import { Button } from "@/components/ui/button";
+import FloatingToolbar from "@/components/craft/FloatingToolbar";
 import { useDoc } from "../contexts/Doc.Context";
 import { audiosAtom, currentModeAtom, selectedContentAtom } from "./atom";
 
@@ -29,7 +28,12 @@ export default function FloatingButtons() {
       return;
     }
     confirm
-      .destructive(`Confirm ${selected.length} items deletion`)
+      .destructive({
+        title: `Delete ${selected.length} ${selected.length === 1 ? "track" : "tracks"}?`,
+        description:
+          "The selected tracks will be deleted from this item's folder on the server. This can't be undone.",
+        confirmText: "Delete",
+      })
       .then((ok) => {
         if (ok)
           removeContentMutation.mutate({
@@ -41,67 +45,32 @@ export default function FloatingButtons() {
   };
 
   return (
-    <div className="fixed bottom-8 right-8 grid gap-1">
-      {mode === "delete" ? (
-        <div className="flex gap-1">
-          <Button
-            onClick={() => {
-              if (galleryData.length === selected.length) {
-                setSelected([]);
-                return;
-              }
-              confirm("Select All?").then((ok) => {
-                if (ok) setSelected(galleryData.map((e) => e.name));
-              });
-            }}
-            variant="secondary"
-            size="icon"
-            className={
-              "backdrop-blur-xs border-2 size-12 " +
-              (selected.length === galleryData.length
-                ? "border-foreground!"
-                : "")
-            }
-          >
-            {String(selected.length).padStart(2, "0")}
-          </Button>
-          <Button
-            onClick={removeGalleryContents}
-            variant="secondary"
-            size="icon"
-            className="backdrop-blur-xs border-2 border-red-500 size-12"
-          >
-            <Trash className="text-red-500 scale-125" />
-          </Button>
-        </div>
-      ) : null}
-      <div className="flex gap-1">
-        <Button
-          onClick={() => setMode((old) => (old === "cover" ? "view" : "cover"))}
-          variant="secondary"
-          size="icon"
-          className={
-            "backdrop-blur-xs border-2 size-12 " +
-            (mode === "cover" ? "border-foreground!" : "")
-          }
-        >
-          <Image className="scale-125" />
-        </Button>
-        <Button
-          onClick={() => {
-            setSelected([]);
-            setMode((old) => (old === "delete" ? "view" : "delete"));
-          }}
-          variant="secondary"
-          size="icon"
-          className={
-            "backdrop-blur-xs border-2 size-12 " +
-            (mode === "delete" ? "border-foreground!" : "")
-          }
-        >
-          <Grid2X2Check className="scale-125" />
-        </Button>
-      </div>
-    </div>
+    <FloatingToolbar
+      mode={mode}
+      noun="tracks"
+      selectedCount={selected.length}
+      total={galleryData.length}
+      onToggleCover={() =>
+        setMode((old) => (old === "cover" ? "view" : "cover"))
+      }
+      onToggleSelect={() => {
+        setSelected([]);
+        setMode((old) => (old === "delete" ? "view" : "delete"));
+      }}
+      onSelectAll={() => {
+        if (galleryData.length === selected.length) {
+          setSelected([]);
+          return;
+        }
+        confirm({
+          title: "Select all tracks?",
+          description: `Selects all ${galleryData.length} tracks so you can delete them together.`,
+          confirmText: "Select all",
+        }).then((ok) => {
+          if (ok) setSelected(galleryData.map((e) => e.name));
+        });
+      }}
+      onDelete={removeGalleryContents}
+    />
   );
 }

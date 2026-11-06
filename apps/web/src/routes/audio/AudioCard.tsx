@@ -1,7 +1,9 @@
 import { useAtom, useAtomValue } from "jotai";
-import { Trash } from "lucide-react";
+import { Play, Trash2 } from "lucide-react";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { useDoc } from "../contexts/Doc.Context";
 import type { AudioEntry } from "./atom";
 import { currentAtom, currentModeAtom, selectedContentAtom } from "./atom";
@@ -15,7 +17,7 @@ export default function AudioCard({
   updateCover: (coverPath: string) => void;
   removeContentCover: (cover: string) => void;
 }) {
-  const { doc, encodedTitle } = useDoc();
+  const { doc, encodedTitle, tags } = useDoc();
 
   const currentMode = useAtomValue(currentModeAtom);
   const [selected, setSelected] = useAtom(selectedContentAtom);
@@ -44,37 +46,74 @@ export default function AudioCard({
   const getAudioCover = (cover: string) =>
     `/media/Audios/${encodedTitle}/.audio-covers/${encodeURIComponent(cover)}`;
 
+  const isCurrent = currentMode === "view" && current === data.name;
+  const isSelected = selected.includes(data.name);
+
   return (
-    <div
-      className={
-        "w-full my-auto bg-secondary rounded hover:cursor-pointer relative " +
-        (currentMode !== "view"
-          ? "border-2 p-3 " +
-            (selected.includes(data.name) ? "border-red-500 " : "")
-          : current === data.name
-            ? "bg-foreground! text-background"
-            : "")
-      }
-    >
-      {data.cover && currentMode === "view" && (
-        <Button
-          variant="destructive"
-          className="absolute right-0 rounded-none rounded-bl z-10 backdrop-blur-xs"
-          size="icon-lg"
-          onClick={() => removeContentCover(data.cover!)}
-        >
-          <Trash />
-        </Button>
+    <article
+      className={cn(
+        "relative flex flex-col border bg-card/40 transition-colors",
+        currentMode === "view" && !isCurrent && "hover:border-foreground/30",
+        isCurrent && "border-foreground ring-1 ring-foreground",
+        currentMode === "delete" && isSelected && "border-destructive",
       )}
-      <button className="size-full text-left" onClick={handleClick}>
+    >
+      <button
+        type="button"
+        className="flex w-full cursor-pointer flex-col text-left"
+        onClick={handleClick}
+        aria-label={
+          currentMode === "view"
+            ? `Play ${data.name}`
+            : currentMode === "delete"
+              ? `${isSelected ? "Unselect" : "Select"} ${data.name}`
+              : `Use the cover of ${data.name} as this item's cover`
+        }
+      >
         {data.cover && (
           <img
             src={getAudioCover(data.cover)}
-            className="w-full min-h-36 mb-2 object-contain"
+            alt=""
+            loading="lazy"
+            className="max-h-60 min-h-36 w-full border-b bg-muted/40 object-contain"
           />
         )}
-        <p className="text-base break-all p-5">{data.name}</p>
+        <span className="p-3 text-sm leading-snug font-medium [overflow-wrap:anywhere]">
+          {data.name}
+        </span>
       </button>
-    </div>
+      {currentMode === "delete" && (
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={handleClick}
+          aria-label={`Select ${data.name}`}
+          className="absolute top-2 left-2 size-5 bg-background/90"
+        />
+      )}
+      {(isCurrent || (!!tags && data.cover && currentMode === "view")) && (
+        <div className="mt-auto flex items-center justify-between gap-2 border-t px-3 py-1">
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            {isCurrent && (
+              <>
+                <Play className="size-3" aria-hidden />
+                Selected track
+              </>
+            )}
+          </span>
+          {!!tags && data.cover && currentMode === "view" && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => removeContentCover(data.cover!)}
+              title="Delete this track's cover image (the track itself is kept)"
+              aria-label={`Delete cover image of ${data.name}`}
+              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 />
+            </Button>
+          )}
+        </div>
+      )}
+    </article>
   );
 }

@@ -1,11 +1,12 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Tag, Trash } from "lucide-react";
+import { Tag, Trash2 } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "sonner";
+import TagChips from "@/components/craft/library/TagChips";
 import LazyVideo from "@/components/LazyVideo";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { TagParentChildList } from "../../components/DocInfoSection";
 import { useDoc } from "../../contexts/Doc.Context";
 import {
   autoPlayFamily,
@@ -44,7 +45,7 @@ const ContentMold = ({
     return (
       <LazyVideo
         src={contentUrl}
-        className="w-full min-h-36 mb-2 object-contain"
+        className="max-h-80 min-h-36 w-full object-contain"
         AutoPlay={currentMode !== "cover" ? autoPlay : false}
       />
     );
@@ -53,7 +54,7 @@ const ContentMold = ({
     <img
       src={coverUrl || contentUrl}
       alt=""
-      className="w-full min-h-36 mb-2 object-contain"
+      className="max-h-80 min-h-36 w-full object-contain"
       loading="lazy"
     />
   );
@@ -108,60 +109,92 @@ export default function GalleryContentCard({
     }
   }, [data, doc, currentMode]);
 
+  const isSelected = selected.includes(data.name);
+  const notACoverChoice =
+    currentMode === "cover" && !(data.type === "img" || data.cover);
+
   return (
-    <div
+    <article
       className={cn(
-        "my-auto w-full hover:cursor-pointer",
-        currentMode !== "view" && "border-2 p-3",
-        currentMode === "delete" &&
-          selected.includes(data.name) &&
-          "border-red-500",
-        currentMode === "cover" &&
-          !(data.type === "img" || data.cover) &&
-          "blur-[2px]",
+        "relative flex w-full flex-col border bg-card/40 transition-colors",
+        currentMode === "view" && "hover:border-foreground/30",
+        currentMode === "delete" && isSelected && "border-destructive",
+        notACoverChoice && "opacity-50",
       )}
     >
-      {/* Media Image / Video */}
-      <button className="w-full text-left" onClick={handleClick}>
+      {/* Media image / video */}
+      <button
+        type="button"
+        className="relative block w-full cursor-pointer border-b bg-muted/40 text-left"
+        onClick={handleClick}
+        aria-label={
+          currentMode === "view"
+            ? `Open ${data.name}`
+            : currentMode === "delete"
+              ? `${isSelected ? "Unselect" : "Select"} ${data.name}`
+              : `Use ${data.name} as the cover`
+        }
+      >
         <ContentMold data={data} currentMode={currentMode} />
       </button>
+      {currentMode === "delete" && (
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={handleClick}
+          aria-label={`Select ${data.name}`}
+          className="absolute top-2 left-2 size-5 bg-background/90"
+        />
+      )}
 
-      {/* Inline Title & Edit Button */}
-      <div className="flex items-center gap-2.5 mt-1">
-        <Button
-          variant="secondary"
-          size="icon-sm"
-          className="rounded-none shrink-0"
-          onClick={openTagModal}
-        >
-          <Tag className="size-4" />
-        </Button>
-        {/* Remove Cover Action */}
-        {!!tags && data.cover && currentMode === "view" && (
-          <Button
-            variant="destructive"
-            className="rounded-none shrink-0"
-            size="icon-sm"
-            onClick={() => removeContentCover(data.cover!)}
-          >
-            <Trash />
-          </Button>
-        )}
-
+      <div className="grid gap-2 p-2">
         <button
-          className="text-base truncate text-left w-full"
+          type="button"
+          className="line-clamp-2 cursor-pointer text-left text-sm leading-snug font-medium [overflow-wrap:anywhere]"
           onClick={handleClick}
+          title={data.name}
         >
           {data.name}
         </button>
+        {!!data.tags?.length && <TagChips tags={data.tags} limit />}
       </div>
 
-      {/* Formatted Tag List (No pills/badges) */}
-      {!!data.tags?.length && (
-        <div className="mt-1.5 text-sm space-y-0.5">
-          <TagParentChildList tags={data.tags} />
+      <div className="mt-auto flex items-center justify-between gap-2 border-t px-2 py-1">
+        <time
+          dateTime={new Date(data.createdAt * 1000).toISOString()}
+          className="text-[11px] text-muted-foreground"
+        >
+          {new Date(data.createdAt * 1000).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
+        </time>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={openTagModal}
+            title="Rename this file and edit its tags"
+            aria-label={`Edit name and tags of ${data.name}`}
+          >
+            <Tag />
+            Edit
+          </Button>
+          {/* Remove Cover Action */}
+          {!!tags && data.cover && currentMode === "view" && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => removeContentCover(data.cover!)}
+              title="Delete this file's cover image (the file itself is kept)"
+              aria-label={`Delete cover image of ${data.name}`}
+              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 />
+            </Button>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </article>
   );
 }
