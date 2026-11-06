@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { tagsAtom } from "@/atom";
+import { LoadingState } from "@/components/craft/EmptyState";
 import MultiSelect from "@/components/craft/MultiSelect";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { useTheme } from "@/components/theme-provider";
@@ -88,83 +89,114 @@ export default function GenerateJSONPage() {
     setId(id);
   }, []);
 
-  if (!globalTags) return <p>Loading...</p>;
+  if (!globalTags)
+    return (
+      <>
+        <TitleHeader
+          Title="Generate JSON"
+          description="Make a metadata file for an item you add to the server's Sync folder by hand."
+        />
+        <LoadingState
+          label="Waiting for tags from the TagApp browser extension…"
+          hint="This page suggests tags from your library, and they come from the extension. If nothing happens, check that the extension is installed and connected to this server."
+        />
+      </>
+    );
 
   return (
     <>
-      <TitleHeader Title="Generate JSON" />
-      <div className="max-w-md w-full mx-auto grid p-4">
-        <div className="flex justify-between mb-2 items-center">
-          <Label>Name</Label>
-          <div className="flex">
-            <Button
-              className="rounded-r-none"
-              size="xs"
-              onClick={generateRandomId}
-              variant="outline"
-            >
-              Random
-            </Button>
-            <Button
-              className="rounded-l-none"
-              size="xs"
-              onClick={generateAndSetUniqueIdFromTitle}
-              variant="outline"
-            >
-              ID from Title
-            </Button>
+      <TitleHeader
+        Title="Generate JSON"
+        description="Make a metadata file for an item you add to the server's Sync folder by hand. Put the downloaded file in that folder, next to the item it describes."
+      />
+      <div className="mx-auto grid w-full max-w-md gap-5 pb-4">
+        <div className="grid gap-2">
+          <div className="flex min-h-6 items-center justify-between gap-2">
+            <Label htmlFor="gen-id">ID</Label>
+            <div className="flex">
+              <Button
+                className="rounded-r-none"
+                size="xs"
+                onClick={generateRandomId}
+                variant="outline"
+                title="Use a new random ID"
+              >
+                Random
+              </Button>
+              <Button
+                className="rounded-l-none"
+                size="xs"
+                onClick={generateAndSetUniqueIdFromTitle}
+                variant="outline"
+                title="Make the ID from the title, so the same title always gives the same ID"
+              >
+                From title
+              </Button>
+            </div>
           </div>
-        </div>
-        <Input
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-          placeholder="ID"
-          className="mb-4"
-        />
-
-        <Label className="mb-2">Title</Label>
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="mb-4"
-        />
-
-        <Label className="mb-2">Tags</Label>
-        <MultiSelect
-          options={globalTags.map((o) => ({
-            label: o,
-            value: o,
-          }))}
-          className="mb-4"
-          placeholder="Tags"
-          value={tags}
-          onChange={setTags}
-        />
-
-        <Label className="mb-2">Extra Data</Label>
-        <div className="max-h-36 overflow-y-scroll bg-input/90 mb-4">
-          <CodeEditor
-            value={extraData}
-            language="md"
-            placeholder="Extra data."
-            onChange={(evn) => setExtraData(evn.target.value)}
-            padding={15}
-            className="bg-background/80!"
-            style={{
-              fontFamily:
-                "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
-            }}
-            data-color-mode={theme === "system" ? "dark" : theme}
+          <Input
+            id="gen-id"
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+            placeholder="ID"
+            className="font-mono"
           />
         </div>
 
-        <Button
-          onClick={handleSaveJson}
-          className="max-w-sm w-11/12 mx-auto mt-4"
-        >
-          Save
-        </Button>
+        <div className="grid gap-2">
+          <Label htmlFor="gen-title">Title</Label>
+          <Input
+            id="gen-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title"
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Tags</Label>
+          <MultiSelect
+            options={globalTags.map((o) => ({
+              label: o,
+              value: o,
+            }))}
+            placeholder="Choose tags"
+            label="Tags"
+            value={tags}
+            onChange={setTags}
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label>Notes</Label>
+          <div className="max-h-40 overflow-y-auto border border-input">
+            <CodeEditor
+              value={extraData}
+              language="md"
+              placeholder="Notes (markdown)"
+              onChange={(evn) => setExtraData(evn.target.value)}
+              padding={12}
+              className="bg-background/80!"
+              style={{
+                fontFamily:
+                  "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+              }}
+              data-color-mode={theme === "system" ? "dark" : theme}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleSaveJson}
+            title="Download the JSON file. Nothing is sent to the server."
+          >
+            Download JSON file
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Saved as <span className="font-mono">title.id.json</span>
+          </span>
+        </div>
       </div>
     </>
   );

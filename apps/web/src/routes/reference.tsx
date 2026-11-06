@@ -7,8 +7,11 @@ import reference from "../../../../Notes/TagApp Server Reference.md?raw";
 export default function ReferencePage() {
   return (
     <>
-      <TitleHeader Title="Reference" />
-      <article className="prose dark:prose-invert max-w-none break-words mb-10">
+      <TitleHeader
+        Title="Reference"
+        description="How the server stores files and what each folder is for."
+      />
+      <article className="prose dark:prose-invert mb-10 max-w-none break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto">
         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
           {reference}
         </Markdown>
