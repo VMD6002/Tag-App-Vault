@@ -1,4 +1,5 @@
 import { readdir, rm } from "node:fs/promises";
+import { parse } from "node:path";
 import { ORPCError, os } from "@orpc/server";
 import z from "zod";
 import { pathExists } from "../lib/fsBaseNameFunctions";
@@ -9,6 +10,21 @@ const audioExistsCheck = async (name: string, id: string) => {
       message: `Audio with name ${name} and ID ${id} doesn't exist`,
     });
   }
+};
+
+/** Tracks of one audio item; a track's cover is the first file starting with `cover.<track name without extension>`. */
+const listAudio = async (name: string, id: string) => {
+  const dir = `./media/Audios/${name}.${id}`;
+  const coverFiles = await readdir(`${dir}/.audio-covers`);
+
+  return (await readdir(dir))
+    .filter((file) => file !== ".audio-covers")
+    .map((audioFile) => ({
+      name: audioFile,
+      cover: coverFiles.find((file) =>
+        file.startsWith(`cover.${parse(audioFile).name}`),
+      ),
+    }));
 };
 
 export const getAudioData = os
@@ -24,20 +40,7 @@ export const getAudioData = os
 
     await audioExistsCheck(name, id);
 
-    const coverFiles = await readdir(
-      `./media/Audios/${name}.${id}/.audio-covers`,
-    );
-
-    const audioData = (await readdir(`./media/Audios/${name}.${id}`))
-      .filter((file) => file !== ".audio-covers")
-      .map((audioFile) => ({
-        name: audioFile,
-        cover: coverFiles.find(
-          (file) => file.startsWith(`cover.${audioFile.slice(0, -4)}`), // This is setup specifically for .mp3 and .wav files only
-        ),
-      }));
-
-    return audioData;
+    return listAudio(name, id);
   });
 
 export const removeAudioContents = os
@@ -68,18 +71,5 @@ export const removeAudioContents = os
       ),
     );
 
-    const coverFiles = await readdir(
-      `./media/Audios/${name}.${id}/.audio-covers`,
-    );
-
-    const audioData = (await readdir(`./media/Audios/${name}.${id}`))
-      .filter((file) => file !== ".audio-covers")
-      .map((audioFile) => ({
-        name: audioFile,
-        cover: coverFiles.find(
-          (file) => file.startsWith(`cover.${audioFile.slice(0, -4)}`), // This is setup specifically for .mp3 and .wav files only
-        ),
-      }));
-
-    return audioData;
+    return listAudio(name, id);
   });
