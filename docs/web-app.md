@@ -1,0 +1,40 @@
+# Web app
+
+Scope: `apps/web` (`tag-app-web`), the React SPA that browses and edits the library: routes, state, the oRPC client and the extension handshake. Components and shadcn rules: [ui components](./ui-components.md). Dev-only fake-server pages: [mock pages](./mock-pages.md).
+
+## Setup
+
+- Vite + React, wouter with the hash router (`useHashLocation`), TanStack Query via `@orpc/tanstack-query`, Jotai, Constate. Alias `@/` is `apps/web/src`.
+- Builds into `apps/server/dist/WebUI` ([deployment](./deployment.md)). The oRPC client posts to `${location.origin}/rpc` (`src/lib/orpc.ts`) and media URLs are same-origin `/media/...`, so `vite.config.ts` proxies `/rpc` to the server (`localhost:5001`, the default in `db/settings.ts`) and `/media` to Caddy (`localhost:5000`). `bun dev:web` therefore needs `bun dev:server` and Caddy running for real data (change the constants if `settings.json` uses another port); the [mock pages](./mock-pages.md) need neither.
+- `src/App.tsx`: router, theme, toaster, confirm dialog, the extension message listener, and the dev-only `#/mock` route. `src/AppLayout.tsx`: nav bar and route table, shared with the mock pages. Query client defaults: no refetch on focus or mount, `retry: 1`.
+
+## Routes (`src/routes`, lazy loaded in `AppLayout.tsx`)
+
+| Hash route                                                     | Page                      | Notes                                                                                                          |
+| -------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `/`                                                            | `routes/index.tsx`        | Library: filters, results, selection, edit, bulk edit, "Sync library". Wrapped by `contexts/Server.Context.ts` |
+| `/tags`                                                        | `routes/tags.tsx`         | Tag counts, `hardResetTagCount`, `softResetTagCount`                                                           |
+| `/generateContentJson`                                         | `routes/generateJSON.tsx` | Builds a metadata JSON file to put in `Sync/` by hand; needs tags from the extension                           |
+| `/reference`                                                   | `routes/reference.tsx`    | Renders `Notes/TagApp Server Reference.md` (`?raw` import)                                                     |
+| `/img/:id` `/video/:id` `/gallery/:id` `/txt/:id` `/audio/:id` | `routes/<type>/[id].tsx`  | Item pages inside `DocProvider` (`contexts/Doc.Context.tsx`); anything else gets `404.tsx`                     |
+
+- Page code lives in `routes/<type>/`, shared pieces in `routes/components/`, generic pieces in `components/`.
+- `DocProvider` sits inside a route matching `DOC_ROUTE`; without that wrapper `Switch` would match it for every URL and the 404 would never render.
+- Media URLs are built from `encodeURIComponent("<title>.<id>")` against `/media/...` ([deployment](./deployment.md)).
+
+## State
+
+- `src/atom.ts`: theme (`localStorage` key `vite-ui-theme`), filter atoms, `FilterQueryAtom`, `filterActiveAtom` (separates "empty library" from "no results") and `tagsAtom`. Filters are mirrored into the URL query (`any`, `all`, `none`, `types`, `search`, `orderByLatest`) by `injectFilterDataIntoURLAtom` and read back on load.
+- `routes/atom.ts` (result list, server tags), `routes/atom.selection.ts` (selection mode), per-type `atom.ts` files, `components/craft/UpdateModal/atom.ts`.
+- Mutations replace objects instead of editing in place: memoised cards skip re-render on an identical reference.
+
+## Extension handshake and read-only mode
+
+- The TagApp browser extension (a separate project) posts `TAG_APP_INJECT_TAGS` with a string array via `window.postMessage`. `App.tsx` accepts it only when `event.source === window`, stores it in `tagsAtom` and replies `TAG_APP_TAGS_RECEIVED`.
+- `tagsAtom` is `null` until then. While it is `null` the app is read-only: the library hides edit, remove and sync controls, item pages hide edit, remove and cover controls, and Generate JSON shows a waiting state.
+
+## Rules
+
+- Titles are sanitized with `sanitizeStringForFileName` before `setContent`: [domain model](./domain-model.md#identity).
+- The web app imports server types only (`import type { router } from "@tagapp/api"`); never server runtime code ([development](./development.md)).
+- `src/lib/TIMEOUTS.ts` is a small timeout registry used by the library page.

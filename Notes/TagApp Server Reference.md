@@ -37,11 +37,11 @@ How content is named, laid out on disk, synced, and served. Written from the cod
 | Type    | Extensions                                                |
 | ------- | --------------------------------------------------------- |
 | `img`   | `jxl` `jpg` `jpeg` `png` `webp` `svg` `avif` `apng` `gif` |
-| `video` | `mp4` `webm` `avi`                                        |
-| `audio` | `mp3` `wav`                                               |
+| `video` | `mp4` `webm` `avi` `mkv`                                  |
+| `audio` | `mp3` `wav` `m4a` `opus`                                  |
 | `txt`   | `txt` `md`                                                |
 
-Anything else (for example `mkv`, `m4a`, `opus`, `heic`) is not recognised and ends up in `UnSyncable/`.
+Anything else (for example `heic`) is not recognised and ends up in `UnSyncable/`.
 
 ---
 
@@ -53,13 +53,13 @@ All server paths are relative to the server's working directory.
 <server root>
 ├── settings.json           port + UI prefix (edit by hand, restart to apply)
 ├── Download/
-│   └── tmp.json            pending download queue (written by the server, read by the CLI)
+│   ├── tmp.json            pending download queue (written by the server, read by the CLI)
+│   └── cookies/<Site>.txt  optional, used by meta:yt-cookie (the CLI reads ./cookies/ from its own cwd, this folder)
 ├── Sync/                   staging area: finished downloads / files to import
 ├── UnSyncable/             files moved here when sync can't make sense of them
 ├── DB/
 │   ├── contentData.json    Record<id, item>   (all synced content)
 │   └── tags.json           Record<tag, count> (usage counts)
-├── cookies/<Site>.txt      optional, used by meta:yt-cookie (CLI)
 └── media/                  the library (next section)
 ```
 
@@ -115,7 +115,7 @@ media
 │       ├── .audio-covers
 │       │   ├── cover.<audio file name>.<ext>
 │       │   └── ...covers
-│       ├── <audio file>.<mp3|wav>
+│       ├── <audio file>.<mp3|wav|m4a|opus>
 │       └── ...audio files
 │
 └── Texts
@@ -132,7 +132,7 @@ Notes:
 
 - `.gallery-covers` and `.audio-covers` are used instead of `.covers` so Caddy needs no extra rule for them (Caddy's `.covers` rules apply only under `Images/` and `Videos/`).
 - Captions are only supported for **videos**. The file is `caption.<name>.vtt`, **not** `cover.<name>.vtt`.
-- Audio covers are per track: a track `song.mp3` looks for a file in `.audio-covers/` starting with `cover.song`. (The code strips exactly 4 characters of extension, so this only works for `.mp3` and `.wav`.)
+- Audio covers are per track: a track `song.mp3` looks for a file in `.audio-covers/` starting with `cover.song`. (The track's extension, whatever it is, is dropped before matching.)
 - Gallery video covers: `cover.<video file name>.<ext>`. A gallery with only videos uses the first file in `.gallery-covers/` as its thumbnail.
 
 ---
@@ -155,7 +155,7 @@ Sync
 │
 ├── <name>.audio
 │   ├── .audio-covers/cover.<audio file name>.<ext>
-│   └── <audio file>.<mp3|wav>
+│   └── <audio file>.<mp3|wav|m4a|opus>
 ├── <name>.json
 │
 ├── <name>.txt
@@ -168,18 +168,18 @@ Sync
 
 What does **not** sync:
 
-| Found in `Sync/`                                                                                                  | Result                                               |
-| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Image with no cover that `Bun.Image` can't decode (`svg`, `jxl`, and `avif` on Linux)                             | `UnSyncable/` (logged)                               |
-| `cover.*` or `caption.*` file with no matching media                                                              | `UnSyncable/`                                        |
-| `cover.*` file that isn't an image, or a second cover for the same item (the alphabetically first extension wins) | `UnSyncable/`                                        |
-| Item whose id is already in the library, or repeats another item's id in the same scan                            | stays in `Sync/` (logged), nothing changes           |
-| Caption for an **image**                                                                                          | `UnSyncable/`                                        |
-| Loose `.md`/`.txt`/`.mp3`/`.wav` file (not in a folder)                                                           | `UnSyncable/`                                        |
-| Folder whose suffix isn't `.gallery`, `.audio` or `.txt`                                                          | `UnSyncable/`                                        |
-| Unrecognised extension                                                                                            | `UnSyncable/`                                        |
-| Item whose `<name>.json` is invalid                                                                               | skipped; its files go to `UnSyncable/`               |
-| `<name>.json` with no matching item                                                                               | stays in `Sync/` (logged, returned as `orphanJsons`) |
+| Found in `Sync/`                                                                                                  | Result                                                   |
+| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Image with no cover that `Bun.Image` can't decode (`svg`, `jxl`, and `avif` on Linux)                             | `UnSyncable/` (logged)                                   |
+| `cover.*` or `caption.*` file with no matching media                                                              | `UnSyncable/`                                            |
+| `cover.*` file that isn't an image, or a second cover for the same item (the alphabetically first extension wins) | `UnSyncable/`                                            |
+| Item whose id is already in the library, or repeats another item's id in the same scan                            | stays in `Sync/` (logged), nothing changes               |
+| Caption for an **image**                                                                                          | `UnSyncable/`                                            |
+| Loose `.md`/`.txt`/`.mp3`/`.wav`/`.m4a`/`.opus` file (not in a folder)                                            | `UnSyncable/`                                            |
+| Folder whose suffix isn't `.gallery`, `.audio` or `.txt`                                                          | `UnSyncable/`                                            |
+| Unrecognised extension                                                                                            | `UnSyncable/`                                            |
+| Item whose `<name>.json` is invalid or unreadable                                                                 | stays in `Sync/` with its JSON (logged), nothing changes |
+| `<name>.json` with no matching item                                                                               | stays in `Sync/` (logged, returned as `orphanJsons`)     |
 
 ---
 
@@ -261,12 +261,12 @@ Changing covers later:
 
 Tags starting with `meta:` change behaviour rather than describing content.
 
-| Meta tag               | Used by       | Effect                                                                                                                                 |
-| ---------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `meta:caption`         | Sync          | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten.                        |
-| `meta:autoplay`        | Web (gallery) | Enables gallery autoplay.                                                                                                              |
-| `meta:yt-cookie`       | CLI           | Download with `./cookies/<Site>.txt`. Requires a `Site:<name>` tag and that cookie file, otherwise the download fails.                 |
-| `meta:different-cover` | CLI           | Download the cover from the item's `cover` URL (with `curl`-style download) instead of yt-dlp's thumbnail. Requires `cover` to be set. |
+| Meta tag               | Used by       | Effect                                                                                                                                                                     |
+| ---------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meta:caption`         | Sync          | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten.                                                            |
+| `meta:autoplay`        | Web (gallery) | Enables gallery autoplay.                                                                                                                                                  |
+| `meta:yt-cookie`       | CLI           | Download with `./cookies/<Site>.txt` (relative to the CLI's cwd, so `Download/cookies/`). Requires a `Site:<name>` tag and that cookie file, otherwise the download fails. |
+| `meta:different-cover` | CLI           | Download the cover from the item's `cover` URL (with `curl`-style download) instead of yt-dlp's thumbnail. Requires `cover` to be set.                                     |
 
 ---
 
@@ -302,7 +302,7 @@ Caddy listens on `:5000`; everything outside `/media/*` is proxied to the app on
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `/media/Images/.covers/*`, `/media/Videos/.covers/*` | `Cache-Control: no-store`; tries `<path>.avif`, `.jpg`, `.jpeg`, `.png`, `.webp`, then the exact path |
 | `/media/Images/*`                                    | tries the same image extensions, then exact path                                                      |
-| `/media/Videos/*`                                    | tries exact path, then `.mp4`, `.webm`                                                                |
+| `/media/Videos/*`                                    | tries exact path, then `.mp4`, `.webm`, `.mkv`                                                        |
 | other `/media/*`                                     | plain static file                                                                                     |
 | CORS                                                 | `Access-Control-Allow-Origin: *`, GET/OPTIONS only                                                    |
 
@@ -312,5 +312,5 @@ Caddy listens on `:5000`; everything outside `/media/*` is proxied to the app on
 
 Current sync behaviour that is likely unintended (remove entries once fixed):
 
-- **Leftovers move to `UnSyncable/` on every sync**, so a file that is still being copied in is moved away. An item with invalid JSON loses its media the same way, while the JSON stays in `Sync/`.
-- **Extensions such as `mkv`/`m4a`/`opus`** from yt-dlp are not recognised.
+- **Leftovers move to `UnSyncable/` on every sync**, so a file that is still being copied in is moved away.
+- **Loose audio files** (`mp3`, `wav`, `m4a`, `opus`, for example an audio-only yt-dlp download) are recognised but cannot sync outside an `.audio` folder, so they land in `UnSyncable/`.
