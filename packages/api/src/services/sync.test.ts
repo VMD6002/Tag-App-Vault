@@ -13,6 +13,8 @@ const { getSyncData } = await import("./getSyncData.js");
 const { syncContent } = await import("./syncContent.js");
 const { setDoc } = await import("./setDoc.js");
 const { deleteData } = await import("./deleteData.js");
+const { call } = await import("@orpc/server");
+const { bulkUpdateContentTags } = await import("../routers/main.js");
 
 // A 1x1 PNG
 const png = Buffer.from(
@@ -196,4 +198,63 @@ test("B11: a video with no cover can be renamed and deleted", async () => {
 
   expect(await deleteData(["1"])).toEqual(["1"]);
   expect(ls("media/Videos").filter((f) => !f.startsWith("."))).toEqual([]);
+});
+
+test("bulkUpdateContentTags counts only real changes", async () => {
+  const item = (id: string, tags: string[]) => ({
+    id,
+    title: id,
+    tags,
+    extraData: "",
+    added: 1,
+    lastUpdated: 1,
+    type: "img" as const,
+  });
+  contentDataDB.data = {
+    "1": item("1", ["keep", "gone"]),
+    "2": item("2", ["keep"]),
+  };
+  tagDB.data = { keep: 2, gone: 1 };
+
+  // "keep" is already on both, "gone" is on item 1 only, "never" is on neither
+  await call(bulkUpdateContentTags, {
+    ids: ["1", "2"],
+    added: ["keep", "new"],
+    removed: ["gone", "never"],
+  });
+  expect(contentDataDB.data["1"]?.tags).toEqual(["keep", "new"]);
+  expect(contentDataDB.data["2"]?.tags).toEqual(["keep", "new"]);
+  expect(tagDB.data).toEqual({ keep: 2, new: 2 });
+
+  // a bad id changes nothing, not even the items listed before it
+  await expect(
+    call(bulkUpdateContentTags, {
+      ids: ["1", "nope"],
+      added: [],
+      removed: ["keep"],
+    }),
+  ).rejects.toThrow();
+  expect(contentDataDB.data["1"]?.tags).toEqual(["keep", "new"]);
+  expect(tagDB.data).toEqual({ keep: 2, new: 2 });
+});
+
+test("an item with invalid or unreadable JSON stays in Sync with its JSON", async () => {
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", JSON.stringify({ id: "1" }));
+  await Bun.write("Sync/b.2.png", png);
+  await Bun.write("Sync/b.2.json", "{ not json");
+  const { orphanJsons } = await getSyncData();
+  expect(orphanJsons).toEqual([]);
+  await syncContent();
+  expect(ls("Sync")).toEqual(["a.1.json", "a.1.png", "b.2.json", "b.2.png"]);
+  expect(ls("UnSyncable")).toEqual([]);
+  expect(contentDataDB.data).toEqual({});
+});
+
+test("mkv syncs as a video", async () => {
+  await Bun.write("Sync/clip.1.mkv", "x");
+  await Bun.write("Sync/clip.1.json", json("1", "clip"));
+  await syncContent();
+  expect(contentDataDB.data["1"]?.type).toBe("video");
+  expect(await Bun.file("media/Videos/clip.1.mkv").exists()).toBe(true);
 });

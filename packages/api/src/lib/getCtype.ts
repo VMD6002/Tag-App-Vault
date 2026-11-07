@@ -24,10 +24,13 @@ export default function getCtype(fileName: string) {
     case "mp4":
     case "webm":
     case "avi":
+    case "mkv":
       Ctype = "video";
       break;
     case "mp3":
     case "wav":
+    case "m4a":
+    case "opus":
       Ctype = "audio";
       break;
     case "txt":

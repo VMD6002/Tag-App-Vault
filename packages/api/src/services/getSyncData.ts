@@ -52,7 +52,12 @@ export const filesOf = (
 
 async function readContentJSON(name: string, source: unknown) {
   const parsed = ContentJsonSchema.safeParse(
-    source ?? (await Bun.file(`${SYNC}/${name}.json`).json()),
+    source ??
+      (await Bun.file(`${SYNC}/${name}.json`)
+        .json()
+        .catch((error) => {
+          console.error(`[Sync Failed] Could not read ${name}.json:`, error);
+        })),
   );
   if (!parsed.success) {
     console.error(
@@ -135,19 +140,23 @@ export async function getSyncData() {
     timePath: string,
   ) => {
     const source = bundled.get(name);
-    const loaded =
-      source || jsons.has(`${name}.json`)
-        ? await readContentJSON(name, source)
-        : await generateContentJSON(name, timePath);
-    if (!loaded) return;
-    usedJsons.add(`${name}.json`);
-
     const consume = () => {
       for (const f of filesOf(name, type, ext)) {
         files.delete(f);
         folders.delete(f);
       }
     };
+
+    const loaded =
+      source || jsons.has(`${name}.json`)
+        ? await readContentJSON(name, source)
+        : await generateContentJSON(name, timePath);
+    usedJsons.add(`${name}.json`);
+    if (!loaded) {
+      // Invalid JSON: leave the item and its JSON in Sync so fixing the JSON is enough
+      consume();
+      return;
+    }
 
     if (contentDataDB.data[loaded.id] || contents[loaded.id]) {
       console.log(

@@ -31,7 +31,7 @@
         }
 
         handle /media/Videos/* {
-            try_files {path} {path}.mp4 {path}.webm =404
+            try_files {path} {path}.mp4 {path}.webm {path}.mkv =404
             file_server
         }
 

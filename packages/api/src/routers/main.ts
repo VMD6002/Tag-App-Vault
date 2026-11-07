@@ -1,9 +1,9 @@
 import { ORPCError, os } from "@orpc/server";
-import { FilterQuerySchema, filterData } from "@tagapp/utils";
+import { FilterQuerySchema, filterData, SetDifferenceES6 } from "@tagapp/utils";
 import z from "zod";
 import { contentDataDB } from "../db/contentData.js";
 import { settingsDB } from "../db/settings.js";
-import { tagDB } from "../db/tags.js";
+import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
 import { withSyncLock } from "../lib/syncLock.js";
 import { deleteData as deleteDocs } from "../services/deleteData.js";
 import { getSyncData as gtSyncData } from "../services/getSyncData.js";
@@ -50,30 +50,28 @@ export const bulkUpdateContentTags = os
     }),
   )
   .handler(async ({ input }) => {
-    input.ids.forEach((id) => {
-      const contentDetails = contentDataDB.data[id];
-
-      if (!contentDetails)
+    // Validate every id first so a bad id can't leave earlier items half-updated in memory
+    for (const id of input.ids) {
+      if (!contentDataDB.data[id])
         throw new ORPCError("BAD_REQUEST", {
           message: `Content with id ${id} doesn't exist`,
         });
+    }
 
-      input.removed.forEach((tag) => {
-        if (tagDB.data[tag]) tagDB.data[tag]--;
-        else delete tagDB.data[tag];
-      });
-      contentDetails.tags = contentDetails.tags.filter(
-        (tag) => !input.removed.includes(tag),
-      );
-
-      input.added.forEach((tag) => {
-        tagDB.data[tag] ??= 0;
-        tagDB.data[tag]++;
-      });
+    for (const id of input.ids) {
+      const contentDetails = contentDataDB.data[id]!;
+      const before = new Set(contentDetails.tags);
+      // A tag in both lists ends up on the item (added wins)
       contentDetails.tags = [
-        ...new Set([...contentDetails.tags, ...input.added]),
+        ...new Set([
+          ...contentDetails.tags.filter((tag) => !input.removed.includes(tag)),
+          ...input.added,
+        ]),
       ];
-    });
+      const after = new Set(contentDetails.tags);
+      DecrementTagCount(SetDifferenceES6(before, after));
+      IncrementTagCount(SetDifferenceES6(after, before));
+    }
 
     await contentDataDB.write();
     await tagDB.write();
