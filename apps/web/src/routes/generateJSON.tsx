@@ -1,9 +1,9 @@
+import { ContentJsonSchema } from "@tagapp/utils/types";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtomValue } from "jotai";
 import { customAlphabet } from "nanoid";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { tagsAtom } from "@/atom";
 import { LoadingState } from "@/components/craft/EmptyState";
 import MultiSelect from "@/components/craft/MultiSelect";
@@ -41,16 +41,6 @@ function getUniqueIdFromString(str: string): string {
   // .toString(36) creates a compact alphanumeric string (0-9, a-z)
   return (hash >>> 0).toString(36);
 }
-
-export const ContentJsonSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  tags: z.array(z.string()),
-  extraData: z.string(),
-  // Unix Timestamps
-  added: z.number(),
-  lastUpdated: z.number(),
-});
 
 export default function GenerateJSONPage() {
   const globalTags = useAtomValue(tagsAtom);
