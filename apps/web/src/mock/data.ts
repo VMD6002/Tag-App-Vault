@@ -519,7 +519,13 @@ export function buildDownloads(scenario: Scenario, db: MockDb) {
         : `Queued download ${i + 1}`,
     scraper: scrapers[i % scrapers.length] as string,
     url: `https://example.invalid/item/${i + 1}`,
-    cover: `https://example.invalid/cover/${i + 1}.jpg`,
+    // /media/ covers become gradients; the CSP blocks example.invalid, so those show the placeholder
+    cover:
+      i % 5 === 3
+        ? undefined
+        : i % 5 === 4
+          ? `https://example.invalid/cover/${i + 1}.jpg`
+          : `/media/Downloads/.covers/cover.dl-${i + 1}`,
     status: "queued",
     percent: 0,
     speed: "",
@@ -539,16 +545,23 @@ export function buildDownloads(scenario: Scenario, db: MockDb) {
             eta: "00:03",
             startedAt: now - 60,
           }
-        : i === 1
+        : i === 2
           ? {
-              status: "failed",
-              percent: 60,
-              error:
-                `Mock failure: id queue_dl_002 is already in the library, and the files stay in Download/done/queue_dl_002. ${"More detail. ".repeat(scenario === "stress" ? 6 : 0)}`.trim(),
-              startedAt: now - 3000,
-              finishedAt: now - 2900,
+              status: "cancelled",
+              percent: 20,
+              startedAt: now - 500,
+              finishedAt: now - 450,
             }
-          : {},
+          : i === 1
+            ? {
+                status: "failed",
+                percent: 60,
+                error:
+                  `Mock failure: id queue_dl_002 is already in the library, and the files stay in Download/done/queue_dl_002. ${"More detail. ".repeat(scenario === "stress" ? 6 : 0)}`.trim(),
+                startedAt: now - 3000,
+                finishedAt: now - 2900,
+              }
+            : {},
     ),
   );
   const done: MockTask[] = Object.values(db.contents)
@@ -558,7 +571,7 @@ export function buildDownloads(scenario: Scenario, db: MockDb) {
       title: c.title,
       scraper: scrapers[i % scrapers.length] as string,
       url: `https://example.invalid/done/${i + 1}`,
-      cover: `https://example.invalid/cover/done-${i + 1}.jpg`,
+      cover: `/media/Downloads/.covers/cover.done-${i + 1}`,
       type: c.type,
       status: "completed",
       percent: 100,
