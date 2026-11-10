@@ -9,6 +9,7 @@ settings.json              {port, prefix}
 DB/contentData.json        Record<id, ContentServerType>
 DB/tags.json               Record<tag, count>
 Download/tmp.json          pending download queue
+Download/history.json      one record per download (status, dates, cover URL); completed ones are "history"
 Download/tmp/  done/<id>/  scratch downloads / staging until imported
 Download/config.json  error.log  userAgent (and CLI retry delay) / failures
 Download/cookies/<Site>.txt  optional yt-dlp cookies (CLI cwd is Download/)

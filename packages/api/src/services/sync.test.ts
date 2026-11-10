@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -30,6 +31,8 @@ const {
   watchDownloads,
   cancelDownloads,
   removeDownloads,
+  clearFinished,
+  liveStateSize,
 } = await import("./downloads.js");
 const { call } = await import("@orpc/server");
 const { getErrorLog, clearErrorLog } = await import("../routers/downloads.js");
@@ -422,12 +425,12 @@ function fakeYtDlp(
 }
 
 async function idle() {
-  while (getDownloadsSnapshot().running) await Bun.sleep(5);
+  while ((await getDownloadsSnapshot()).running) await Bun.sleep(5);
 }
 
 test("download: a finished item goes straight into the library, never through Sync", async () => {
   await setQueue([item("7", "pic/1"), item("8", "other")]);
-  const snapshots: ReturnType<typeof getDownloadsSnapshot>[] = [];
+  const snapshots: Awaited<ReturnType<typeof getDownloadsSnapshot>>[] = [];
   const abort = new AbortController();
   const watching = (async () => {
     for await (const s of watchDownloads(abort.signal)) snapshots.push(s);
@@ -456,7 +459,8 @@ test("download: a finished item goes straight into the library, never through Sy
   expect(ls("UnSyncable")).toEqual([]);
   expect(ls("Download/done")).toEqual([]);
 
-  expect(snapshots[0]).toEqual({ running: false, tasks: [] }); // immediate
+  // immediate, and already complete: both items are queued
+  expect(snapshots[0]?.tasks.map((t) => t.id)).toEqual(["7", "8"]);
   const last = snapshots.at(-1);
   expect(last?.running).toBe(false);
   expect(last?.tasks.map((t) => t.status)).toEqual(["completed", "completed"]);
@@ -474,7 +478,7 @@ test("download: an id already in the library is dropped from the queue without d
   await idle();
 
   expect(calls).toEqual([]);
-  expect(getDownloadsSnapshot().tasks[0]?.status).toBe("completed");
+  expect((await getDownloadsSnapshot()).tasks[0]?.status).toBe("completed");
   expect(await readQueue()).toEqual([]);
   expect(contentDataDB.data["7"]).toEqual(old);
   expect(await Bun.file("Download/error.log").exists()).toBe(false);
@@ -492,7 +496,7 @@ test("download: staged files of a failed import are imported without downloading
   await idle();
 
   expect(calls).toEqual([]);
-  expect(getDownloadsSnapshot().tasks[0]?.status).toBe("completed");
+  expect((await getDownloadsSnapshot()).tasks[0]?.status).toBe("completed");
   expect(contentDataDB.data["7"]?.title).toBe("pic");
   expect(await readQueue()).toEqual([]);
   expect(ls("Download/done")).toEqual([]);
@@ -528,21 +532,21 @@ async function failedWithStaging() {
   await setQueue([item("7", "pic")]);
   await startDownloads(fakeYtDlp());
   await idle();
-  expect(getDownloadsSnapshot().tasks[0]?.status).toBe("failed");
+  expect((await getDownloadsSnapshot()).tasks[0]?.status).toBe("failed");
 }
 
 test("download: cancel stops a downloading item and the waiting ones, keeps them queued, no error.log", async () => {
   await setQueue([item("1"), item("2"), item("3")]); // one scraper: 1 runs, 2 and 3 wait
   const calls: string[] = [];
   await startDownloads(fakeYtDlp({ calls, gate: new Promise(() => {}) }));
-  while (getDownloadsSnapshot().tasks[0]?.status !== "downloading")
+  while ((await getDownloadsSnapshot()).tasks[0]?.status !== "downloading")
     await Bun.sleep(5);
 
-  expect(cancelDownloads()).toBe(3);
-  expect(cancelDownloads()).toBe(0); // nothing left to cancel
+  expect(await cancelDownloads()).toBe(3);
+  expect(await cancelDownloads()).toBe(0); // nothing left to cancel
   await idle(); // the run ends although yt-dlp never finished by itself
 
-  expect(getDownloadsSnapshot().tasks.map((t) => t.status)).toEqual([
+  expect((await getDownloadsSnapshot()).tasks.map((t) => t.status)).toEqual([
     "cancelled",
     "cancelled",
     "cancelled",
@@ -561,16 +565,16 @@ test("download: cancel stops a downloading item and the waiting ones, keeps them
 test("download: cancel with an id only stops that item", async () => {
   await setQueue([item("1"), item("2")]);
   await startDownloads(fakeYtDlp({ gate: new Promise(() => {}) }));
-  while (getDownloadsSnapshot().tasks[0]?.status !== "downloading")
+  while ((await getDownloadsSnapshot()).tasks[0]?.status !== "downloading")
     await Bun.sleep(5);
-  expect(cancelDownloads("1")).toBe(1);
-  while (getDownloadsSnapshot().tasks[1]?.status !== "downloading")
+  expect(await cancelDownloads("1")).toBe(1);
+  while ((await getDownloadsSnapshot()).tasks[1]?.status !== "downloading")
     await Bun.sleep(5); // "2" takes over the scraper slot
-  expect(getDownloadsSnapshot().tasks.map((t) => t.status)).toEqual([
+  expect((await getDownloadsSnapshot()).tasks.map((t) => t.status)).toEqual([
     "cancelled",
     "downloading",
   ]);
-  cancelDownloads();
+  await cancelDownloads();
   await idle();
 });
 
@@ -585,7 +589,7 @@ test("download: remove moves staged files to Sync, drops the item and its partia
   expect(ls("Download/done")).toEqual([]);
   expect(ls("Download/tmp")).toEqual(["other.17.png.part", "pic.7.png"]);
   expect(await readQueue()).toEqual([]);
-  expect(getDownloadsSnapshot().tasks).toEqual([]);
+  expect((await getDownloadsSnapshot()).tasks).toEqual([]);
   // the files are importable again from the sync page
   delete contentDataDB.data["7"];
   await syncContent();
@@ -595,13 +599,13 @@ test("download: remove moves staged files to Sync, drops the item and its partia
 test("download: remove refuses an item that is queued or running", async () => {
   await setQueue([item("1")]);
   await startDownloads(fakeYtDlp({ gate: new Promise(() => {}) }));
-  while (getDownloadsSnapshot().tasks[0]?.status !== "downloading")
+  while ((await getDownloadsSnapshot()).tasks[0]?.status !== "downloading")
     await Bun.sleep(5);
   await expect(removeDownloads(["1"])).rejects.toMatchObject({
     code: "CONFLICT",
   });
   expect((await readQueue()).map((i) => i.id)).toEqual(["1"]);
-  cancelDownloads();
+  await cancelDownloads();
   await idle();
   expect(await removeDownloads(["1"])).toEqual(["1"]); // cancelled: removable
   expect(await readQueue()).toEqual([]);
@@ -623,6 +627,111 @@ test("download: remove with a name clash in Sync is a CONFLICT and moves nothing
   await expect(removeDownloads(["../x"])).rejects.toMatchObject({
     code: "BAD_REQUEST",
   });
+});
+
+// literal keys: the tests only use these ids (no `undefined` from indexing)
+type Records = Record<
+  "1" | "2" | "3" | "4" | "7" | "8",
+  Required<import("./downloads.js").DownloadRecord>
+>;
+const history = async () =>
+  JSON.parse(readFileSync("Download/history.json", "utf8")) as Records;
+
+test("download history: a run leaves completed records in the file and nothing live in memory", async () => {
+  const before = Math.floor(Date.now() / 1000);
+  await setQueue([
+    { ...item("7"), cover: "http://example.invalid/c.png" },
+    item("8"),
+  ]);
+  const queuedAt = (await history())["7"].queuedAt;
+  expect(queuedAt).toBeGreaterThanOrEqual(before);
+  await startDownloads(fakeYtDlp({ slow: true }));
+  await Bun.sleep(30);
+  expect(liveStateSize()).toBeGreaterThan(0); // mid-run the overlay exists
+  await idle();
+
+  expect(liveStateSize()).toBe(0);
+  const h = await history();
+  expect(Object.keys(h).sort()).toEqual(["7", "8"]);
+  expect(h["7"]).toMatchObject({
+    status: "completed",
+    type: "img",
+    percent: 100,
+    cover: "http://example.invalid/c.png",
+    queuedAt,
+  });
+  expect(h["7"].startedAt).toBeGreaterThanOrEqual(queuedAt);
+  expect(h["7"].finishedAt).toBeGreaterThanOrEqual(h["7"].startedAt);
+  const snap = await getDownloadsSnapshot();
+  expect(snap.tasks.map((t) => [t.id, t.status, t.added])).toEqual(
+    expect.arrayContaining([["7", "completed", 1]]),
+  );
+});
+
+test("download history: re-posting keeps queuedAt; a completed one is queued anew; items that left the queue lose their record", async () => {
+  await setQueue([item("1"), item("2")]);
+  const h = await history();
+  h["1"].queuedAt = 100;
+  h["2"].status = "completed";
+  h["2"].queuedAt = 100;
+  await Bun.write("Download/history.json", JSON.stringify(h));
+
+  await setQueue([{ ...item("1", "new title") }, item("2"), item("3")]);
+  const next = await history();
+  expect(next["1"]).toMatchObject({ queuedAt: 100, title: "new title" });
+  expect(next["2"].status).toBe("queued");
+  expect(next["2"].queuedAt).toBeGreaterThan(100);
+
+  await setQueue([item("3")]);
+  expect(Object.keys(await history()).sort()).toEqual(["3"]);
+});
+
+test("download history: an interrupted download or import reads as queued again after a restart", async () => {
+  await setQueue([item("1"), item("2")]);
+  const h = await history();
+  Object.assign(h["1"], { status: "downloading", percent: 40, startedAt: 5 });
+  Object.assign(h["2"], { status: "importing", percent: 100, startedAt: 5 });
+  await Bun.write("Download/history.json", JSON.stringify(h));
+
+  // a fresh module instance has no run state, like a restarted server
+  const restartPath = "./downloads.js?restart";
+  const restarted = (await import(
+    restartPath
+  )) as typeof import("./downloads.js");
+  const { tasks, running } = await restarted.getDownloadsSnapshot();
+  expect(running).toBe(false);
+  expect(tasks.map((t) => [t.status, t.percent, t.startedAt])).toEqual([
+    ["queued", 0, undefined],
+    ["queued", 0, undefined],
+  ]);
+});
+
+test("download history: failed and cancelled records keep their dates; a failure is removed with the item", async () => {
+  await failedWithStaging();
+  const failed = (await history())["7"];
+  expect(failed).toMatchObject({ status: "failed" });
+  expect(failed.error).toContain("already in the library");
+  expect(failed.finishedAt).toBeGreaterThanOrEqual(failed.queuedAt);
+  expect(await removeDownloads(["7"])).toEqual(["7"]);
+  expect(Object.keys(await history())).toEqual([]);
+});
+
+test("download history: clearFinished drops completed records only and never touches the library", async () => {
+  await setQueue([item("1"), item("2"), item("3")]);
+  await startDownloads(fakeYtDlp());
+  await idle();
+  await setQueue([item("4")]); // queued
+  const libraryBefore = structuredClone(contentDataDB.data);
+  const files = ls("media/Images");
+
+  expect(await clearFinished(["1", "4", "nope"])).toBe(1); // 4 is not completed
+  expect(Object.keys(await history()).sort()).toEqual(["2", "3", "4"]);
+  expect(await clearFinished()).toBe(2);
+  expect(Object.keys(await history())).toEqual(["4"]);
+  expect(await clearFinished()).toBe(0);
+  expect(contentDataDB.data).toEqual(libraryBefore);
+  expect(ls("media/Images")).toEqual(files);
+  expect((await readQueue()).map((i) => i.id)).toEqual(["4"]);
 });
 
 test("error log: missing file is empty, a normal log is returned whole, a huge one is cut to whole trailing lines, clear deletes it", async () => {
