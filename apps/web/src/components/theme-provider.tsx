@@ -1,5 +1,5 @@
 import { useAtom } from "jotai";
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import { themeAtom } from "@/atom";
 
 type Theme = "dark" | "light" | "system";
@@ -41,10 +41,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     root.classList.add(theme);
   }, [theme]);
 
-  const value = {
-    theme,
-    setTheme,
-  };
+  const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
