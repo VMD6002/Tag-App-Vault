@@ -198,6 +198,12 @@ async function processItem(
     // (duplicate id, bad metadata...): retry the import instead of downloading again.
     const sidecar = `${stage}/${safeTitle(item.title)}.${item.id}.json`;
     const staged = await pathExists(sidecar);
+    // Already in the library (synced by hand, or posted again): nothing to download
+    if (!staged && contentDataDB.data[item.id]) {
+      await removeFromQueue(item.id);
+      update(item.id, { status: "completed", percent: 100 });
+      return;
+    }
     // From the last abort check to `importing` nothing awaits, so a cancel can't slip in between
     signal.throwIfAborted();
     if (!staged) {

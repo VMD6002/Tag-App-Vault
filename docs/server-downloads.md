@@ -36,7 +36,7 @@ Shared helpers (`packages/utils/src/download`, entry `@tagapp/utils/download`, s
 
 - A run works on the queue it started with. Items posted later wait for the next `start`; nothing starts by itself.
 - `set` while a run is active keeps every item whose task is `queued`, `downloading` or `importing` exactly as it is (never dropped), and ignores a posted copy of the same id; the rest is replaced by what was posted. Idle: it just writes the posted list. Either way ids are de-duplicated (first wins) and the written list is returned.
-- Completed items are already gone from the queue; posting one again re-queues it (it then fails as "already in the library" unless it was deleted).
+- Completed items are already gone from the queue; posting one again re-queues it. An item whose id is already in the library (and has no staged files) is never downloaded: the run drops it from the queue and marks it `completed`.
 - A server restart loses the task state, not the queue: partial files in `tmp/` resume, staged items retry their import.
 
 ## Cancel and remove
@@ -95,4 +95,4 @@ The CLI (`apps/cli`) and the server run the same queue file and `Download/tmp`. 
 
 ## Tests
 
-`packages/api/src/services/sync.test.ts` ("download:" tests) drives `startDownloads` with a fake yt-dlp: item lands in `media/` + DB + tag counts and leaves the queue, a duplicate id stays staged and retries without downloading, `setQueue` during a run. Cancel (a hung fake yt-dlp that closes with a null code on abort: the run ends, waiting items never start, nothing in `error.log`, items stay queued and run again) and remove (staged files to `Sync/`, active item refused, name clash is CONFLICT and moves nothing, partial downloads of the id deleted) are tested there too. `packages/utils/src/download/*.test.ts`: config, `fetch` retries and abort. The error log procedures (missing file, normal, over the cap, clear) have one test at the end of `sync.test.ts`. No network, no real yt-dlp.
+`packages/api/src/services/sync.test.ts` ("download:" tests) drives `startDownloads` with a fake yt-dlp: item lands in `media/` + DB + tag counts and leaves the queue, an id already in the library is dropped without downloading, staged files of a failed import are imported without downloading again, `setQueue` during a run. Cancel (a hung fake yt-dlp that closes with a null code on abort: the run ends, waiting items never start, nothing in `error.log`, items stay queued and run again) and remove (staged files to `Sync/`, active item refused, name clash is CONFLICT and moves nothing, partial downloads of the id deleted) are tested there too. `packages/utils/src/download/*.test.ts`: config, `fetch` retries and abort. The error log procedures (missing file, normal, over the cap, clear) have one test at the end of `sync.test.ts`. No network, no real yt-dlp.

@@ -465,29 +465,33 @@ test("download: a finished item goes straight into the library, never through Sy
   );
 });
 
-test("download: a duplicate id fails, keeps its files in staging and is retried without downloading again", async () => {
-  contentDataDB.data = { "7": { ...item("7", "old"), type: "img" } };
+test("download: an id already in the library is dropped from the queue without downloading", async () => {
+  const old = { ...item("7", "old"), type: "img" as const };
+  contentDataDB.data = { "7": old };
   await setQueue([item("7", "pic")]);
   const calls: string[] = [];
   await startDownloads(fakeYtDlp({ calls }));
   await idle();
 
-  const [task] = getDownloadsSnapshot().tasks;
-  expect(task).toMatchObject({ status: "failed" });
-  expect(task?.error).toContain("already in the library");
-  expect(ls("Download/done/7")).toEqual([
-    "cover.pic.7.png",
-    "pic.7.json",
-    "pic.7.png",
-  ]);
-  expect(ls("media/Images")).toEqual([".covers"]);
-  expect((await readQueue()).map((i) => i.id)).toEqual(["7"]);
-  expect(await Bun.file("Download/error.log").text()).toContain("[pic]");
+  expect(calls).toEqual([]);
+  expect(getDownloadsSnapshot().tasks[0]?.status).toBe("completed");
+  expect(await readQueue()).toEqual([]);
+  expect(contentDataDB.data["7"]).toEqual(old);
+  expect(await Bun.file("Download/error.log").exists()).toBe(false);
+});
 
-  delete contentDataDB.data["7"];
+test("download: staged files of a failed import are imported without downloading again", async () => {
+  await Bun.write("Download/done/7/pic.7.png", png);
+  await Bun.write(
+    "Download/done/7/pic.7.json",
+    JSON.stringify(item("7", "pic")),
+  );
+  await setQueue([item("7", "pic")]);
+  const calls: string[] = [];
   await startDownloads(fakeYtDlp({ calls }));
   await idle();
-  expect(calls).toHaveLength(1); // no second download
+
+  expect(calls).toEqual([]);
   expect(getDownloadsSnapshot().tasks[0]?.status).toBe("completed");
   expect(contentDataDB.data["7"]?.title).toBe("pic");
   expect(await readQueue()).toEqual([]);
@@ -515,6 +519,12 @@ test("download: setQueue during a run keeps unfinished items and ignores their c
 /** A duplicate id fails its import and leaves the files staged in Download/done/7. */
 async function failedWithStaging() {
   contentDataDB.data = { "7": { ...item("7", "old"), type: "img" } };
+  await Bun.write("Download/done/7/cover.pic.7.png", png);
+  await Bun.write("Download/done/7/pic.7.png", png);
+  await Bun.write(
+    "Download/done/7/pic.7.json",
+    JSON.stringify(item("7", "pic")),
+  );
   await setQueue([item("7", "pic")]);
   await startDownloads(fakeYtDlp());
   await idle();
