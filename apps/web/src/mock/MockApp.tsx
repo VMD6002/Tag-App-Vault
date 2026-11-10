@@ -37,6 +37,7 @@ export default function MockApp({ page }: { page: MockPage }) {
   // Configure before the first render so the first request already sees the scenario.
   useMemo(() => configureMock(scenario, page.affects), [scenario, page]);
 
+  // react-doctor-disable-next-line react-doctor/effect-needs-cleanup -- false positive: the cleanup below clears the (conditional) timer
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.source === window && e.data?.type === MESSAGE_ACK_TAGS)

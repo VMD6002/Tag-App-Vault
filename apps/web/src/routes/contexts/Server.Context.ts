@@ -59,7 +59,13 @@ const useServer = () => {
     setSelectedEntries([]);
     setSelectionModeOn(false);
     getFilteredDataMutation.mutate(store.get(FilterQueryAtom));
-  }, [store]);
+  }, [
+    store,
+    getFilteredDataMutation.mutate,
+    setSelectedEntries,
+    injectFilterDataIntoURL,
+    setSelectionModeOn,
+  ]);
 
   const syncContentsModified = useMutation(
     orpc.main.sync.mutationOptions({
@@ -68,7 +74,10 @@ const useServer = () => {
       },
     }),
   );
-  const serverSyncFunc = useCallback(() => syncContentsModified.mutate({}), []);
+  const serverSyncFunc = useCallback(
+    () => syncContentsModified.mutate({}),
+    [syncContentsModified.mutate],
+  );
 
   const setUpdateTitle = useSetAtom(updateTitleAtom);
   const setUpdateModalOpen = useSetAtom(updateModalOpenAtom);
@@ -113,7 +122,12 @@ const useServer = () => {
     const content: typeof updateData = { ...updateData, title: sanitizedTitle };
     setInputDisabled(true);
     updateContentMutaion.mutate(content);
-  }, [updateData]);
+  }, [
+    updateData,
+    updateContentMutaion.mutate,
+    setUpdateTitle,
+    setInputDisabled,
+  ]);
 
   const setBulkUpdateModalOpen = useSetAtom(bulkUpdateModalOpenAtom);
   const bulkUpdateMutation = useMutation(
@@ -165,7 +179,13 @@ const useServer = () => {
       added: addedTags,
       removed: removedTags,
     });
-  }, [selectionTags, selectedEntries, selectionTagsInitial]);
+  }, [
+    selectionTags,
+    selectedEntries,
+    selectionTagsInitial,
+    setInputDisabled,
+    bulkUpdateMutation.mutate,
+  ]);
 
   const removeContentsMutation = useMutation(
     orpc.main.removeContents.mutationOptions({
@@ -179,9 +199,12 @@ const useServer = () => {
     }),
   );
 
-  const removeContents = useCallback((keys: string[]) => {
-    removeContentsMutation.mutate(keys);
-  }, []);
+  const removeContents = useCallback(
+    (keys: string[]) => {
+      removeContentsMutation.mutate(keys);
+    },
+    [removeContentsMutation.mutate],
+  );
 
   const isSelected = useCallback(
     (id: string) => {

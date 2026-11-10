@@ -58,7 +58,14 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
     setExtraData(Content.extraData);
     setUpdateId(Content.id);
     setUpdateModalOpen(true);
-  }, [Content]);
+  }, [
+    Content,
+    setUpdateModalOpen,
+    setUpdateTags,
+    setUpdateId,
+    setTitle,
+    setExtraData,
+  ]);
 
   const removeContent = useCallback(() => {
     confirm
@@ -70,7 +77,7 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
       .then((ok) => {
         if (ok) removeContents([Content.id]);
       });
-  }, [Content.id, Content.title]);
+  }, [Content.id, Content.title, removeContents]);
 
   const Selected = useMemo(
     () => isSelected(Content.id),

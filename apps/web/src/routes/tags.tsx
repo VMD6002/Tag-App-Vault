@@ -39,7 +39,7 @@ export default function ServerTags() {
 
   useEffect(() => {
     GetTagsFromServerMutation.mutate({});
-  }, []);
+  }, [GetTagsFromServerMutation.mutate]);
 
   const tagCount = Object.keys(tags).length;
   const loading =

@@ -17,7 +17,7 @@ export default function AudioCard({
   updateCover: (coverPath: string) => void;
   removeContentCover: (cover: string) => void;
 }) {
-  const { doc, encodedTitle, tags } = useDoc();
+  const { encodedTitle, tags } = useDoc();
 
   const currentMode = useAtomValue(currentModeAtom);
   const [selected, setSelected] = useAtom(selectedContentAtom);
@@ -41,7 +41,7 @@ export default function AudioCard({
       default:
         break;
     }
-  }, [data, doc, currentMode]);
+  }, [data, currentMode, updateCover, setSelected, setCurrent]);
 
   const getAudioCover = (cover: string) =>
     `/media/Audios/${encodedTitle}/.audio-covers/${encodeURIComponent(cover)}`;

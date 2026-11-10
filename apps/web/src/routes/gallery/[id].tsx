@@ -42,7 +42,7 @@ export default function GalleryPage() {
 
   useEffect(() => {
     getGalleryDataMutation.mutate({ name: doc.title, id: doc.id });
-  }, [doc.title, doc.id]);
+  }, [doc.title, doc.id, getGalleryDataMutation.mutate]);
 
   const coverUrl = doc.cover
     ? `/media/Galleries/${encodedTitle}/${encodeURIComponent(doc.cover!)}`
@@ -59,7 +59,7 @@ export default function GalleryPage() {
           });
       }),
 
-    [doc.id, doc.title],
+    [doc.id, doc.title, setCoverMutation.mutate],
   );
 
   const loading =

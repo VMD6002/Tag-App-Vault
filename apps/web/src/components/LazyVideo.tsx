@@ -41,14 +41,11 @@ const LazyVideo: React.FC<LazyVideoProps> = ({
         observerCallback,
         observerOptions,
       );
-      if (parentDivRef.current) {
-        observer.observe(parentDivRef.current);
-      }
+      const target = parentDivRef.current;
+      if (target) observer.observe(target);
 
       return () => {
-        if (parentDivRef.current) {
-          observer.unobserve(parentDivRef.current);
-        }
+        if (target) observer.unobserve(target);
         observer.disconnect();
       };
     } else {

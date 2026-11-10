@@ -63,7 +63,7 @@ export default function Gallery() {
           toast.error("Failed to update Cover");
         });
     },
-    [doc],
+    [doc, setCurrentMode, setDoc, setCoverMutation.mutateAsync],
   );
 
   const removeContentMutation = useMutation(
@@ -90,7 +90,7 @@ export default function Gallery() {
               contents: [`.gallery-covers/${cover}`],
             });
         }),
-    [doc],
+    [doc, removeContentMutation.mutate],
   );
 
   const isList = galleryViewMode === "list";
@@ -106,7 +106,7 @@ export default function Gallery() {
 
   useEffect(() => {
     if (doc.tags.includes("meta:autoplay")) setAutoPlay(true);
-  }, [doc.tags]);
+  }, [doc.tags, setAutoPlay]);
 
   return (
     <>

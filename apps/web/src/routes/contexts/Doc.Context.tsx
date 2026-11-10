@@ -95,7 +95,7 @@ function useDocContext() {
     };
     setInputDisabled(true);
     updateContentModified.mutate(content);
-  }, [updateData]);
+  }, [updateData, setTitle, updateContentModified.mutate, setInputDisabled]);
 
   const removeContentsMutaion = useMutation(
     orpc.main.removeContents.mutationOptions({
@@ -109,7 +109,7 @@ function useDocContext() {
   );
   const removeContent = useCallback(() => {
     removeContentsMutaion.mutate([id]);
-  }, [id]);
+  }, [id, removeContentsMutaion.mutate]);
 
   const encodedTitle = useMemo(
     () => encodeURIComponent(`${doc.title}.${doc.id}`),
@@ -145,7 +145,7 @@ export function Child({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     getContentMutation.mutate({ id });
-  }, [id]);
+  }, [id, getContentMutation.mutate]);
 
   if (getContentMutation.isError) {
     const notFound =

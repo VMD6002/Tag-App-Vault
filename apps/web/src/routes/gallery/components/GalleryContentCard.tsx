@@ -69,7 +69,7 @@ export default function GalleryContentCard({
   updateCover: (coverPath: string) => void;
   removeContentCover: (cover: string) => void;
 }) {
-  const { doc, tags } = useDoc();
+  const { tags } = useDoc();
 
   const setContentModalOpen = useSetAtom(contentModalOpenAtom);
   const setContentModalData = useSetAtom(contentModalDataAtom);
@@ -107,7 +107,14 @@ export default function GalleryContentCard({
       default:
         break;
     }
-  }, [data, doc, currentMode]);
+  }, [
+    data,
+    currentMode,
+    setContentModalOpen,
+    updateCover,
+    setSelected,
+    setContentModalData,
+  ]);
 
   const isSelected = selected.includes(data.name);
   const notACoverChoice =

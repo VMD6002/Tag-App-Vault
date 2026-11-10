@@ -64,7 +64,7 @@ export default function Filters() {
 
   const onSelectAllCheckedChange = useCallback(
     (a: boolean) => (a ? selectAll(filtered.map((o) => o.id)) : unSelectAll()),
-    [filtered],
+    [filtered, unSelectAll, selectAll],
   );
 
   const deleteSelected = useCallback(
@@ -79,7 +79,7 @@ export default function Filters() {
         .then((ok) => {
           if (ok) removeContents(selectedEntries);
         }),
-    [selectedEntries],
+    [selectedEntries, removeContents],
   );
 
   const setSelectionTagsInitial = useSetAtom(selectionTagsInitialAtom);
@@ -94,12 +94,12 @@ export default function Filters() {
     );
     setSelectionTagsInitial(Data);
     setSelectionTags(Data.map((o: string) => ({ label: o, value: o })));
-  }, [selectedEntries, filtered]);
+  }, [selectedEntries, filtered, setSelectionTagsInitial, setSelectionTags]);
 
   const openBulkUpdateModal = useCallback(() => {
     syncSelectedTags();
     setBulkUpdateModalOpen(true);
-  }, [syncSelectedTags]);
+  }, [syncSelectedTags, setBulkUpdateModalOpen]);
 
   const tagsForMultiSelectComponent = useMemo(
     () =>

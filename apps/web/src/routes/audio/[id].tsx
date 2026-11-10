@@ -50,7 +50,7 @@ export default function AudioPage() {
           });
       });
     },
-    [doc.id, doc.title],
+    [doc.id, doc.title, setCoverMutation.mutate],
   );
 
   const removeContentMutation = useMutation(
@@ -78,12 +78,12 @@ export default function AudioPage() {
             });
         });
     },
-    [doc],
+    [doc, removeContentMutation.mutate],
   );
 
   useEffect(() => {
     getAudioDataMutation.mutate({ name: doc.title, id: doc.id });
-  }, [doc]);
+  }, [doc, getAudioDataMutation.mutate]);
 
   const loading = getAudioDataMutation.isPending || getAudioDataMutation.isIdle;
 

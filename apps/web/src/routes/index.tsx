@@ -47,7 +47,7 @@ function Child() {
     initializeFilterDataFromURL();
     TIMEOUTS.clearAllTimeouts();
     TIMEOUTS.setTimeout(() => filterData(), 100);
-  }, []);
+  }, [initializeFilterDataFromURL, filterData]);
 
   const resetAll = () => {
     reset();
