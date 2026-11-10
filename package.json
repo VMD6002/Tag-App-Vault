@@ -23,6 +23,7 @@
     "format:fix": "biome format --write",
     "check": "biome check",
     "check:fix": "biome check --write",
+    "doctor:web": "cd apps/web && bun run doctor",
     "update:all": "bun -r update"
   },
   "devDependencies": {
