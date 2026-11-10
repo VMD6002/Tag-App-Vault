@@ -35,7 +35,12 @@ export const setCover = os
     }),
   )
   .handler(async ({ input }) => {
-    contentDataDB.data[input.id]!.cover = input.coverPath;
+    const content = contentDataDB.data[input.id];
+    if (!content)
+      throw new ORPCError("NOT_FOUND", {
+        message: `Content with id ${input.id} doesn't exist`,
+      });
+    content.cover = input.coverPath;
     await contentDataDB.write();
     console.log(`Succefully updated Cover of ${input.name}`);
     return input;
@@ -51,15 +56,16 @@ export const bulkUpdateContentTags = os
   )
   .handler(async ({ input }) => {
     // Validate every id first so a bad id can't leave earlier items half-updated in memory
-    for (const id of input.ids) {
-      if (!contentDataDB.data[id])
+    const items = input.ids.map((id) => {
+      const item = contentDataDB.data[id];
+      if (!item)
         throw new ORPCError("BAD_REQUEST", {
           message: `Content with id ${id} doesn't exist`,
         });
-    }
+      return item;
+    });
 
-    for (const id of input.ids) {
-      const contentDetails = contentDataDB.data[id]!;
+    for (const contentDetails of items) {
       const before = new Set(contentDetails.tags);
       // A tag in both lists ends up on the item (added wins)
       contentDetails.tags = [

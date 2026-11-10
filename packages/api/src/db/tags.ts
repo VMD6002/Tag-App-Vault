@@ -11,11 +11,12 @@ const DecrementTagCount = (tags: string[] | Set<string>) => {
   try {
     const tagsArray = Array.from(tags);
     tagsArray.forEach((tag) => {
-      if (isNaN(tagDB.data[tag]!)) {
+      const count = tagDB.data[tag];
+      if (count === undefined) {
         console.log(`Tag "${tag}" not found. No update performed.`);
         return;
       }
-      const newCount = tagDB.data[tag]! - 1;
+      const newCount = count - 1;
       if (newCount < 1) {
         delete tagDB.data[tag];
         console.log(`Decrement: Deleted tag ${tag}`);

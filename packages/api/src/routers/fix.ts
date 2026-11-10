@@ -4,8 +4,8 @@ import { tagDB } from "../db/tags.js";
 
 export const hardResetTagCount = os.handler(async () => {
   tagDB.data = {};
-  for (const id in contentDataDB.data) {
-    contentDataDB.data[id]!.tags.forEach((tag) => {
+  for (const item of Object.values(contentDataDB.data)) {
+    item.tags.forEach((tag) => {
       tagDB.data[tag] = (tagDB.data[tag] ?? 0) + 1;
     });
   }

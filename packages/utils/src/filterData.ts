@@ -38,11 +38,9 @@ export function filterData(
   const hasNone = !!none?.length;
   const allTypes = !types.length;
 
-  const keys = Object.keys(contentData);
   const results: ContentServerType[] = [];
 
-  for (const key of keys) {
-    const item = contentData[key]!;
+  for (const item of Object.values(contentData)) {
     if (!allTypes && !types.includes(item.type)) continue;
     const tags = item.tags;
 

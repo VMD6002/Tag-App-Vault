@@ -25,14 +25,10 @@ export async function deleteData(IdList: string[]) {
   const successfullyDeletedIds: string[] = [];
 
   for (const ContentDeleted of Deleted) {
-    const movedFiles: {
-      isBasename: boolean;
-      dir?: string;
-      from?: string;
-      to?: string;
-      exactFrom?: string;
-      exactTo?: string;
-    }[] = [];
+    const movedFiles: (
+      | { isBasename: true; dir: string; from: string; to: string }
+      | { isBasename: false; exactFrom: string; exactTo: string }
+    )[] = [];
 
     const safeRenameBasename = async (
       dir: string,
@@ -88,8 +84,8 @@ export async function deleteData(IdList: string[]) {
       }
 
       for (const moved of movedFiles) {
-        if (moved.isBasename) await rmByBasename(moved.dir!, moved.to!);
-        else await rm(moved.exactTo!, { recursive: true, force: true });
+        if (moved.isBasename) await rmByBasename(moved.dir, moved.to);
+        else await rm(moved.exactTo, { recursive: true, force: true });
       }
 
       DecrementTagCount(ContentDeleted.tags);
@@ -105,11 +101,11 @@ export async function deleteData(IdList: string[]) {
       for (const moved of movedFiles.reverse()) {
         try {
           if (moved.isBasename)
-            await renameByBasename(moved.dir!, moved.to!, moved.from!);
-          else await rename(moved.exactTo!, moved.exactFrom!);
+            await renameByBasename(moved.dir, moved.to, moved.from);
+          else await rename(moved.exactTo, moved.exactFrom);
         } catch (rollbackError) {
           console.error(
-            `Failed to rollback deletion for ${moved.to || moved.exactTo}:`,
+            `Failed to rollback deletion for ${moved.isBasename ? moved.to : moved.exactTo}:`,
             rollbackError,
           );
         }
