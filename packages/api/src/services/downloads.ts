@@ -16,12 +16,17 @@ import {
   safeTitle,
 } from "@tagapp/utils/download";
 import { type ContentWebType, contentWebSchema } from "@tagapp/utils/types";
-import YTDlpWrap from "yt-dlp-wrap-plus";
+import YTDlpWrapModule from "yt-dlp-wrap-plus";
 import { contentDataDB } from "../db/contentData.js";
 import { pathExists } from "../lib/fsBaseNameFunctions.js";
 import { createLock, withSyncLock } from "../lib/syncLock.js";
 import { SYNC } from "./getSyncData.js";
 import { syncContent } from "./syncContent.js";
+
+// A CJS package: the bundled server gets `{ default: class }` instead of the class (source runs get the class)
+const YTDlpWrap =
+  (YTDlpWrapModule as unknown as { default?: typeof YTDlpWrapModule })
+    .default ?? YTDlpWrapModule;
 
 const DIR = "./Download";
 const QUEUE = `${DIR}/tmp.json`;

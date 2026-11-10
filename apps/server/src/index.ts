@@ -1,4 +1,5 @@
 import { networkInterfaces } from "node:os";
+import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { router, setQueue, settingsDB } from "@tagapp/api";
 import { Hono } from "hono";
@@ -59,7 +60,10 @@ app.post("/downloads/set", async (c) => {
   return c.json(await setQueue(res));
 });
 
-const handler = new RPCHandler(router);
+// oRPC hides a procedure's exception behind a bare 500: print it
+const handler = new RPCHandler(router, {
+  interceptors: [onError((error) => console.error(error))],
+});
 app.use("/rpc/*", async (c, next) => {
   const { matched, response } = await handler.handle(c.req.raw, {
     prefix: "/rpc",
