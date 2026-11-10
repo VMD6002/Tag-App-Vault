@@ -68,7 +68,7 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
   ]);
 
   const removeContent = useCallback(() => {
-    confirm
+    void confirm
       .destructive({
         title: "Remove this item?",
         description: `"${Content.title}" and its files will be deleted from the server. This can't be undone.`,

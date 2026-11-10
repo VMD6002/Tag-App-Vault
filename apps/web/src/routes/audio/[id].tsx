@@ -63,7 +63,7 @@ export default function AudioPage() {
 
   const removeContentCover = useCallback(
     (cover: string) => {
-      confirm
+      void confirm
         .destructive({
           title: "Delete this cover image?",
           description: `${cover} will be deleted from the server. The track it belongs to is kept.`,

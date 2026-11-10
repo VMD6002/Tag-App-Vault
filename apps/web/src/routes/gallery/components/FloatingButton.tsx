@@ -26,7 +26,7 @@ export default function FloatingButtons() {
       toast.warning("No items selected");
       return;
     }
-    confirm
+    void confirm
       .destructive({
         title: `Delete ${selected.length} ${selected.length === 1 ? "file" : "files"}?`,
         description:

@@ -14,7 +14,7 @@ export const setCoverGivenFile = os
     const { id, name, file } = input;
     try {
       await rmByBasename("./media/Videos/.covers", `cover.${name}.${id}`);
-    } catch (error) {}
+    } catch {}
     await Bun.write(
       `./media/Videos/.covers/cover.${name}.${id}.${file.type.split("/")[1]}`,
       file,
