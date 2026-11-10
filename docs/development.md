@@ -20,19 +20,24 @@ Bun workspaces. Hono + oRPC (`/rpc`). Vite + React + wouter (hash router). LowDB
 
 ## Commands (root `package.json`)
 
-| Command                                              | Does                                                                                                                 |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `bun install`                                        | Install workspaces                                                                                                   |
-| `bun dev:server`                                     | `bun --watch src/index.ts` in `apps/server` (cwd is the runtime root)                                                |
-| `bun dev:web`                                        | Vite dev server; proxies `/rpc` and `/media` to a running server and Caddy: [web app](./web-app.md#setup)            |
-| `bun type:check`                                     | `biome check`, then `tsc -b` in `apps/web` (which references and so also checks `packages/api` and `packages/utils`) |
-| `bun check` / `check:fix`                            | Biome lint and format check / apply                                                                                  |
-| `bun lint` / `lint:fix`, `bun format` / `format:fix` | Biome lint or format alone                                                                                           |
-| `bun test packages/api`                              | Sync tests; Bun >= 1.4.2 ([sync pipeline](./sync-pipeline.md#tests))                                                 |
-| `bun build:serverFull`                               | Full build into `apps/server/dist`: [deployment](./deployment.md)                                                    |
-| `bun update:all`                                     | `bun -r update`                                                                                                      |
+| Command                                              | Does                                                                                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `bun install`                                        | Install workspaces                                                                                                       |
+| `bun dev:server`                                     | `bun --watch src/index.ts` in `apps/server` (cwd is the runtime root)                                                    |
+| `bun dev:web`                                        | Vite dev server; proxies `/rpc` and `/media` to a running server and Caddy: [web app](./web-app.md#setup)                |
+| `bun type:check`                                     | `biome check`, then `tsc -b` in `apps/web` (which references and so also checks `packages/api` and `packages/utils`)     |
+| `bun check` / `check:fix`                            | Biome lint and format check / apply                                                                                      |
+| `bun lint` / `lint:fix`, `bun format` / `format:fix` | Biome lint or format alone                                                                                               |
+| `bun test packages/api`                              | Sync tests; Bun >= 1.4.2 ([sync pipeline](./sync-pipeline.md#tests))                                                     |
+| `bun build:serverFull`                               | Full build into `apps/server/dist`: [deployment](./deployment.md)                                                        |
+| `bun doctor:web`                                     | React Doctor scan of `apps/web` (score and findings); exits 1 when it finds an error-level issue: [below](#react-doctor) |
+| `bun update:all`                                     | `bun -r update`                                                                                                          |
 
 `apps/cli` has no dev script; build it and run from `dist/Download`. Single-part builds: `build:server`, `build:cli`, `build:web`, `build:caddy`.
+
+## React Doctor
+
+[React Doctor](https://github.com/millionco/react-doctor) is a dev dependency of `apps/web` (script `doctor`, root alias `doctor:web`). It is a static React linter configured in `apps/web/doctor.config.json` (skips `components/ui` and `dist`; one ignored false positive for `saveJsonFile.ts`). The script runs `react-doctor --yes` (non-interactive). Its telemetry and score upload are on by default and are not disabled in the script (opt out with `--no-telemetry`).
 
 ## Code conventions
 
