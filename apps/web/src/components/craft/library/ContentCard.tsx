@@ -31,6 +31,8 @@ type Props = {
   /** Cover image URL; empty when the item has none (or it failed to load). */
   cover: string | null;
   onCoverError?: () => void;
+  /** Plays the video in the card instead of showing the cover (used as poster). */
+  video?: { src: string; caption?: string };
   selection?: { on: boolean; selected: boolean; onToggle: () => void };
   /** Edit and remove only render when handlers are given (they need the browser extension). */
   onEdit?: () => void;
@@ -43,6 +45,7 @@ const ContentCard = memo(
     url,
     cover,
     onCoverError,
+    video,
     selection,
     onEdit,
     onRemove,
@@ -64,7 +67,26 @@ const ContentCard = memo(
         )}
       >
         <div className="relative flex min-h-32 items-center justify-center overflow-hidden border-b bg-muted/40">
-          {cover ? (
+          {video ? (
+            <video
+              className="max-h-72 w-full object-contain"
+              src={video.src}
+              poster={cover ?? undefined}
+              preload="none"
+              controls
+              onClick={(e) => e.stopPropagation()}
+            >
+              {video.caption && (
+                <track
+                  src={video.caption}
+                  kind="subtitles"
+                  srcLang="en"
+                  label="English"
+                  default
+                />
+              )}
+            </video>
+          ) : cover ? (
             <img
               loading="lazy"
               className="max-h-72 w-full object-contain"
