@@ -65,7 +65,7 @@ type DownloadsSnapshot = {
 
 - `watch` yields a full snapshot at once (even when idle: `{running:false,tasks:[]}` before any run), then a new full snapshot after changes. Status changes are sent immediately; progress ticks are coalesced to at most 4 per second. Snapshots may repeat the same state. It ends when the client aborts (the handler's `signal`).
 - `tasks` keep the last run's items (completed and failed) until the next run replaces them. When a task completes or fails, refetch `getQueue` for the remaining queue.
-- Streaming was checked end to end, also through the repo's Caddyfile (`encode zstd gzip` + `reverse_proxy`, client sending `Accept-Encoding: gzip, zstd`): `logger`, `trimTrailingSlash`, CORS and the `/rpc/*` handler do not buffer it, and oRPC sends a `: ` keep-alive comment every 5 s, under Bun's 10 s idle timeout. The web client needs oRPC's fetch link to consume the iterator (`for await`).
+- Streaming was checked end to end, also through the repo's Caddyfile (`encode zstd gzip` + `reverse_proxy`, client sending `Accept-Encoding: gzip, zstd`): `logger`, `trimTrailingSlash`, CORS and the `/rpc/*` handler do not buffer it, and oRPC sends a `: ` keep-alive comment every 5 s, under Bun's 10 s idle timeout. The web client needs oRPC's fetch link to consume the iterator; the `/downloads` page does ([web app](./web-app.md#state)). `DownloadsSnapshot` and `DownloadTask` are re-exported (types only) from `@tagapp/api`.
 
 ## CLI side effects to know
 

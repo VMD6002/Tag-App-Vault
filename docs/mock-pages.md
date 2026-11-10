@@ -5,7 +5,7 @@ Scope: `apps/web/src/mock/`, which renders the real web app on a fake server wit
 ## Open
 
 - `bun dev:web`, then `http://localhost:5173/#/mock` (index) or `#/mock/<slug>?s=<scenario>&x=<0|1>`.
-- Slugs (`pages.ts`, `MOCK_PAGES`): `library`, `sync`, `tags`, `generate`, `reference`, `not-found`, `image`, `video`, `gallery`, `text`, `audio`. Each opens the real route in an in-memory router (`MockApp.tsx` mounts the real `AppLayout`).
+- Slugs (`pages.ts`, `MOCK_PAGES`): `library`, `sync`, `downloads`, `tags`, `generate`, `reference`, `not-found`, `image`, `video`, `gallery`, `text`, `audio`. Each opens the real route in an in-memory router (`MockApp.tsx` mounts the real `AppLayout`).
 - Scenarios: `normal`, `stress` (long titles, 60+ character unbroken ids, 46 tags on one item, zero-tag items, many cover shapes, 150-file gallery, 40 tracks, 24 chapters), `empty`, `noresults`, `loading`, `error`. Each page lists the ones that apply (`scenarios`).
 - On item pages `noresults` means the item does not exist. On gallery, text and audio pages `loading` and `error` hit only the file-list procedures (`affects`), so the page frame still renders.
 - `x=0` switches the extension off. With it on, `MockApp` posts `TAG_APP_INJECT_TAGS` like the extension and shows whether the app replied `TAG_APP_TAGS_RECEIVED`; with it off the app is read-only ([web app](./web-app.md#extension-handshake-and-read-only-mode)).
@@ -26,7 +26,7 @@ Scope: `apps/web/src/mock/`, which renders the real web app on a fake server wit
 ## Adding a page or procedure
 
 - Page: add an entry to `MOCK_PAGES` (slug, route to open, scenarios, optional `affects`, `search`). Keep data neutral and invented.
-- Procedure: when a new oRPC procedure is used by the UI, add its handler to `handlers` in `stubs.ts` ([server API](./server-api.md#add-an-endpoint)). Mutations change only the fake server's memory. The `sync` page uses `state.pending` (`buildSync` in `data.ts`): edit and remove change it, `main/sync` moves it into the library.
+- Procedure: when a new oRPC procedure is used by the UI, add its handler to `handlers` in `stubs.ts` ([server API](./server-api.md#add-an-endpoint)). Mutations change only the fake server's memory. The `sync` page uses `state.pending` (`buildSync` in `data.ts`): edit and remove change it, `main/sync` moves it into the library. The `downloads` page uses `state.queue` (`buildQueue`): `downloads/start` replays one fake run (items download, import and leave the queue; `stress` fails the last one) and `downloads/watch` is answered in `answer()` with a real `text/event-stream` body (`event: message` + `data: {"json":…}`), pushed to every open stream on each tick. Scenarios: normal, stress, empty, loading, error.
 
 ## Not covered
 
