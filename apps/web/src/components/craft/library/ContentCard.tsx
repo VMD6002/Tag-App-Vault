@@ -13,6 +13,7 @@ import {
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatDate } from "@/lib/formatDate";
 import { cn } from "@/lib/utils";
 import TagChips from "./TagChips";
 
@@ -149,13 +150,7 @@ const ContentCard = memo(
             dateTime={added.toISOString()}
             className="text-[11px] text-muted-foreground"
           >
-            {added.toLocaleString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
+            {formatDate(content.added)}
           </time>
           {(onEdit || onRemove) && (
             <div className="flex items-center gap-0.5">

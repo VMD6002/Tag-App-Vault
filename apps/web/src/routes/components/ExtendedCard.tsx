@@ -1,4 +1,3 @@
-import { CTypeDir } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
 import { useAtomValue, useSetAtom } from "jotai";
 import { memo, useCallback, useMemo, useState } from "react";
@@ -12,28 +11,9 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
+import { getCoverUrl } from "@/lib/coverUrl";
 import { selectEntryAtom, selectionOnAtom } from "../atom.selection";
 import { useServerActions } from "../contexts/Server.Context";
-
-function getCoverUrl(Content: ContentServerType) {
-  const pathPrefix = `media/${CTypeDir[Content.type]}`;
-  const encodedTitle = encodeURIComponent(`${Content.title}.${Content.id}`);
-  const encodedCover = Content.cover ? encodeURIComponent(Content.cover) : null;
-  switch (Content.type) {
-    case "img":
-    case "video":
-      return `${pathPrefix}/.covers/cover.${encodedTitle}`;
-    case "gallery":
-      if (!encodedCover) return null;
-      return `${pathPrefix}/${encodedTitle}/${encodedCover}`;
-    case "audio":
-      if (!encodedCover) return null;
-      return `${pathPrefix}/${encodedTitle}/.audio-covers/${encodedCover}`;
-    case "txt":
-      if (!encodedCover) return null;
-      return `${pathPrefix}/${encodedTitle}/.media/${encodedCover}`;
-  }
-}
 
 const getUrl = (id: string, Type: string) => `#/${Type}/${id}`;
 
