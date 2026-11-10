@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { DownloadTask } from "@tagapp/api";
-import { mergeRows } from "./downloads.merge";
+import { mergeRows } from "./merge";
 
 const task = (id: string, status: DownloadTask["status"]): DownloadTask => ({
   id,
