@@ -4,19 +4,19 @@ Scope: stack, repo map, commands, code conventions, imports, git workflow and fi
 
 ## Stack
 
-Bun workspaces. Hono + oRPC (`/rpc`). Vite + React + wouter (hash router). LowDB (JSON files). Zod. Jotai + Constate + TanStack Query. Tailwind + shadcn/ui on Base UI (`base-nova`, preset `b2Pg`). Caddy (media + proxy). yt-dlp via `yt-dlp-wrap-plus`, Ink TUI and p-queue (CLI). Biome (lint and format). Server and CLI run on Bun only.
+Bun workspaces. Hono + oRPC (`/rpc`). Vite + React + wouter (hash router). LowDB (JSON files). Zod. Jotai + Constate + TanStack Query. Tailwind + shadcn/ui on Base UI (`base-nova`, preset `b2Pg`). Caddy (media + proxy). yt-dlp via `yt-dlp-wrap-plus`, Ink TUI and p-queue (CLI). Biome (lint and format). Server and CLI run on Bun only. The server downloads through the same `yt-dlp-wrap-plus` as the CLI ([server downloads](./server-downloads.md)).
 
 ## Repo map
 
-| Path             | Package          | Role                                                                                            |
-| ---------------- | ---------------- | ----------------------------------------------------------------------------------------------- |
-| `apps/server`    | `tag-app-server` | Hono entry: [server API](./server-api.md)                                                       |
-| `apps/web`       | `tag-app-web`    | React SPA: [web app](./web-app.md)                                                              |
-| `apps/cli`       | `tag-app-cli`    | Download worker: [download CLI](./download-cli.md)                                              |
-| `apps/Caddyfile` | -                | Media and proxy: [deployment](./deployment.md)                                                  |
-| `packages/api`   | `@tagapp/api`    | oRPC `router`, `routers/*` (thin handlers), `services/*`, `db/*`, `lib/*`                       |
-| `packages/utils` | `@tagapp/utils`  | Shared Zod schemas, types, `CTypeDir`, `filterData`, helpers: [domain model](./domain-model.md) |
-| `Notes/`         | -                | `TagApp Server Reference.md`, human guide to the disk layout                                    |
+| Path             | Package          | Role                                                                                                                                                                              |
+| ---------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server`    | `tag-app-server` | Hono entry: [server API](./server-api.md)                                                                                                                                         |
+| `apps/web`       | `tag-app-web`    | React SPA: [web app](./web-app.md)                                                                                                                                                |
+| `apps/cli`       | `tag-app-cli`    | Download worker: [download CLI](./download-cli.md)                                                                                                                                |
+| `apps/Caddyfile` | -                | Media and proxy: [deployment](./deployment.md)                                                                                                                                    |
+| `packages/api`   | `@tagapp/api`    | oRPC `router`, `routers/*` (thin handlers), `services/*`, `db/*`, `lib/*`                                                                                                         |
+| `packages/utils` | `@tagapp/utils`  | Shared Zod schemas, types, `CTypeDir`, `filterData`, helpers: [domain model](./domain-model.md); `@tagapp/utils/download`: download helpers for server and CLI (server-side only) |
+| `Notes/`         | -                | `TagApp Server Reference.md`, human guide to the disk layout                                                                                                                      |
 
 ## Commands (root `package.json`)
 
@@ -28,7 +28,8 @@ Bun workspaces. Hono + oRPC (`/rpc`). Vite + React + wouter (hash router). LowDB
 | `bun type:check`                                     | `biome check`, then `tsc -b` in `apps/web` (which references and so also checks `packages/api` and `packages/utils`)     |
 | `bun check` / `check:fix`                            | Biome lint and format check / apply                                                                                      |
 | `bun lint` / `lint:fix`, `bun format` / `format:fix` | Biome lint or format alone                                                                                               |
-| `bun test packages/api`                              | Sync tests; Bun >= 1.4.2 ([sync pipeline](./sync-pipeline.md#tests))                                                     |
+| `bun test packages/api`                              | Sync and download-pipeline tests; Bun >= 1.4.2 ([sync pipeline](./sync-pipeline.md#tests))                               |
+| `bun test packages/utils`, `bun test apps/cli`       | Download helper tests (config, fetch retries) / CLI args tests                                                           |
 | `bun build:serverFull`                               | Full build into `apps/server/dist`: [deployment](./deployment.md)                                                        |
 | `bun doctor:web`                                     | React Doctor scan of `apps/web` (score and findings); exits 1 when it finds an error-level issue: [below](#react-doctor) |
 | `bun update:all`                                     | `bun -r update`                                                                                                          |

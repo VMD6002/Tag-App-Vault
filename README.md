@@ -20,15 +20,15 @@ All commands, conventions and the production layout: [docs/development.md](docs/
 
 ## Architecture
 
-| Path             | Role                                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| `apps/server`    | Hono entry: mounts oRPC at `/rpc`, `POST /downloads/set`, serves the built web UI           |
-| `apps/web`       | React SPA to browse and edit the library; also hosts dev-only mock pages                    |
-| `apps/cli`       | Download worker: reads the queue, runs yt-dlp or a direct fetch, drops results into `Sync/` |
-| `apps/Caddyfile` | `:5000`: serves `/media/*` from disk, proxies the rest to the server on `:5001`             |
-| `packages/api`   | oRPC routers, sync/delete/update services, LowDB stores (`@tagapp/api`)                     |
-| `packages/utils` | Shared Zod schemas and types, filtering, helpers (`@tagapp/utils`)                          |
-| `Notes/`         | Human guide to the folder layout                                                            |
+| Path             | Role                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| `apps/server`    | Hono entry: mounts oRPC at `/rpc`, `POST /downloads/set`, serves the built web UI                 |
+| `apps/web`       | React SPA to browse and edit the library; also hosts dev-only mock pages                          |
+| `apps/cli`       | Headless download worker: same queue, drops results into `Sync/` (the server downloads by itself) |
+| `apps/Caddyfile` | `:5000`: serves `/media/*` from disk, proxies the rest to the server on `:5001`                   |
+| `packages/api`   | oRPC routers, sync/delete/update services, LowDB stores (`@tagapp/api`)                           |
+| `packages/utils` | Shared Zod schemas and types, filtering, helpers (`@tagapp/utils`)                                |
+| `Notes/`         | Human guide to the folder layout                                                                  |
 
 ```
 browser --> Caddy :5000 --/media/*--> media/ (files on disk)
@@ -36,7 +36,8 @@ browser --> Caddy :5000 --/media/*--> media/ (files on disk)
                +--everything else--> server :5001 (apps/server + packages/api)
                                        /rpc, /downloads/set, built web UI --> DB/*.json
 
-POST /downloads/set --> Download/tmp.json --> apps/cli --> Sync/ --(sync)--> media/ + DB/
+POST /downloads/set --> Download/tmp.json --> server downloads --> media/ + DB/
+                                          (headless: apps/cli --> Sync/ --(sync)--> media/ + DB/)
 ```
 
 ## Contributing

@@ -1,15 +1,19 @@
 # Sync pipeline
 
-Scope: how an item travels from the download queue to the library, and the sync stages in `packages/api/src/services`. Tree and naming: [disk layout](./disk-layout.md). CLI side: [download CLI](./download-cli.md).
+Scope: how an item travels from the download queue to the library, and the sync stages in `packages/api/src/services`. Tree and naming: [disk layout](./disk-layout.md). Download side: [server downloads](./server-downloads.md), [download CLI](./download-cli.md).
 
 ## Stages
 
 1. Queue: `POST /downloads/set` validates `ContentWebType[]` and writes `Download/tmp.json` ([server API](./server-api.md)).
-2. Download: the CLI moves finished files into `Sync/` and drops the item from the queue.
+2. Download, two ways:
+   - Server (primary): `downloads.start` downloads and moves each finished item into its own staging folder `Download/done/<id>/`, then runs `syncContent` on that folder and drops the item from the queue. No `Sync/`, no manual sync: [server downloads](./server-downloads.md).
+   - CLI: moves finished files into `Sync/` and drops the item from the queue; then step 3.
 3. Sync: `main.sync` runs `syncContent`. `main.getSyncData` is the read-only preview.
 4. Browse: the web UI queries oRPC; file bytes come from Caddy `/media/...` ([deployment](./deployment.md)).
 
 ## getSyncData (`services/getSyncData.ts`, read-only)
+
+The scan, prepare and sync services take the folder to work on (`dir`, default `SYNC` = `./Sync`); the server download pipeline passes a staging folder. Everything below says `Sync/` for the default. `UnSyncable/` is always `./UnSyncable`.
 
 - Scans `Sync/`. Pairs media with `cover.<name>.<ext>` (first cover wins, duplicates warn) and, for videos, `caption.<name>.vtt`.
 - Folder items are detected by suffix `.gallery`, `.audio`, `.txt` (`folderThumbs`).
@@ -36,7 +40,7 @@ Behind the web `/sync` preview ([web app](./web-app.md)). `main.editSyncItem` an
 
 ## syncContent (`services/syncContent.ts`)
 
-- Wrapped in `withSyncLock` (`lib/syncLock.ts`), which queues calls so scans and syncs never overlap; `main.getSyncData` uses it too.
+- Wrapped in `withSyncLock` (`lib/syncLock.ts`, built with `createLock`, which the download queue file also uses), which queues calls so scans and syncs never overlap; `main.getSyncData` uses it too.
 - Per item: move files into `media/<Dir>/` (img/video covers to `.covers/`, captions to `.captions/`; folder items move whole), then prepend the item to `contentDataDB`, `IncrementTagCount`, write both DBs, and delete the `<name>.json` sidecar last (it is the only metadata copy until the DB is written).
 - A failure for one item rolls back that item (removes it from memory, decrements tags, moves files back) and the loop continues. Returns all content data.
 - Rollback pattern for other file operations: [file operations](./file-operations.md).

@@ -1,6 +1,8 @@
 # Download CLI
 
-Scope: `apps/cli` (`tag-app-cli`), the Ink TUI worker that turns the download queue into files in `Sync/`. What happens after: [sync pipeline](./sync-pipeline.md). Entry: `src/index.tsx`; helpers in `src/lib/`.
+Scope: `apps/cli` (`tag-app-cli`), the Ink TUI worker that turns the download queue into files in `Sync/`. The server now runs the same queue itself and imports finished items straight into the library ([server downloads](./server-downloads.md)); that is the primary way, the CLI remains for headless use (no server running, or a different machine). What happens after the CLI: [sync pipeline](./sync-pipeline.md). Entry: `src/index.tsx`; args and paths in `src/lib/`. The download logic itself (flags, `fetch`, config, naming, moving files) lives in `packages/utils/src/download` (entry `@tagapp/utils/download`), shared with the server; every path there is a parameter and the CLI passes its cwd-relative ones.
+
+Do not run the CLI and the server downloads on the same `Download/` at once: both read and rewrite `tmp.json` and share `./tmp`, and nothing checks for it.
 
 ## Run
 
@@ -16,7 +18,7 @@ Scope: `apps/cli` (`tag-app-cli`), the Ink TUI worker that turns the download qu
 - `-r`, `--retry [N]`: after a full run, re-read `tmp.json`; if items remain, wait `retryDelayMinutes`, print `Retrying in X min (attempt a/N)...` and run the remaining queue again (fresh queues, fresh Ink render). No `N`: retry until the queue is empty. `N` must be a positive integer: at most `N` retries.
 - Unknown flags or a bad `N`: error plus usage, exit 1.
 
-## Config (`config.json`, `lib/config.ts`)
+## Config (`config.json`, shared `loadConfig`)
 
 Lives in the cwd next to `tmp.json`. Created with defaults on start if missing; read on every start.
 
@@ -38,17 +40,17 @@ A missing (or wrongly typed) key falls back to its default; missing keys are wri
 | `direct`                | Fetches `item.cover` and `item.contentUrl` with `fetch` (`userAgent` from config, streamed to disk). Both are required |
 | anything else or absent | Runs yt-dlp (`yt-dlp-wrap-plus`) with flags from `createFlag`                                                          |
 
-yt-dlp flags (`lib/createFlags.ts`): the item URL, `-o ./tmp/<base>.%(ext)s`, `--embed-thumbnail -R 3 --continue --no-overwrites`, then `download.flags.value` split on whitespace (quoted values stay whole; `--no-part` and `--no-continue` are dropped so resuming keeps working), `--user-agent <config userAgent>` unless the item flags set one, then the meta tags below.
+yt-dlp flags (shared `createFlag`): the item URL, `-o <tmp dir>/<base>.%(ext)s`, `--embed-thumbnail -R 3 --continue --no-overwrites`, then `download.flags.value` split on whitespace (quoted values stay whole; `--no-part` and `--no-continue` are dropped so resuming keeps working), `--user-agent <config userAgent>` unless the item flags set one, then the meta tags below.
 
-- `meta:yt-cookie`: needs a `Site:<name>` tag and `./cookies/<name>.txt`, else the task fails; adds `--cookies`.
+- `meta:yt-cookie`: needs a `Site:<name>` tag and `./cookies/<name>.txt` (the cookies dir is a parameter), else the task fails; adds `--cookies`.
 - `meta:different-cover`: downloads `item.cover` itself (needs `cover`); otherwise `--write-thumbnail` with the thumbnail output `cover.<base>.%(ext)s`.
 - Tag semantics: [domain model](./domain-model.md#meta-tags).
 - Resuming: yt-dlp keeps `.part` files and `--continue` picks them up on the next run; `--no-overwrites` skips files that already finished. `direct` downloads (and the `meta:different-cover` cover) write to `<file>.part` and rename on success; an existing finished file is skipped (no HTTP range resume, so a partial `.part` is refetched in full).
-- Fetch retries (`lib/downloadContent.ts`): network errors, `429` and `5xx` are retried up to 3 attempts in total, waiting 2s then 4s; other `4xx` fail at once. Longer outages are left to `--retry`.
+- Fetch retries (shared `downloadContent`): network errors, `429` and `5xx` are retried up to 3 attempts in total, waiting 2s then 4s; other `4xx` fail at once. Longer outages are left to `--retry`.
 - Cover extension for direct downloads comes from the URL's `ext` query parameter, else the path extension; no extension throws (`getImageExtensionFromURL`).
 
 ## File naming and completion
 
-- `fileBase(title, id)` = `<title>.<id>` with `\ / : * ? " < > | %` and control characters replaced by `_`, trimmed.
+- `fileBase(title, id)` = `<title>.<id>` (title through `safeTitle`) with `\ / : * ? " < > | %` and control characters replaced by `_`, trimmed.
 - On success every file in `./tmp` containing `.<id>.` (except `*.part`, `*.part-FragN`, `*.ytdl`, `*.temp` leftovers, which stay in `./tmp`) moves to `../Sync` (so one id cannot match a longer id), `<title>.<id>.json` is written there with the whole queue item, and the item is removed from `tmp.json`.
 - On failure the task is marked failed and the message plus stack are appended to `error.log`; the item stays in the queue.

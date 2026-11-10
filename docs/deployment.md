@@ -18,7 +18,7 @@ Other commands: [development](./development.md).
 ## Running
 
 - Server paths are cwd-relative, and the CLI's `tmp.json` and `../Sync` only line up with the server's `Download/tmp.json` and `Sync/` when the server's cwd is `dist`. So run the built server and Caddy from `dist`, where `index.js` and `WebUI/` already are. The server creates the data dirs at start ([disk layout](./disk-layout.md)).
-- Run the CLI from `dist/Download` (`bun index.js`): its `tmp.json` and `../Sync` resolve to the server's `Download/tmp.json` and `Sync/`.
+- The server downloads by itself ([server downloads](./server-downloads.md)). To use the CLI instead (headless), run it from `dist/Download` (`bun index.js`): its `tmp.json` and `../Sync` resolve to the server's `Download/tmp.json` and `Sync/`.
 - Server port and UI prefix come only from `settings.json` ([server API](./server-api.md)). Run the server on `:5001` behind Caddy on `:5000`; the Caddyfile hardcodes both.
 - In development the server runs in `apps/server` and Vite serves the web app: [development](./development.md).
 

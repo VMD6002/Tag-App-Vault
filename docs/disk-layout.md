@@ -9,6 +9,8 @@ settings.json              {port, prefix}
 DB/contentData.json        Record<id, ContentServerType>
 DB/tags.json               Record<tag, count>
 Download/tmp.json          pending download queue
+Download/tmp/  done/<id>/  scratch downloads / staging until imported
+Download/config.json  error.log  userAgent (and CLI retry delay) / failures
 Download/cookies/<Site>.txt  optional yt-dlp cookies (CLI cwd is Download/)
 Sync/  UnSyncable/         staging in / rejected
 media/
@@ -19,6 +21,7 @@ media/
   Texts/<title>.<id>/      .media/           <name>.md
 ```
 
+- `Download/` details (server run, CLI sharing the same files): [server downloads](./server-downloads.md#files-all-under-download).
 - `createAppDirs` (`apps/server/src/lib/createAppDirs.ts`) creates at startup: `Sync`, `UnSyncable`, `Download`, `DB`, `media/Videos/.covers`, `media/Videos/.captions`, `media/Images/.covers`, `media/Audios`, `media/Texts`, `media/Galleries`.
 - Folder items in `Sync/` are named `<title>.<id>.gallery|audio|txt/` with the same inner layout. Dot-folders hold support files and are never content.
 - Gallery and audio use `.gallery-covers` / `.audio-covers` rather than `.covers` so Caddy needs no extra rules ([deployment](./deployment.md)).

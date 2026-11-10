@@ -2,7 +2,7 @@
 
 Index for coding agents. Read the doc that owns your task before editing; docs link to code, code is the source of truth.
 
-TagAppVault is a self-hosted tag-based media library: a queue of downloads (CLI) is synced into a library on disk, and a React web UI browses and tags it through a Hono + oRPC server. Storage is the filesystem plus LowDB JSON files. Human overview: [README.md](README.md).
+TagAppVault is a self-hosted tag-based media library: a queue of downloads (run by the server, or by the CLI for headless use) lands in a library on disk, and a React web UI browses and tags it through a Hono + oRPC server. Storage is the filesystem plus LowDB JSON files. Human overview: [README.md](README.md).
 
 Layout: `apps/server`, `apps/web`, `apps/cli`, `apps/Caddyfile`, `packages/api` (routers, services, DB), `packages/utils` (shared schemas, filtering), `Notes/` (human guide to the disk layout), `docs/`.
 
@@ -25,6 +25,7 @@ Layout: `apps/server`, `apps/web`, `apps/cli`, `apps/Caddyfile`, `packages/api` 
 | [docs/sync-pipeline.md](docs/sync-pipeline.md)                           | working on the queue-to-library flow or sync tests             |
 | [docs/file-operations.md](docs/file-operations.md)                       | changing rename, delete or per-type edit routers               |
 | [docs/download-cli.md](docs/download-cli.md)                             | working on `apps/cli`, yt-dlp flags, cookies                   |
+| [docs/server-downloads.md](docs/server-downloads.md)                     | working on the in-server download manager, its SSE, staging    |
 | [docs/server-api.md](docs/server-api.md)                                 | adding endpoints, changing settings, port, prefix, startup     |
 | [docs/deployment.md](docs/deployment.md)                                 | building, running, or changing the Caddyfile                   |
 | [docs/web-app.md](docs/web-app.md)                                       | working on `apps/web` routes, state, extension handshake       |
@@ -42,7 +43,8 @@ Layout: `apps/server`, `apps/web`, `apps/cli`, `apps/Caddyfile`, `packages/api` 
 | Sync behaviour             | [sync pipeline](docs/sync-pipeline.md)                                                                                                                       |
 | Delete or rename behaviour | [file operations](docs/file-operations.md)                                                                                                                   |
 | Filtering or search        | [domain model](docs/domain-model.md)                                                                                                                         |
-| Download flags or yt-dlp   | [download CLI](docs/download-cli.md)                                                                                                                         |
+| Download flags or yt-dlp   | [download CLI](docs/download-cli.md), [server downloads](docs/server-downloads.md)                                                                           |
+| Server download progress   | [server downloads](docs/server-downloads.md), [server API](docs/server-api.md)                                                                               |
 | Server prefix or port      | [server API](docs/server-api.md)                                                                                                                             |
 | New endpoint               | [server API](docs/server-api.md), [mock pages](docs/mock-pages.md)                                                                                           |
 | Media serving rules        | [deployment](docs/deployment.md)                                                                                                                             |
