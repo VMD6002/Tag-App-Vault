@@ -21,6 +21,8 @@ const {
   readQueue,
   getDownloadsSnapshot,
   watchDownloads,
+  cancelDownloads,
+  removeDownloads,
 } = await import("./downloads.js");
 const { call } = await import("@orpc/server");
 const { bulkUpdateContentTags } = await import("../routers/main.js");
@@ -389,8 +391,10 @@ function fakeYtDlp(
   opts: { calls?: string[]; gate?: Promise<void>; slow?: boolean } = {},
 ) {
   return {
-    exec(flags: string[]) {
+    exec(flags: string[], _options?: unknown, signal?: AbortSignal) {
       const ee = new EventEmitter();
+      // like the real wrapper: a killed process closes with a null code
+      signal?.addEventListener("abort", () => ee.emit("close", null));
       const base = (flags[flags.indexOf("-o") + 1] as string).replace(
         ".%(ext)s",
         "",
@@ -498,4 +502,107 @@ test("download: setQueue during a run keeps unfinished items and ignores their c
   // "1" is imported and gone; "2" waits for the next run
   expect((await readQueue()).map((i) => i.id)).toEqual(["2"]);
   expect(Object.keys(contentDataDB.data)).toEqual(["1"]);
+});
+
+/** A duplicate id fails its import and leaves the files staged in Download/done/7. */
+async function failedWithStaging() {
+  contentDataDB.data = { "7": { ...item("7", "old"), type: "img" } };
+  await setQueue([item("7", "pic")]);
+  await startDownloads(fakeYtDlp());
+  await idle();
+  expect(getDownloadsSnapshot().tasks[0]?.status).toBe("failed");
+}
+
+test("download: cancel stops a downloading item and the waiting ones, keeps them queued, no error.log", async () => {
+  await setQueue([item("1"), item("2"), item("3")]); // one scraper: 1 runs, 2 and 3 wait
+  const calls: string[] = [];
+  await startDownloads(fakeYtDlp({ calls, gate: new Promise(() => {}) }));
+  while (getDownloadsSnapshot().tasks[0]?.status !== "downloading")
+    await Bun.sleep(5);
+
+  expect(cancelDownloads()).toBe(3);
+  expect(cancelDownloads()).toBe(0); // nothing left to cancel
+  await idle(); // the run ends although yt-dlp never finished by itself
+
+  expect(getDownloadsSnapshot().tasks.map((t) => t.status)).toEqual([
+    "cancelled",
+    "cancelled",
+    "cancelled",
+  ]);
+  expect(calls).toHaveLength(1); // the waiting ones never started
+  expect((await readQueue()).map((i) => i.id)).toEqual(["1", "2", "3"]);
+  expect(await Bun.file("Download/error.log").exists()).toBe(false);
+  expect(contentDataDB.data).toEqual({});
+
+  // it can be started again
+  expect(await startDownloads(fakeYtDlp())).toBe(true);
+  await idle();
+  expect(Object.keys(contentDataDB.data).sort()).toEqual(["1", "2", "3"]);
+});
+
+test("download: cancel with an id only stops that item", async () => {
+  await setQueue([item("1"), item("2")]);
+  await startDownloads(fakeYtDlp({ gate: new Promise(() => {}) }));
+  while (getDownloadsSnapshot().tasks[0]?.status !== "downloading")
+    await Bun.sleep(5);
+  expect(cancelDownloads("1")).toBe(1);
+  while (getDownloadsSnapshot().tasks[1]?.status !== "downloading")
+    await Bun.sleep(5); // "2" takes over the scraper slot
+  expect(getDownloadsSnapshot().tasks.map((t) => t.status)).toEqual([
+    "cancelled",
+    "downloading",
+  ]);
+  cancelDownloads();
+  await idle();
+});
+
+test("download: remove moves staged files to Sync, drops the item and its partial downloads", async () => {
+  await failedWithStaging();
+  await Bun.write("Download/tmp/pic.7.png.part", "x");
+  await Bun.write("Download/tmp/pic.7.png", "finished data stays");
+  await Bun.write("Download/tmp/other.17.png.part", "x"); // another id
+
+  expect(await removeDownloads(["7"])).toEqual(["7"]);
+  expect(ls("Sync")).toEqual(["cover.pic.7.png", "pic.7.json", "pic.7.png"]);
+  expect(ls("Download/done")).toEqual([]);
+  expect(ls("Download/tmp")).toEqual(["other.17.png.part", "pic.7.png"]);
+  expect(await readQueue()).toEqual([]);
+  expect(getDownloadsSnapshot().tasks).toEqual([]);
+  // the files are importable again from the sync page
+  delete contentDataDB.data["7"];
+  await syncContent();
+  expect(contentDataDB.data["7"]?.title).toBe("pic");
+});
+
+test("download: remove refuses an item that is queued or running", async () => {
+  await setQueue([item("1")]);
+  await startDownloads(fakeYtDlp({ gate: new Promise(() => {}) }));
+  while (getDownloadsSnapshot().tasks[0]?.status !== "downloading")
+    await Bun.sleep(5);
+  await expect(removeDownloads(["1"])).rejects.toMatchObject({
+    code: "CONFLICT",
+  });
+  expect((await readQueue()).map((i) => i.id)).toEqual(["1"]);
+  cancelDownloads();
+  await idle();
+  expect(await removeDownloads(["1"])).toEqual(["1"]); // cancelled: removable
+  expect(await readQueue()).toEqual([]);
+});
+
+test("download: remove with a name clash in Sync is a CONFLICT and moves nothing", async () => {
+  await failedWithStaging();
+  await Bun.write("Sync/pic.7.png", "mine");
+  await expect(removeDownloads(["7"])).rejects.toMatchObject({
+    code: "CONFLICT",
+  });
+  expect(ls("Download/done/7")).toEqual([
+    "cover.pic.7.png",
+    "pic.7.json",
+    "pic.7.png",
+  ]);
+  expect(ls("Sync")).toEqual(["pic.7.png"]);
+  expect((await readQueue()).map((i) => i.id)).toEqual(["7"]);
+  await expect(removeDownloads(["../x"])).rejects.toMatchObject({
+    code: "BAD_REQUEST",
+  });
 });

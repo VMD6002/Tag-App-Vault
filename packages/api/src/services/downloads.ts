@@ -1,4 +1,12 @@
-import { appendFile, mkdir, rename, rm, rmdir } from "node:fs/promises";
+import {
+  appendFile,
+  mkdir,
+  readdir,
+  rename,
+  rm,
+  rmdir,
+} from "node:fs/promises";
+import { ORPCError } from "@orpc/server";
 import {
   createEnqueue,
   type DownloadEnv,
@@ -11,7 +19,8 @@ import { type ContentWebType, contentWebSchema } from "@tagapp/utils/types";
 import YTDlpWrap from "yt-dlp-wrap-plus";
 import { contentDataDB } from "../db/contentData.js";
 import { pathExists } from "../lib/fsBaseNameFunctions.js";
-import { createLock } from "../lib/syncLock.js";
+import { createLock, withSyncLock } from "../lib/syncLock.js";
+import { SYNC } from "./getSyncData.js";
 import { syncContent } from "./syncContent.js";
 
 const DIR = "./Download";
@@ -26,7 +35,8 @@ export type TaskStatus =
   | "downloading"
   | "importing"
   | "completed"
-  | "failed";
+  | "failed"
+  | "cancelled";
 
 export interface DownloadTask {
   id: string;
@@ -47,6 +57,8 @@ export interface DownloadsSnapshot {
 
 let running = false;
 let tasks = new Map<string, DownloadTask>();
+/** One per item of the current run; aborted by `cancelDownloads`. */
+let aborts = new Map<string, AbortController>();
 const listeners = new Set<() => void>();
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -54,6 +66,10 @@ const isActive = (t?: DownloadTask) =>
   t?.status === "queued" ||
   t?.status === "downloading" ||
   t?.status === "importing";
+
+/** The id becomes a folder name and part of every file name. */
+export const isSafeId = (id: string) =>
+  id !== "" && !/[\\/]/.test(id) && id !== "." && id !== "..";
 
 export const getDownloadsSnapshot = (): DownloadsSnapshot => ({
   running,
@@ -158,19 +174,27 @@ async function importStaged(item: ContentWebType, stage: string) {
     );
 }
 
-async function processItem(item: ContentWebType, env: DownloadEnv) {
+async function processItem(
+  item: ContentWebType,
+  env: DownloadEnv,
+  { signal }: AbortController,
+) {
   const stage = `${DONE}/${item.id}`;
   try {
-    // The id becomes a folder name and part of every file name
-    if (/[\\/]/.test(item.id) || item.id === "." || item.id === "..")
-      throw new Error(`Unsafe id "${item.id}"`);
+    // Cancelled while still waiting in the p-queue: never starts
+    signal.throwIfAborted();
+    if (!isSafeId(item.id)) throw new Error(`Unsafe id "${item.id}"`);
 
     // A staging folder with files is left over from an import that failed earlier
     // (duplicate id, bad metadata...): retry the import instead of downloading again.
     const sidecar = `${stage}/${safeTitle(item.title)}.${item.id}.json`;
-    if (!(await pathExists(sidecar))) {
+    const staged = await pathExists(sidecar);
+    // From the last abort check to `importing` nothing awaits, so a cancel can't slip in between
+    signal.throwIfAborted();
+    if (!staged) {
       update(item.id, { status: "downloading" });
-      await downloadItem(item, env, (p) => update(item.id, p, false));
+      await downloadItem(item, env, (p) => update(item.id, p, false), signal);
+      signal.throwIfAborted();
       // The sidecar title matches the file names, which is what prepareSync expects
       const moved = moveFinished(
         { ...item, title: safeTitle(item.title) },
@@ -199,6 +223,8 @@ async function processItem(item: ContentWebType, env: DownloadEnv) {
     await removeFromQueue(item.id);
     update(item.id, { status: "completed" });
   } catch (error) {
+    // `cancelDownloads` already set the status; a cancel is not a failure (no error.log)
+    if (signal.aborted) return;
     const err = error as Error | undefined;
     const message = err?.message ?? "Unknown error";
     update(item.id, { status: "failed", error: message });
@@ -241,6 +267,7 @@ export async function startDownloads(ytDlp?: DownloadEnv["ytDlp"]) {
     throw error;
   }
 
+  aborts = new Map(queue.map(({ id }) => [id, new AbortController()]));
   tasks = new Map(
     queue.map(({ id, title, scraper }) => [
       id,
@@ -259,10 +286,105 @@ export async function startDownloads(ytDlp?: DownloadEnv["ytDlp"]) {
 
   const enqueue = createEnqueue();
   void Promise.all(
-    queue.map((item) => enqueue(item.scraper, () => processItem(item, env))),
+    queue.map((item) =>
+      enqueue(item.scraper, () =>
+        processItem(item, env, aborts.get(item.id) as AbortController),
+      ),
+    ),
   ).finally(() => {
     running = false;
     changed(true);
   });
   return true;
 }
+
+/**
+ * Cancels `id`, or every item of the run, that is `queued` or `downloading`: the task becomes
+ * `cancelled`, yt-dlp is killed / `fetch` aborted, and the item stays in the queue with its
+ * partial files in `Download/tmp` (the next `start` resumes it). An `importing` item is not
+ * cancelled: it runs under `withSyncLock` and is atomic. Returns how many were cancelled.
+ */
+export function cancelDownloads(id?: string) {
+  let cancelled = 0;
+  for (const task of tasks.values()) {
+    if (id !== undefined && task.id !== id) continue;
+    if (task.status !== "queued" && task.status !== "downloading") continue;
+    update(task.id, { status: "cancelled", speed: "", eta: "--:--" });
+    aborts.get(task.id)?.abort();
+    cancelled++;
+  }
+  return cancelled;
+}
+
+/**
+ * Drops items from `Download/tmp.json` (the user's "clear failed"). Refused (CONFLICT, nothing
+ * changed) if any is `queued`/`downloading`/`importing`: cancel it first. Staged files of a
+ * failed import (`Download/done/<id>/`) are moved to `Sync/` so they can be fixed on the
+ * `/sync` page; a name clash there is a CONFLICT and nothing moves. Incomplete downloads
+ * (`.part`, `.ytdl`, `.temp`) of the id in `Download/tmp` are deleted last. Returns the ids
+ * that were in the queue.
+ */
+export const removeDownloads = (ids: string[]) =>
+  withSyncLock(async () => {
+    if (ids.some((id) => !isSafeId(id)))
+      throw new ORPCError("BAD_REQUEST", { message: "Unsafe id" });
+    const busy = ids.find((id) => isActive(tasks.get(id)));
+    if (busy)
+      throw new ORPCError("CONFLICT", {
+        message: `"${busy}" is queued or running: cancel it first`,
+      });
+
+    const staged = new Map<string, string[]>();
+    for (const id of ids)
+      staged.set(
+        id,
+        await readdir(`${DONE}/${id}`).catch((e: NodeJS.ErrnoException) => {
+          if (e.code === "ENOENT") return [];
+          throw e;
+        }),
+      );
+    // rename would silently replace a file of the same name
+    for (const file of [...staged.values()].flat())
+      if (await pathExists(`${SYNC}/${file}`))
+        throw new ORPCError("CONFLICT", {
+          message: `Sync already has "${file}"`,
+        });
+
+    const moved: [string, string][] = [];
+    const undo = async () => {
+      for (const [from, to] of moved.reverse())
+        await rename(to, from).catch((e) =>
+          console.error(`Failed to rollback ${to}:`, e),
+        );
+    };
+    let removed: string[] = [];
+    try {
+      for (const [id, files] of staged)
+        for (const file of files) {
+          await rename(`${DONE}/${id}/${file}`, `${SYNC}/${file}`);
+          moved.push([`${DONE}/${id}/${file}`, `${SYNC}/${file}`]);
+        }
+      await withQueueLock(async () => {
+        const queue = await readQueue();
+        removed = queue.filter((i) => ids.includes(i.id)).map((i) => i.id);
+        await writeQueue(queue.filter((i) => !ids.includes(i.id)));
+      });
+    } catch (error) {
+      await undo();
+      throw error;
+    }
+
+    // The data is safe by now; what follows is cleanup
+    for (const id of ids) {
+      await rmdir(`${DONE}/${id}`).catch(() => {});
+      aborts.delete(id);
+      tasks.delete(id);
+      const partial = new RegExp(
+        `\\.${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\..+\\.(part(-Frag\\d+)?|ytdl|temp)$`,
+      );
+      for (const file of await readdir(TMP).catch(() => []))
+        if (partial.test(file)) await rm(`${TMP}/${file}`, { force: true });
+    }
+    changed(true);
+    return removed;
+  });
