@@ -48,7 +48,7 @@ To add one: handle it where it acts (CLI `createFlags.ts`, sync, or web) and add
 
 ## Filtering
 
-`filterData` (`filterData.ts`) backs `main.getFilteredData`; `FilterQuerySchema` is its input.
+`filterData` (`filterData.ts`) runs in the browser, not on the server: the web app loads the whole library with `main.getAllContent` and filters it in memory ([web app](./web-app.md#state)). `FilterQuerySchema` is its input.
 
 - `any`: item has at least one of these tags. `all`: item has every one. `none`: item has none of them (`ArrayHasAnyModified`, `ArrayHasAll` in `ArrayHelperFunctions.ts`).
 - `any` and `none` accept wildcards: `*` matches any item with at least one tag, `Parent:*` matches any tag starting with `Parent:`. `all` is exact.

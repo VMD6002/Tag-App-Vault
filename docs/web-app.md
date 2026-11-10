@@ -25,8 +25,9 @@ Scope: `apps/web` (`tag-app-web`), the React SPA that browses and edits the libr
 
 ## State
 
-- `src/atom.ts`: theme (`localStorage` key `vite-ui-theme`), filter atoms, `FilterQueryAtom`, `filterActiveAtom` (separates "empty library" from "no results") and `tagsAtom`. Filters are mirrored into the URL query (`any`, `all`, `none`, `types`, `search`, `orderByLatest`) by `injectFilterDataIntoURLAtom` and read back on load.
-- `routes/atom.ts` (result list, server tags), `routes/atom.selection.ts` (selection mode), per-type `atom.ts` files, `components/craft/UpdateModal/atom.ts`.
+- `src/atom.ts`: theme (`localStorage` key `vite-ui-theme`), filter atoms, `FilterQueryAtom`, `filterActiveAtom` (separates "empty library" from "no results") and `tagsAtom`. `realtimeFilterAtom` (`localStorage` key `realtime-filter`) is the "Realtime" switch in the filters panel. Filters are mirrored into the URL query (`any`, `all`, `none`, `types`, `search`, `orderByLatest`) by `injectFilterDataIntoURLAtom` and read back on load.
+- Filtering is client-side: the library page loads everything once via `main.getAllContent` into `allContentAtom` and runs the shared `filterData` into `filteredAtom` (`Server.Context.ts`). The Filter button applies the filters; with Realtime on, a debounced effect (200 ms) re-filters whenever `FilterQueryAtom` changes and updates the URL with `replaceState`. Sync refetches everything; edit, bulk update and delete patch both lists in place.
+- `routes/atom.ts` (all items, result list, server tags), `routes/atom.selection.ts` (selection mode), per-type `atom.ts` files, `components/craft/UpdateModal/atom.ts`.
 - Mutations replace objects instead of editing in place: memoised cards skip re-render on an identical reference.
 
 ## Extension handshake and read-only mode
