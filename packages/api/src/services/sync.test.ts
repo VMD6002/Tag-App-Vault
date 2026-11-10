@@ -1,6 +1,13 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -25,6 +32,7 @@ const {
   removeDownloads,
 } = await import("./downloads.js");
 const { call } = await import("@orpc/server");
+const { getErrorLog, clearErrorLog } = await import("../routers/downloads.js");
 const { bulkUpdateContentTags } = await import("../routers/main.js");
 
 // A 1x1 PNG
@@ -605,4 +613,31 @@ test("download: remove with a name clash in Sync is a CONFLICT and moves nothing
   await expect(removeDownloads(["../x"])).rejects.toMatchObject({
     code: "BAD_REQUEST",
   });
+});
+
+test("error log: missing file is empty, a normal log is returned whole, a huge one is cut to whole trailing lines, clear deletes it", async () => {
+  expect(await call(getErrorLog, undefined)).toEqual({
+    text: "",
+    truncated: false,
+  });
+
+  mkdirSync("Download");
+  writeFileSync("Download/error.log", "[a]: boom\nstack\n");
+  expect(await call(getErrorLog, undefined)).toEqual({
+    text: "[a]: boom\nstack\n",
+    truncated: false,
+  });
+
+  const line = `${"x".repeat(98)}é\n`; // 100 bytes: the 1 MB cut lands inside a line
+  writeFileSync("Download/error.log", `first\n${line.repeat(10_500)}`);
+  const cut = await call(getErrorLog, undefined);
+  expect(cut.truncated).toBe(true);
+  expect(cut.text).not.toContain("first");
+  expect(cut.text.startsWith(line)).toBe(true);
+  expect(Buffer.byteLength(cut.text)).toBeLessThanOrEqual(1024 * 1024);
+
+  await call(clearErrorLog, undefined);
+  expect(existsSync("Download/error.log")).toBe(false);
+  await call(clearErrorLog, undefined); // already gone: fine
+  expect((await call(getErrorLog, undefined)).text).toBe("");
 });

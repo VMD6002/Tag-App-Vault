@@ -25,6 +25,10 @@ import { syncContent } from "./syncContent.js";
 
 const DIR = "./Download";
 const QUEUE = `${DIR}/tmp.json`;
+/** Failures appended by `runItem` (the CLI writes the same file from its cwd). */
+const ERROR_LOG = `${DIR}/error.log`;
+/** `readErrorLog` returns at most this many trailing bytes. */
+export const ERROR_LOG_MAX = 1024 * 1024;
 const TMP = `${DIR}/tmp`;
 /** One staging folder per finished item: `Download/done/<id>/`. */
 const DONE = `${DIR}/done`;
@@ -229,11 +233,25 @@ async function processItem(
     const message = err?.message ?? "Unknown error";
     update(item.id, { status: "failed", error: message });
     await appendFile(
-      `${DIR}/error.log`,
+      ERROR_LOG,
       `[${item.title}]: ${message}\n${err?.stack ?? ""}\n`,
     ).catch(() => {});
   }
 }
+
+/** The tail of `error.log` (missing file = empty); `truncated` when older entries were cut. */
+export async function readErrorLog() {
+  const file = Bun.file(ERROR_LOG);
+  if (!(await file.exists())) return { text: "", truncated: false };
+  const size = file.size;
+  if (size <= ERROR_LOG_MAX)
+    return { text: await file.text(), truncated: false };
+  const tail = await file.slice(size - ERROR_LOG_MAX).text();
+  // the cut can land mid-line (or mid-character): start at the next full line
+  return { text: tail.slice(tail.indexOf("\n") + 1), truncated: true };
+}
+
+export const clearErrorLog = () => rm(ERROR_LOG, { force: true });
 
 /**
  * Starts a run over the queue in `Download/tmp.json` unless one is already going (then it

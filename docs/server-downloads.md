@@ -20,7 +20,7 @@ Shared helpers (`packages/utils/src/download`, entry `@tagapp/utils/download`, s
 | `cookies/<Site>.txt` | yt-dlp cookies for `meta:yt-cookie` items                                                                    |
 | `tmp/`               | In-flight and partial downloads, never cleared (yt-dlp resumes from them)                                    |
 | `done/<id>/`         | Staging per item: finished files plus sidecar until imported                                                 |
-| `error.log`          | Failures appended: `[title]: message` plus stack                                                             |
+| `error.log`          | Failures appended: `[title]: message` plus stack; read and cleared from the web ([Error log](#error-log))    |
 
 ## Failure handling
 
@@ -45,15 +45,23 @@ Shared helpers (`packages/utils/src/download`, entry `@tagapp/utils/download`, s
 - `downloads.remove` (`removeDownloads`, input `{ ids }`, ids validated like the staging folder name): runs under `withSyncLock`. Any id whose task is `queued`/`downloading`/`importing` refuses the whole call with CONFLICT (cancel it first), so there is no partial removal. Then, per id: files in `Download/done/<id>/` (a failed import) move to `Sync/` so they can be fixed on the `/sync` page; a name already in `Sync/` is a CONFLICT and nothing moves; a failure while moving or writing the queue renames everything back. The item leaves `tmp.json`, the empty staging folder is removed, its task state leaves the snapshot (watchers are notified) and incomplete downloads of the id in `tmp/` (`<title>.<id>.<ext>.part`, `.part-FragN`, `.ytdl`, `.temp`; matched on the exact id so other items' files are safe) are deleted. Finished files in `tmp/` are never deleted. Returns `{ removed }`: the ids that were in the queue.
 - Known limit: a `start` issued while a `remove` of the same item is in flight can still pick the item up (the window is a few ms); the web page disables nothing for this.
 
+## Error log
+
+- `Download/error.log` (`ERROR_LOG` in `services/downloads.ts`, also the CLI's `./error.log` when run from `Download/`) holds one `[title]: message` plus stack block per failed item. Cancels are not logged. Nothing trims it.
+- `downloads.getErrorLog` (`readErrorLog`) returns `{ text, truncated }`: a missing file is `""`; a file over 1 MB (`ERROR_LOG_MAX`) returns only its last 1 MB, starting at a whole line, with `truncated: true`. `downloads.clearErrorLog` (`clearErrorLog`) deletes the file (a missing file is fine). Failed items stay in the queue; only their log entries go. Clearing is not locked against an append in the same instant.
+- Other server errors (`errorLog()` in `lib/errorLog.ts`, route failures, sync) go to the console only and are not in this file or the web page.
+
 ## oRPC procedures (`downloads`)
 
-| Procedure  | Input               | Output                                                                                      |
-| ---------- | ------------------- | ------------------------------------------------------------------------------------------- |
-| `getQueue` | none                | `ContentWebType[]`: the current `tmp.json` items (also those of a finished run that failed) |
-| `start`    | none                | `{ started: boolean }`: false when a run is already going or the queue is empty             |
-| `cancel`   | `{ id?: string }`   | `{ cancelled: number }`: see [Cancel and remove](#cancel-and-remove)                        |
-| `remove`   | `{ ids: string[] }` | `{ removed: string[] }`: drops items from the queue, staged files go to `Sync/`             |
-| `watch`    | none                | event stream (`text/event-stream` via oRPC event iterator) of `DownloadsSnapshot`           |
+| Procedure       | Input               | Output                                                                                      |
+| --------------- | ------------------- | ------------------------------------------------------------------------------------------- |
+| `getQueue`      | none                | `ContentWebType[]`: the current `tmp.json` items (also those of a finished run that failed) |
+| `start`         | none                | `{ started: boolean }`: false when a run is already going or the queue is empty             |
+| `cancel`        | `{ id?: string }`   | `{ cancelled: number }`: see [Cancel and remove](#cancel-and-remove)                        |
+| `remove`        | `{ ids: string[] }` | `{ removed: string[] }`: drops items from the queue, staged files go to `Sync/`             |
+| `getErrorLog`   | none                | `{ text: string, truncated: boolean }`: the tail of `Download/error.log`                    |
+| `clearErrorLog` | none                | nothing: deletes `Download/error.log`                                                       |
+| `watch`         | none                | event stream (`text/event-stream` via oRPC event iterator) of `DownloadsSnapshot`           |
 
 ```ts
 type DownloadsSnapshot = {
@@ -87,4 +95,4 @@ The CLI (`apps/cli`) and the server run the same queue file and `Download/tmp`. 
 
 ## Tests
 
-`packages/api/src/services/sync.test.ts` ("download:" tests) drives `startDownloads` with a fake yt-dlp: item lands in `media/` + DB + tag counts and leaves the queue, a duplicate id stays staged and retries without downloading, `setQueue` during a run. Cancel (a hung fake yt-dlp that closes with a null code on abort: the run ends, waiting items never start, nothing in `error.log`, items stay queued and run again) and remove (staged files to `Sync/`, active item refused, name clash is CONFLICT and moves nothing, partial downloads of the id deleted) are tested there too. `packages/utils/src/download/*.test.ts`: config, `fetch` retries and abort. No network, no real yt-dlp.
+`packages/api/src/services/sync.test.ts` ("download:" tests) drives `startDownloads` with a fake yt-dlp: item lands in `media/` + DB + tag counts and leaves the queue, a duplicate id stays staged and retries without downloading, `setQueue` during a run. Cancel (a hung fake yt-dlp that closes with a null code on abort: the run ends, waiting items never start, nothing in `error.log`, items stay queued and run again) and remove (staged files to `Sync/`, active item refused, name clash is CONFLICT and moves nothing, partial downloads of the id deleted) are tested there too. `packages/utils/src/download/*.test.ts`: config, `fetch` retries and abort. The error log procedures (missing file, normal, over the cap, clear) have one test at the end of `sync.test.ts`. No network, no real yt-dlp.

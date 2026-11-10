@@ -2,7 +2,9 @@ import { os } from "@orpc/server";
 import z from "zod";
 import {
   cancelDownloads,
+  clearErrorLog as clearLog,
   isSafeId,
+  readErrorLog,
   readQueue,
   removeDownloads,
   startDownloads,
@@ -30,3 +32,11 @@ export const remove = os
   .handler(async ({ input }) => ({
     removed: await removeDownloads(input.ids),
   }));
+
+/** `Download/error.log` (the last 1 MB at most, `truncated` says so); empty when there is none. */
+export const getErrorLog = os.handler(() => readErrorLog());
+
+/** Deletes `Download/error.log`; a missing file is fine. */
+export const clearErrorLog = os.handler(async () => {
+  await clearLog();
+});
