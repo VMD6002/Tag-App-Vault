@@ -1,10 +1,18 @@
-import { sanitizeStringForFileName } from "@tagapp/utils";
+import {
+  filterData as filterContent,
+  sanitizeStringForFileName,
+} from "@tagapp/utils";
+import type { ContentServerType } from "@tagapp/utils/types";
 import { useMutation } from "@tanstack/react-query";
 import constate from "constate";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { FilterQueryAtom, injectFilterDataIntoURLAtom } from "@/atom";
+import {
+  FilterQueryAtom,
+  injectFilterDataIntoURLAtom,
+  realtimeFilterAtom,
+} from "@/atom";
 import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
 import {
   updateDataAtom,
@@ -13,7 +21,7 @@ import {
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
 import { orpc } from "@/lib/orpc";
-import { filteredAtom, serverTagsAtom } from "../atom";
+import { allContentAtom, filteredAtom, serverTagsAtom } from "../atom";
 import {
   selectionEntriesAtom,
   selectionOnAtom,
@@ -23,6 +31,10 @@ import {
 
 const useServer = () => {
   const setFiltered = useSetAtom(filteredAtom);
+  const setAllContent = useSetAtom(allContentAtom);
+  const store = useStore();
+  const realtime = useAtomValue(realtimeFilterAtom);
+  const filterQuery = useAtomValue(FilterQueryAtom);
   const setInputDisabled = useSetAtom(updateInputDisabledAtom);
   const setServerTags = useSetAtom(serverTagsAtom);
   const injectFilterDataIntoURL = useSetAtom(injectFilterDataIntoURLAtom);
@@ -37,11 +49,32 @@ const useServer = () => {
       },
     }),
   );
-  const getFilteredDataMutation = useMutation(
-    orpc.main.getFilteredData.mutationOptions({
+  // Filters the library held in memory (no server call)
+  const runFilter = useCallback(() => {
+    const all = store.get(allContentAtom);
+    setFiltered(
+      filterContent(
+        store.get(FilterQueryAtom),
+        Object.fromEntries(all.map((c) => [c.id, c])),
+      ),
+    );
+  }, [store, setFiltered]);
+
+  // Edit, bulk edit and delete patch both lists so an edited item doesn't vanish from the view
+  const patchContent = useCallback(
+    (fn: (old: ContentServerType[]) => ContentServerType[]) => {
+      setAllContent(fn);
+      setFiltered(fn);
+    },
+    [setAllContent, setFiltered],
+  );
+
+  const getAllContentMutation = useMutation(
+    orpc.main.getAllContent.mutationOptions({
       onSuccess: (res) => {
         getServerTagsMutation.mutate({});
-        setFiltered(res);
+        setAllContent(Object.values(res));
+        runFilter();
       },
       onError: () => {
         console.warn("DB, online ?");
@@ -51,27 +84,39 @@ const useServer = () => {
 
   const [selectedEntries, setSelectedEntries] = useAtom(selectionEntriesAtom);
   const setSelectionModeOn = useSetAtom(selectionOnAtom);
-  const store = useStore();
 
-  // Read at call time: the first load runs from a timeout that would otherwise see the pre-URL-init filters
-  const filterData = useCallback(() => {
-    injectFilterDataIntoURL();
-    setSelectedEntries([]);
-    setSelectionModeOn(false);
-    getFilteredDataMutation.mutate(store.get(FilterQueryAtom));
-  }, [
-    store,
-    getFilteredDataMutation.mutate,
-    setSelectedEntries,
-    injectFilterDataIntoURL,
-    setSelectionModeOn,
-  ]);
+  // Reads the atoms at call time: the first load runs from a timeout that would otherwise see the pre-URL-init filters
+  const filterData = useCallback(
+    (replaceURL?: boolean) => {
+      injectFilterDataIntoURL(replaceURL);
+      setSelectedEntries([]);
+      setSelectionModeOn(false);
+      runFilter();
+    },
+    [
+      runFilter,
+      setSelectedEntries,
+      injectFilterDataIntoURL,
+      setSelectionModeOn,
+    ],
+  );
+
+  // Realtime: re-filter shortly after the search text or any filter changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: filterQuery is the trigger, filterData reads the same atoms from the store
+  useEffect(() => {
+    if (!realtime) return;
+    const timeout = setTimeout(() => filterData(true), 200);
+    return () => clearTimeout(timeout);
+  }, [realtime, filterQuery, filterData]);
+
+  const loadAllContent = useCallback(
+    () => getAllContentMutation.mutate({}),
+    [getAllContentMutation.mutate],
+  );
 
   const syncContentsModified = useMutation(
     orpc.main.sync.mutationOptions({
-      onSuccess: () => {
-        getFilteredDataMutation.mutate(store.get(FilterQueryAtom));
-      },
+      onSuccess: loadAllContent,
     }),
   );
   const serverSyncFunc = useCallback(
@@ -84,7 +129,7 @@ const useServer = () => {
   const updateContentMutaion = useMutation(
     orpc.main.setContent.mutationOptions({
       onSuccess: (res) => {
-        setFiltered((old) =>
+        patchContent((old) =>
           old.map((val) => {
             if (val.id !== res.id) return val;
             const content = { ...val };
@@ -139,7 +184,7 @@ const useServer = () => {
           return [...old, ...unSyncedTags];
         });
         // New objects, not in-place edits: memo'd cards skip re-render on an identical reference
-        setFiltered((oldFiltered) =>
+        patchContent((oldFiltered) =>
           oldFiltered.map((content) => {
             if (!res.ids.includes(content.id)) return content;
             const tags = content.tags.filter((t) => !res.removed.includes(t));
@@ -190,7 +235,7 @@ const useServer = () => {
   const removeContentsMutation = useMutation(
     orpc.main.removeContents.mutationOptions({
       onSuccess: (res) => {
-        setFiltered((old) => old.filter((doc) => !res.includes(doc.id)));
+        patchContent((old) => old.filter((doc) => !res.includes(doc.id)));
         setSelectedEntries((old) => old.filter((id) => !res.includes(id)));
       },
       onError: () => {
@@ -217,9 +262,9 @@ const useServer = () => {
     // Status for the loading / error / sync states in the UI
     loadState: {
       isPending:
-        getFilteredDataMutation.isPending || getFilteredDataMutation.isIdle,
-      isError: getFilteredDataMutation.isError,
-      message: getFilteredDataMutation.error?.message,
+        getAllContentMutation.isPending || getAllContentMutation.isIdle,
+      isError: getAllContentMutation.isError,
+      message: getAllContentMutation.error?.message,
     },
     syncState: {
       isPending: syncContentsModified.isPending,
@@ -231,6 +276,7 @@ const useServer = () => {
     updateContentFunc,
     bulkUpdateContentFunc,
     filterData,
+    loadAllContent,
     serverSyncFunc,
     isSelected,
   };

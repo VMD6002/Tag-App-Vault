@@ -1,7 +1,6 @@
 // Fake TagAppVault server for the dev-only #/mock pages. A patched `fetch` answers the app's oRPC
 // calls (`/rpc/<router>/<procedure>`) and chapter text from memory, and cover/media URLs under
 // `/media/` are swapped for generated gradients so no image is ever requested.
-import { filterData } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
 import {
   buildDb,
@@ -71,7 +70,7 @@ const doc = (id: string) => {
 const handlers: Record<string, Handler> = {
   "main/getSettings": () => ({ port: 5001, prefix: "/" }),
   "main/getServerTags": () => state.tags,
-  "main/getFilteredData": (i) => filterData(i, state.db.contents),
+  "main/getAllContent": () => state.db.contents,
   "main/getContent": (i: { id: string }) => doc(i.id),
   "main/setContent": (
     i: Pick<ContentServerType, "id" | "title" | "tags" | "extraData">,

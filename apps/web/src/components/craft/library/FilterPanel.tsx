@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 export function FilterField({
   label,
@@ -29,6 +30,8 @@ export function FilterPanel({
   onApply,
   onClear,
   activeCount,
+  realtime,
+  onRealtimeChange,
   children,
 }: {
   search: string;
@@ -37,11 +40,14 @@ export function FilterPanel({
   onClear: () => void;
   /** Number of filters currently set (search counts as one). */
   activeCount: number;
+  /** Re-filter live as the search and filters change. */
+  realtime: boolean;
+  onRealtimeChange: (v: boolean) => void;
   children: ReactNode;
 }) {
   return (
     <section aria-label="Filters" className="grid gap-3 border bg-card/40 p-3">
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
           <Search
             className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -58,6 +64,14 @@ export function FilterPanel({
             className="pl-8"
           />
         </div>
+        <Label htmlFor="realtime-filter-switch" className="text-sm">
+          Realtime
+        </Label>
+        <Switch
+          id="realtime-filter-switch"
+          checked={realtime}
+          onCheckedChange={onRealtimeChange}
+        />
         <Button onClick={onApply} title="Apply the search and tag filters">
           Filter
         </Button>
@@ -66,8 +80,8 @@ export function FilterPanel({
       {activeCount > 0 && (
         <div className="flex items-center justify-between gap-3 border-t pt-2 text-xs text-muted-foreground">
           <span>
-            {activeCount} {activeCount === 1 ? "filter" : "filters"} set. Press
-            Filter to apply.
+            {activeCount} {activeCount === 1 ? "filter" : "filters"} set.
+            {realtime ? "" : " Press Filter to apply."}
           </span>
           <Button variant="ghost" size="xs" onClick={onClear}>
             <X />

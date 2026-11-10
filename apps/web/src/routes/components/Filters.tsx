@@ -7,6 +7,7 @@ import {
   anyAtom,
   noneAtom,
   orderByLatestAtom,
+  realtimeFilterAtom,
   resetFilterAtom,
   searchAtom,
   tagsAtom,
@@ -52,6 +53,7 @@ export default function Filters() {
   const [any, setAny] = useAtom(anyAtom);
   const [none, setNone] = useAtom(noneAtom);
   const [orderByLatest, setOrderByLatest] = useAtom(orderByLatestAtom);
+  const [realtime, setRealtime] = useAtom(realtimeFilterAtom);
   const reset = useSetAtom(resetFilterAtom);
 
   const selectedEntries = useAtomValue(selectionEntriesAtom);
@@ -149,6 +151,8 @@ export default function Filters() {
         search={search}
         onSearchChange={setSearch}
         onApply={() => filterData()}
+        realtime={realtime}
+        onRealtimeChange={setRealtime}
         onClear={reset}
         activeCount={activeCount}
       >

@@ -1,5 +1,5 @@
 import { ORPCError, os } from "@orpc/server";
-import { FilterQuerySchema, filterData, SetDifferenceES6 } from "@tagapp/utils";
+import { SetDifferenceES6 } from "@tagapp/utils";
 import z from "zod";
 import { contentDataDB } from "../db/contentData.js";
 import { settingsDB } from "../db/settings.js";
@@ -88,12 +88,10 @@ export const removeContents = os
   .input(z.string().array())
   .handler(async ({ input }) => await deleteDocs(input));
 
-export const getFilteredData = os
-  .input(FilterQuerySchema)
-  .handler(async ({ input }) => {
-    console.log("Data requested");
-    return filterData(input, contentDataDB.data);
-  });
+export const getAllContent = os.handler(async () => {
+  console.log("All data requested");
+  return contentDataDB.data;
+});
 
 export const getContent = os
   .input(z.object({ id: z.string() }))

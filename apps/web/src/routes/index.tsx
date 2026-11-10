@@ -28,6 +28,7 @@ function Child() {
     updateContentFunc,
     bulkUpdateContentFunc,
     filterData,
+    loadAllContent,
     serverSyncFunc,
     loadState,
     syncState,
@@ -46,8 +47,8 @@ function Child() {
   useEffect(() => {
     initializeFilterDataFromURL();
     TIMEOUTS.clearAllTimeouts();
-    TIMEOUTS.setTimeout(() => filterData(), 100);
-  }, [initializeFilterDataFromURL, filterData]);
+    TIMEOUTS.setTimeout(() => loadAllContent(), 100);
+  }, [initializeFilterDataFromURL, loadAllContent]);
 
   const resetAll = () => {
     reset();
@@ -109,7 +110,7 @@ function Child() {
         <ErrorState
           title="Couldn't load the library"
           message={loadState.message}
-          onRetry={() => filterData()}
+          onRetry={() => loadAllContent()}
         />
       ) : loadState.isPending && filtered.length === 0 ? (
         <LoadingState label="Loading the library…" />

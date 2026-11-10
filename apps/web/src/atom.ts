@@ -22,6 +22,9 @@ export const noneAtom = atom<MultiSelectOption[]>([]);
 export const typesAtom = atom<MultiSelectOption[]>([]);
 export const orderByLatestAtom = atom(true);
 
+/** Live re-filtering on every change instead of the Filter button. */
+export const realtimeFilterAtom = atomWithStorage("realtime-filter", false);
+
 export const FilterQueryAtom = atom((get) => ({
   search: get(searchAtom),
   all: get(allAtom).map((o) => o.value),
@@ -41,31 +44,36 @@ export const filterActiveAtom = atom(
     get(typesAtom).length > 0,
 );
 
-export const injectFilterDataIntoURLAtom = atom(null, (get) => {
-  const fd = get(FilterQueryAtom);
-  const url = new URL(location.href);
-  const params = url.searchParams;
+export const injectFilterDataIntoURLAtom = atom(
+  null,
+  (get, _, replace?: boolean) => {
+    const fd = get(FilterQueryAtom);
+    const url = new URL(location.href);
+    const params = url.searchParams;
 
-  if (fd.any.length) params.set("any", fd.any.join(","));
-  else params.delete("any");
+    if (fd.any.length) params.set("any", fd.any.join(","));
+    else params.delete("any");
 
-  if (fd.none.length) params.set("none", fd.none.join(","));
-  else params.delete("none");
+    if (fd.none.length) params.set("none", fd.none.join(","));
+    else params.delete("none");
 
-  if (fd.all.length) params.set("all", fd.all.join(","));
-  else params.delete("all");
+    if (fd.all.length) params.set("all", fd.all.join(","));
+    else params.delete("all");
 
-  if (fd.types.length) params.set("types", fd.types.join(","));
-  else params.delete("types");
+    if (fd.types.length) params.set("types", fd.types.join(","));
+    else params.delete("types");
 
-  if (fd.search.trim()) params.set("search", fd.search);
-  else params.delete("search");
+    if (fd.search.trim()) params.set("search", fd.search);
+    else params.delete("search");
 
-  if (!fd.orderByLatest) params.set("orderByLatest", "false");
-  else params.delete("orderByLatest");
+    if (!fd.orderByLatest) params.set("orderByLatest", "false");
+    else params.delete("orderByLatest");
 
-  history.pushState({}, "", url.toString());
-});
+    // Realtime filtering replaces the entry so typing doesn't flood the history
+    if (replace) history.replaceState({}, "", url.toString());
+    else history.pushState({}, "", url.toString());
+  },
+);
 
 export const initializeFilterDataFromURLAtom = atom(null, (_, set) => {
   const url = new URL(location.href);
