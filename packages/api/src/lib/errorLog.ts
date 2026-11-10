@@ -1,4 +1,5 @@
-export default function errorLog(error: Error | any) {
+// biome-ignore lint/suspicious/noExplicitAny: callers pass untyped catch values; only optional property reads
+export default function errorLog(error: any) {
   console.error("--- An Error Occurred ---");
   console.error("Error Name:", error?.name);
   console.error("Error Message:", error?.message);

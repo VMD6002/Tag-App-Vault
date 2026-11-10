@@ -60,7 +60,7 @@ export default function TagContentModal() {
 
   const updateTagsMutation = useMutation(
     orpc.gallery.updateContentTags.mutationOptions({
-      onError: (err: any) => {
+      onError: (err) => {
         toast.error(err?.message || "Failed to update tags");
       },
     }),
@@ -68,7 +68,7 @@ export default function TagContentModal() {
 
   const renameMutation = useMutation(
     orpc.gallery.renameGalleryContent.mutationOptions({
-      onError: (err: any) => {
+      onError: (err) => {
         setNameError(err?.message || "Failed to rename file");
         toast.error(err?.message || "Rename failed");
       },

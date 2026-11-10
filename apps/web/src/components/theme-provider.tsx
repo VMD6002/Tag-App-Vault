@@ -10,7 +10,7 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: Theme;
-  setTheme: any;
+  setTheme: (theme: Theme) => void;
 };
 
 const initialState: ThemeProviderState = {

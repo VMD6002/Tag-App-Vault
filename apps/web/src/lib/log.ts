@@ -1,3 +1,3 @@
-export default function log(aaa: any) {
+export default function log(aaa: unknown) {
   console.log("tagAppExt:", aaa);
 }

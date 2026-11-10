@@ -3,7 +3,7 @@ import path from "node:path";
 import { ORPCError, os } from "@orpc/server";
 import z from "zod";
 import { pathExists, rmByBasename } from "../lib/fsBaseNameFunctions";
-import { generateGalleryData } from "../lib/generateGalleryData";
+import { type entry, generateGalleryData } from "../lib/generateGalleryData";
 
 const galleryExistsCheck = async (name: string, id: string) => {
   if (!(await pathExists(`./media/Galleries/${name}.${id}`))) {
@@ -14,7 +14,11 @@ const galleryExistsCheck = async (name: string, id: string) => {
 };
 
 // Helper to attach saved tags to gallery items
-const attachTagsToGalleryData = async (galleryPath: string, items: any[]) => {
+type GalleryItem = entry & { tags?: string[] };
+const attachTagsToGalleryData = async (
+  galleryPath: string,
+  items: GalleryItem[],
+) => {
   const tagsFilePath = `${galleryPath}/.tags.json`;
   if (await pathExists(tagsFilePath)) {
     try {
@@ -204,7 +208,7 @@ export const updateContentTags = os
       galleryData = await generateGalleryData(`${name}.${id}`);
     }
 
-    const updatedData = galleryData.map((item: any) => ({
+    const updatedData = galleryData.map((item: GalleryItem) => ({
       ...item,
       tags:
         item.name === content ? tags : tagsData[item.name] || item.tags || [],

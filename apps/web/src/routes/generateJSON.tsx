@@ -4,7 +4,7 @@ import { useAtomValue } from "jotai";
 import { customAlphabet } from "nanoid";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { tagsAtom } from "@/atom";
+import { type MultiSelectOption, tagsAtom } from "@/atom";
 import { LoadingState } from "@/components/craft/EmptyState";
 import MultiSelect from "@/components/craft/MultiSelect";
 import TitleHeader from "@/components/craft/TitleHeader";
@@ -48,7 +48,7 @@ export default function GenerateJSONPage() {
 
   const [id, setId] = useState(`gen_${nanoid()}`);
   const [title, setTitle] = useState("");
-  const [tags, setTags] = useState<any[]>([]);
+  const [tags, setTags] = useState<MultiSelectOption[]>([]);
   const [extraData, setExtraData] = useState("");
 
   const handleSaveJson = () => {

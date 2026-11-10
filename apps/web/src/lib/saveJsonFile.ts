@@ -1,5 +1,5 @@
 export default function saveJsonFile(
-  JsonString: Record<string, any>,
+  JsonString: Record<string, unknown>,
   FileName: string,
 ) {
   const DownloadDataFile = new Blob([JSON.stringify(JsonString)], {
