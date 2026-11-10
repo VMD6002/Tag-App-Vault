@@ -10,6 +10,8 @@ export async function downloadContent(
   filePath: string,
   userAgent: string,
   baseDelayMs = 2000,
+  /** Aborts the request (and the retries); the `.part` file stays and is overwritten next time. */
+  signal?: AbortSignal,
 ) {
   // shortcut: a finished file from a previous run is trusted and no HTTP range resume of partial files, upgrade if big direct downloads need resuming.
   if (existsSync(filePath)) return;
@@ -17,6 +19,7 @@ export async function downloadContent(
     try {
       const response = await fetch(url, {
         headers: { "User-Agent": userAgent },
+        signal,
       });
       if (!response.ok) {
         const msg = `HTTP ${response.status}: ${response.statusText} for ${url}`;
@@ -30,7 +33,8 @@ export async function downloadContent(
       return;
     } catch (e) {
       // Network errors, 429 and 5xx are retried with backoff (2s, 4s, ...); the CLI's --retry covers longer outages.
-      if (e instanceof PermanentError || attempt >= ATTEMPTS) throw e;
+      if (signal?.aborted || e instanceof PermanentError || attempt >= ATTEMPTS)
+        throw e;
       await Bun.sleep(baseDelayMs * 2 ** (attempt - 1));
     }
   }

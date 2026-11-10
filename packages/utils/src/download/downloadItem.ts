@@ -26,6 +26,8 @@ export async function downloadItem(
   item: ContentWebType,
   { config, tmpDir, cookiesDir, ytDlp }: DownloadEnv,
   onProgress: (p: Partial<DownloadProgress>) => void,
+  /** Abort kills yt-dlp and cancels `fetch`; the returned promise then rejects. Partial files stay for a resume. */
+  signal?: AbortSignal,
 ) {
   if (item.download?.type === "direct") {
     if (!item.cover || !item.contentUrl)
@@ -37,6 +39,8 @@ export async function downloadItem(
       item.cover,
       `${tmpDir}/cover.${base}.${getImageExtensionFromURL(item.cover)}`,
       config.userAgent,
+      undefined,
+      signal,
     );
 
     onProgress({ percent: 50, speed: "Fetch", eta: "Content" });
@@ -44,6 +48,8 @@ export async function downloadItem(
       item.contentUrl,
       `${tmpDir}/${base}.${getImageExtensionFromURL(item.contentUrl)}`,
       config.userAgent,
+      undefined,
+      signal,
     );
     return;
   }
@@ -52,9 +58,11 @@ export async function downloadItem(
     tmpDir,
     cookiesDir,
   });
+  // An already-aborted signal would never fire its listener, so the process must not start
+  signal?.throwIfAborted();
   await new Promise<void>((resolve, reject) => {
     ytDlp
-      .exec(flags)
+      .exec(flags, undefined, signal)
       .on("progress", (p) =>
         onProgress({
           percent: p.percent ?? 0,

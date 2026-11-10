@@ -14,6 +14,7 @@ const server = Bun.serve({
     if (path === "/flaky" && hits[path] < 3)
       return new Response("busy", { status: 503 });
     if (path === "/missing") return new Response("no", { status: 404 });
+    if (path === "/hang") return new Promise<Response>(() => {});
     if (path === "/down") return new Response("down", { status: 500 });
     return new Response("ok");
   },
@@ -43,4 +44,19 @@ test("does not retry 404", async () => {
     downloadContent(url("/missing"), join(dir, "c"), "ua", 1),
   ).rejects.toThrow("HTTP 404");
   expect(hits["/missing"]).toBe(1);
+});
+
+test("an abort stops the request without retrying or leaving a finished file", async () => {
+  const abort = new AbortController();
+  const done = downloadContent(
+    url("/hang"),
+    join(dir, "d"),
+    "ua",
+    1,
+    abort.signal,
+  );
+  setTimeout(() => abort.abort(), 20);
+  await expect(done).rejects.toThrow();
+  expect(hits["/hang"]).toBe(1);
+  expect(existsSync(join(dir, "d"))).toBe(false);
 });
