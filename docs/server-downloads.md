@@ -24,7 +24,7 @@ Shared helpers (`packages/utils/src/download`, entry `@tagapp/utils/download`, s
 
 ## Failure handling
 
-- A failed item stays in `tmp.json`, its task is `failed` with `error`, and the message goes to `error.log`.
+- A failed item stays in `tmp.json`, its task is `failed` with `error`, and the message goes to `error.log`. Drop it with `downloads.remove` (the "Clear failed" button) instead of editing `tmp.json`.
 - Files are never dropped: a failed import (duplicate id, invalid metadata, failed move, DB write error) leaves them in `Download/done/<id>/` (the sync rollback moves them back there). Files with an unsupported extension go to `UnSyncable/`, as in `Sync/`.
 - The next run of a failed item with a staging folder skips the download and retries the import (fix the sidecar JSON by hand, or free the id, first). Delete the folder to force a new download.
 - The sidecar title is made file-safe (`safeTitle`: `\ / : * ? " < > | %` become `_`) so it matches the file names; `prepareSync` renames to `<title>.<id>` from the JSON title and would fail on `/`. The queue entry keeps the original title.
@@ -37,15 +37,23 @@ Shared helpers (`packages/utils/src/download`, entry `@tagapp/utils/download`, s
 - A run works on the queue it started with. Items posted later wait for the next `start`; nothing starts by itself.
 - `set` while a run is active keeps every item whose task is `queued`, `downloading` or `importing` exactly as it is (never dropped), and ignores a posted copy of the same id; the rest is replaced by what was posted. Idle: it just writes the posted list. Either way ids are de-duplicated (first wins) and the written list is returned.
 - Completed items are already gone from the queue; posting one again re-queues it (it then fails as "already in the library" unless it was deleted).
-- There is no cancel. A server restart loses the task state, not the queue: partial files in `tmp/` resume, staged items retry their import.
+- A server restart loses the task state, not the queue: partial files in `tmp/` resume, staged items retry their import.
+
+## Cancel and remove
+
+- `downloads.cancel` (`cancelDownloads`): with `id`, stops that item if its task is `queued` or `downloading`; without, every such item of the run. The task becomes `cancelled` at once, the item's `AbortController` fires (yt-dlp is killed through `ytDlp.exec(flags, undefined, signal)`, `fetch` aborts in `downloadContent`), items still waiting in the p-queue return as soon as their turn comes without starting, and the run ends normally (`running` goes false). A cancelled item stays in `tmp.json` (the next `start` runs it again, resuming from the partial files in `tmp/`) and is not written to `error.log`. Returns `{ cancelled: n }`; an unknown, finished or `importing` id cancels nothing (`importing` runs under `withSyncLock` and is atomic per item, so it always finishes).
+- `downloads.remove` (`removeDownloads`, input `{ ids }`, ids validated like the staging folder name): runs under `withSyncLock`. Any id whose task is `queued`/`downloading`/`importing` refuses the whole call with CONFLICT (cancel it first), so there is no partial removal. Then, per id: files in `Download/done/<id>/` (a failed import) move to `Sync/` so they can be fixed on the `/sync` page; a name already in `Sync/` is a CONFLICT and nothing moves; a failure while moving or writing the queue renames everything back. The item leaves `tmp.json`, the empty staging folder is removed, its task state leaves the snapshot (watchers are notified) and incomplete downloads of the id in `tmp/` (`<title>.<id>.<ext>.part`, `.part-FragN`, `.ytdl`, `.temp`; matched on the exact id so other items' files are safe) are deleted. Finished files in `tmp/` are never deleted. Returns `{ removed }`: the ids that were in the queue.
+- Known limit: a `start` issued while a `remove` of the same item is in flight can still pick the item up (the window is a few ms); the web page disables nothing for this.
 
 ## oRPC procedures (`downloads`)
 
-| Procedure  | Input | Output                                                                                      |
-| ---------- | ----- | ------------------------------------------------------------------------------------------- |
-| `getQueue` | none  | `ContentWebType[]`: the current `tmp.json` items (also those of a finished run that failed) |
-| `start`    | none  | `{ started: boolean }`: false when a run is already going or the queue is empty             |
-| `watch`    | none  | event stream (`text/event-stream` via oRPC event iterator) of `DownloadsSnapshot`           |
+| Procedure  | Input               | Output                                                                                      |
+| ---------- | ------------------- | ------------------------------------------------------------------------------------------- |
+| `getQueue` | none                | `ContentWebType[]`: the current `tmp.json` items (also those of a finished run that failed) |
+| `start`    | none                | `{ started: boolean }`: false when a run is already going or the queue is empty             |
+| `cancel`   | `{ id?: string }`   | `{ cancelled: number }`: see [Cancel and remove](#cancel-and-remove)                        |
+| `remove`   | `{ ids: string[] }` | `{ removed: string[] }`: drops items from the queue, staged files go to `Sync/`             |
+| `watch`    | none                | event stream (`text/event-stream` via oRPC event iterator) of `DownloadsSnapshot`           |
 
 ```ts
 type DownloadsSnapshot = {
@@ -54,7 +62,13 @@ type DownloadsSnapshot = {
     id: string;
     title: string;
     scraper: string;
-    status: "queued" | "downloading" | "importing" | "completed" | "failed";
+    status:
+      | "queued"
+      | "downloading"
+      | "importing"
+      | "completed"
+      | "failed"
+      | "cancelled";
     percent: number; // 0-100
     speed: string; // "1.2MiB/s", "Fetch" for direct downloads
     eta: string; // "00:12", "--:--"
@@ -73,4 +87,4 @@ The CLI (`apps/cli`) and the server run the same queue file and `Download/tmp`. 
 
 ## Tests
 
-`packages/api/src/services/sync.test.ts` ("download:" tests) drives `startDownloads` with a fake yt-dlp: item lands in `media/` + DB + tag counts and leaves the queue, a duplicate id stays staged and retries without downloading, `setQueue` during a run. `packages/utils/src/download/*.test.ts`: config and `fetch` retries. No network, no real yt-dlp.
+`packages/api/src/services/sync.test.ts` ("download:" tests) drives `startDownloads` with a fake yt-dlp: item lands in `media/` + DB + tag counts and leaves the queue, a duplicate id stays staged and retries without downloading, `setQueue` during a run. Cancel (a hung fake yt-dlp that closes with a null code on abort: the run ends, waiting items never start, nothing in `error.log`, items stay queued and run again) and remove (staged files to `Sync/`, active item refused, name clash is CONFLICT and moves nothing, partial downloads of the id deleted) are tested there too. `packages/utils/src/download/*.test.ts`: config, `fetch` retries and abort. No network, no real yt-dlp.
