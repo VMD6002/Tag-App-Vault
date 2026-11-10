@@ -28,6 +28,7 @@ Site `:5000`, `root * .`, gzip/zstd, `Access-Control-Allow-Origin *` for GET/OPT
 
 | Path                                                 | Behaviour                                                                                                             |
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `/media/.sync/*`                                     | serves `./Sync` (prefix stripped), `Cache-Control: no-store`; used by the web `/sync` preview                         |
 | `/media/Images/.covers/*`, `/media/Videos/.covers/*` | `Cache-Control: no-store`; `try_files` tries `.avif .jpg .jpeg .png .webp` appended to the path, then the path itself |
 | `/media/Images/*`                                    | same `try_files`, no cache header                                                                                     |
 | `/media/Videos/*`                                    | `try_files` the path, then `.mp4`, `.webm`, `.mkv` appended                                                           |

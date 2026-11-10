@@ -9,6 +9,13 @@
         Access-Control-Allow-Headers "*"
     }
 
+    # Items waiting in ./Sync, for the web /sync preview
+    handle_path /media/.sync/* {
+        root * ./Sync
+        header Cache-Control "no-store, no-cache, must-revalidate"
+        file_server
+    }
+
     handle /media/* {
 
         # Rule for Images sub .covers
