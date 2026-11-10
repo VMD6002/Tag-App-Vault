@@ -17,6 +17,10 @@ export const router = {
 };
 
 export { settingsDB } from "./db/settings.js";
+export type {
+  DownloadsSnapshot,
+  DownloadTask,
+} from "./services/downloads.js";
 export { setQueue } from "./services/downloads.js";
 
 export type router = typeof router;

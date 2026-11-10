@@ -13,6 +13,7 @@ import { ModeToggle } from "./mode-toggle";
 const Links = [
   { Name: "Library", Path: "/" },
   { Name: "Sync", Path: "/sync" },
+  { Name: "Downloads", Path: "/downloads" },
   { Name: "Tags", Path: "/tags" },
   { Name: "Generate JSON", Path: "/generateContentJson" },
   { Name: "Reference", Path: "/reference" },

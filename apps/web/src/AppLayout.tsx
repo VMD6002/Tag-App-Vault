@@ -8,6 +8,7 @@ import DocProvider from "./routes/contexts/Doc.Context";
 const PageNotFound = lazy(() => import("./404"));
 const Library = lazy(() => import("./routes/"));
 const SyncPage = lazy(() => import("./routes/sync"));
+const DownloadsPage = lazy(() => import("./routes/downloads"));
 const TagPage = lazy(() => import("./routes/tags"));
 const ImagePage = lazy(() => import("./routes/img/[id]"));
 const VideoPage = lazy(() => import("./routes/video/[id]"));
@@ -43,6 +44,9 @@ export default function AppLayout() {
               </Route>
               <Route path="/sync">
                 <SyncPage />
+              </Route>
+              <Route path="/downloads">
+                <DownloadsPage />
               </Route>
               <Route path="/tags">
                 <TagPage />

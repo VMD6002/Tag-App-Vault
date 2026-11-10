@@ -30,5 +30,7 @@
   },
   // Reads the API's emitted .d.ts instead of its source, so Bun's globals stay out of the web build
   "references": [{ "path": "../../packages/api" }],
-  "include": ["src"]
+  "include": ["src"],
+  // Tests run with bun test (its types are not in this build)
+  "exclude": ["src/**/*.test.ts"]
 }
