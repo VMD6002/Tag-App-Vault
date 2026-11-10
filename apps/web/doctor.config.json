@@ -1,0 +1,12 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "ignore": {
+    "files": ["**/components/ui/**", "**/dist/**"],
+    "overrides": [
+      {
+        "files": ["src/lib/saveJsonFile.ts"],
+        "rules": ["react-doctor/no-create-object-url-without-revoke"]
+      }
+    ]
+  }
+}
