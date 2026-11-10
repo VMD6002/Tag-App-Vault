@@ -1,7 +1,8 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
+import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 // Paths are cwd-relative and the DB loads on import, so move to a scratch root first.
 const root = mkdtempSync(join(tmpdir(), "tagapp-sync-"));
@@ -14,6 +15,13 @@ const { syncContent } = await import("./syncContent.js");
 const { setDoc } = await import("./setDoc.js");
 const { deleteData } = await import("./deleteData.js");
 const { editSyncItem, removeSyncItem } = await import("./syncItem.js");
+const {
+  startDownloads,
+  setQueue,
+  readQueue,
+  getDownloadsSnapshot,
+  watchDownloads,
+} = await import("./downloads.js");
 const { call } = await import("@orpc/server");
 const { bulkUpdateContentTags } = await import("../routers/main.js");
 
@@ -27,7 +35,7 @@ const json = (id: string, title: string, tags: string[] = []) =>
 const ls = (dir: string) => readdirSync(dir).sort();
 
 beforeEach(() => {
-  for (const dir of ["Sync", "UnSyncable", "media"]) {
+  for (const dir of ["Sync", "UnSyncable", "media", "Download"]) {
     rmSync(dir, { recursive: true, force: true });
   }
   mkdirSync("Sync");
@@ -361,4 +369,133 @@ test("remove: a bundled folder item leaves no entry behind, a name clash changes
   await removeSyncItem({ name: "g.3", type: "gallery" });
   expect(ls("Sync")).toEqual([]);
   expect(ls("UnSyncable")).toEqual(["g.3.gallery", "g.3.json"]);
+});
+
+// --- direct download pipeline (downloads.ts); yt-dlp is replaced by a fake that writes files ---
+
+const item = (id: string, title = id, scraper = "s") => ({
+  id,
+  title,
+  scraper,
+  url: "http://example.invalid/x",
+  tags: ["t"],
+  extraData: "",
+  added: 1,
+  lastUpdated: 1,
+});
+
+/** Stands in for yt-dlp: writes `<base>.png` and its cover into the `-o` folder, then exits 0. */
+function fakeYtDlp(
+  opts: { calls?: string[]; gate?: Promise<void>; slow?: boolean } = {},
+) {
+  return {
+    exec(flags: string[]) {
+      const ee = new EventEmitter();
+      const base = (flags[flags.indexOf("-o") + 1] as string).replace(
+        ".%(ext)s",
+        "",
+      );
+      opts.calls?.push(base);
+      void (async () => {
+        await (opts.gate ?? Bun.sleep(5));
+        await Bun.write(`${base}.png`, png);
+        await Bun.write(`${dirname(base)}/cover.${basename(base)}.png`, png);
+        ee.emit("progress", { percent: 50, currentSpeed: "1MiB/s", eta: "1" });
+        if (opts.slow) await Bun.sleep(300); // longer than the progress throttle
+        ee.emit("close", 0);
+      })();
+      return ee;
+    },
+  } as never;
+}
+
+async function idle() {
+  while (getDownloadsSnapshot().running) await Bun.sleep(5);
+}
+
+test("download: a finished item goes straight into the library, never through Sync", async () => {
+  await setQueue([item("7", "pic/1"), item("8", "other")]);
+  const snapshots: ReturnType<typeof getDownloadsSnapshot>[] = [];
+  const abort = new AbortController();
+  const watching = (async () => {
+    for await (const s of watchDownloads(abort.signal)) snapshots.push(s);
+  })();
+
+  expect(await startDownloads(fakeYtDlp({ slow: true }))).toBe(true);
+  expect(await startDownloads(fakeYtDlp())).toBe(false); // already running
+  await idle();
+  abort.abort();
+  await watching; // the stream ends when the client goes away
+
+  // the title was made file-safe, so the sidecar matches the file names
+  expect(contentDataDB.data["7"]).toMatchObject({
+    title: "pic_1",
+    tags: ["t"],
+  });
+  expect(await Bun.file("media/Images/pic_1.7.png").exists()).toBe(true);
+  expect(ls("media/Images/.covers")).toEqual([
+    "cover.other.8.png",
+    "cover.pic_1.7.png",
+  ]);
+  expect(Object.keys(contentDataDB.data).sort()).toEqual(["7", "8"]);
+  expect(tagDB.data).toEqual({ t: 2 });
+  expect(await readQueue()).toEqual([]);
+  expect(ls("Sync")).toEqual([]);
+  expect(ls("UnSyncable")).toEqual([]);
+  expect(ls("Download/done")).toEqual([]);
+
+  expect(snapshots[0]).toEqual({ running: false, tasks: [] }); // immediate
+  const last = snapshots.at(-1);
+  expect(last?.running).toBe(false);
+  expect(last?.tasks.map((t) => t.status)).toEqual(["completed", "completed"]);
+  expect(snapshots.some((s) => s.tasks.some((t) => t.percent === 50))).toBe(
+    true,
+  );
+});
+
+test("download: a duplicate id fails, keeps its files in staging and is retried without downloading again", async () => {
+  contentDataDB.data = { "7": { ...item("7", "old"), type: "img" } };
+  await setQueue([item("7", "pic")]);
+  const calls: string[] = [];
+  await startDownloads(fakeYtDlp({ calls }));
+  await idle();
+
+  const [task] = getDownloadsSnapshot().tasks;
+  expect(task).toMatchObject({ status: "failed" });
+  expect(task?.error).toContain("already in the library");
+  expect(ls("Download/done/7")).toEqual([
+    "cover.pic.7.png",
+    "pic.7.json",
+    "pic.7.png",
+  ]);
+  expect(ls("media/Images")).toEqual([".covers"]);
+  expect((await readQueue()).map((i) => i.id)).toEqual(["7"]);
+  expect(await Bun.file("Download/error.log").text()).toContain("[pic]");
+
+  delete contentDataDB.data["7"];
+  await startDownloads(fakeYtDlp({ calls }));
+  await idle();
+  expect(calls).toHaveLength(1); // no second download
+  expect(getDownloadsSnapshot().tasks[0]?.status).toBe("completed");
+  expect(contentDataDB.data["7"]?.title).toBe("pic");
+  expect(await readQueue()).toEqual([]);
+  expect(ls("Download/done")).toEqual([]);
+});
+
+test("download: setQueue during a run keeps unfinished items and ignores their copies", async () => {
+  await setQueue([item("1")]);
+  let open!: () => void;
+  const gate = new Promise<void>((resolve) => (open = resolve));
+  await startDownloads(fakeYtDlp({ gate }));
+
+  const written = await setQueue([item("2"), item("1", "changed")]);
+  expect(written.map((i) => [i.id, i.title])).toEqual([
+    ["1", "1"],
+    ["2", "2"],
+  ]);
+  open();
+  await idle();
+  // "1" is imported and gone; "2" waits for the next run
+  expect((await readQueue()).map((i) => i.id)).toEqual(["2"]);
+  expect(Object.keys(contentDataDB.data)).toEqual(["1"]);
 });
