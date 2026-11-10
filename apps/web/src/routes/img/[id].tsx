@@ -1,4 +1,9 @@
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import DocInfoSection from "../components/DocInfoSection";
 import ItemHeader from "../components/ItemHeader";
 import { useDoc } from "../contexts/Doc.Context";
@@ -28,6 +33,7 @@ export default function ImagePage() {
             />
           </DialogTrigger>
           <DialogContent className="max-w-[80vw] border-0 bg-secondary/60 p-0 backdrop-blur sm:max-w-[80vw] md:max-w-[80vw] lg:max-w-[80vw] xl:max-w-[80vw]">
+            <DialogTitle className="sr-only">{doc.title}</DialogTitle>
             <img
               className="size-full max-h-[90vh] object-contain"
               src={imgUrl}
