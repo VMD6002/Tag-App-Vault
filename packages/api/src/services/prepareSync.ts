@@ -3,7 +3,7 @@ import type { ContentWebType } from "@tagapp/utils/types";
 import { filesOf, getSyncData, SYNC } from "./getSyncData.js";
 
 /** Splits every `tdata.*.json` into one `<title>.<id>.json` per item, then removes it. */
-async function splitTData() {
+export async function splitTData() {
   const names = await readdir(SYNC);
   for (const file of names.filter(
     (f) => f.startsWith("tdata.") && f.endsWith(".json"),

@@ -26,6 +26,14 @@ Scope: how an item travels from the download queue to the library, and the sync 
 - Moves everything unsyncable to `UnSyncable/`. Returns the items ready to sync.
 - Known limit: every sync moves all leftovers, so a file that is still being copied into `Sync/` is moved away mid-copy. Not fixed: it needs a decision (for example skip files modified in the last N seconds, or only move files that match no item for two consecutive scans).
 
+## Edit or remove before sync (`services/syncItem.ts`)
+
+Behind the web `/sync` preview ([web app](./web-app.md)). `main.editSyncItem` and `main.removeSyncItem` take the item's current disk `name` (as in `getSyncData().contents[id].name`) and `type`; the service runs under `withSyncLock`, calls `splitTData` and re-scans, and matches `name` + `type` against the scan (`NOT_FOUND` otherwise), so a client string never becomes a path. The router also rejects names containing `/` or `\`.
+
+- Splitting bundles first means an item from a `tdata.*.json` has its own `<name>.json` sidecar, so the edit wins over the bundle (which is gone). The split is what the next sync does anyway; other bundle items become plain sidecars.
+- Edit overwrites `<name>.json` with the scanned `id`, `added`, `lastUpdated` (and `cover`) plus the new title (trimmed, `sanitizeStringForFileName`; blank is `BAD_REQUEST`), tags and `extraData`. For an item without JSON this pins its generated `gen_` id. Files are not renamed here: prepareSync does that at sync. Tags are normalised by the next scan as always (trim, `meta:caption` mirrors the caption file).
+- Remove is non-destructive: it moves `filesOf(...)` and the sidecar (if any) into `UnSyncable/`, rolling back in reverse if a move fails. Unlike prepareSync (whose `rename` silently replaces), it refuses with `CONFLICT` when `UnSyncable/` already holds a file of that name. A bundled item has already been split, so no bundle entry is left behind.
+
 ## syncContent (`services/syncContent.ts`)
 
 - Wrapped in `withSyncLock` (`lib/syncLock.ts`), which queues calls so scans and syncs never overlap; `main.getSyncData` uses it too.

@@ -1,5 +1,6 @@
 import { ORPCError, os } from "@orpc/server";
 import { SetDifferenceES6 } from "@tagapp/utils";
+import { CtypeSchema } from "@tagapp/utils/types";
 import z from "zod";
 import { contentDataDB } from "../db/contentData.js";
 import { settingsDB } from "../db/settings.js";
@@ -9,9 +10,36 @@ import { deleteData as deleteDocs } from "../services/deleteData.js";
 import { getSyncData as gtSyncData } from "../services/getSyncData.js";
 import { setDoc as set } from "../services/setDoc.js";
 import { syncContent } from "../services/syncContent.js";
+import {
+  editSyncItem as editSync,
+  removeSyncItem as removeSync,
+} from "../services/syncItem.js";
 export const getSyncData = os.handler(() => withSyncLock(gtSyncData));
 
 export const sync = os.handler(() => syncContent());
+
+// `name` is the item's current disk name from getSyncData; the service re-scans to find it
+const syncItemRef = z.object({
+  name: z
+    .string()
+    .min(1)
+    .refine((n) => !/[/\\]/.test(n)),
+  type: CtypeSchema,
+});
+
+export const editSyncItem = os
+  .input(
+    syncItemRef.extend({
+      title: z.string(),
+      tags: z.string().array(),
+      extraData: z.string(),
+    }),
+  )
+  .handler(({ input }) => editSync(input));
+
+export const removeSyncItem = os
+  .input(syncItemRef)
+  .handler(({ input }) => removeSync(input));
 
 const docValidator = z.object({
   id: z.string(),

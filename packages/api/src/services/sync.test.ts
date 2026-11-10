@@ -13,6 +13,7 @@ const { getSyncData } = await import("./getSyncData.js");
 const { syncContent } = await import("./syncContent.js");
 const { setDoc } = await import("./setDoc.js");
 const { deleteData } = await import("./deleteData.js");
+const { editSyncItem, removeSyncItem } = await import("./syncItem.js");
 const { call } = await import("@orpc/server");
 const { bulkUpdateContentTags } = await import("../routers/main.js");
 
@@ -257,4 +258,107 @@ test("mkv syncs as a video", async () => {
   await syncContent();
   expect(contentDataDB.data["1"]?.type).toBe("video");
   expect(await Bun.file("media/Videos/clip.1.mkv").exists()).toBe(true);
+});
+
+test("edit: a plain sidecar is overwritten and sync renames to the new title", async () => {
+  await Bun.write("Sync/old.1.png", png);
+  await Bun.write("Sync/old.1.json", json("1", "old", ["x"]));
+  await editSyncItem({
+    name: "old.1",
+    type: "img",
+    title: "a/b",
+    tags: [" t ", "y", "y"],
+    extraData: "notes",
+  });
+  const item = Object.values((await getSyncData()).contents)[0];
+  expect(item).toMatchObject({
+    id: "1",
+    title: "a-b",
+    tags: ["t", "y"],
+    extraData: "notes",
+    added: 1,
+    name: "old.1",
+  });
+  await syncContent();
+  expect(contentDataDB.data["1"]?.title).toBe("a-b");
+  expect(await Bun.file("media/Images/a-b.1.png").exists()).toBe(true);
+  expect(tagDB.data).toEqual({ t: 1, y: 1 });
+});
+
+test("edit: a generated item gets a sidecar that pins its id", async () => {
+  await Bun.write("Sync/pic.png", png);
+  const [before] = Object.values((await getSyncData()).contents);
+  await editSyncItem({
+    name: "pic",
+    type: "img",
+    title: "pic",
+    tags: [],
+    extraData: "mine",
+  });
+  expect(ls("Sync")).toEqual(["pic.json", "pic.png"]);
+  const [after] = Object.values((await getSyncData()).contents);
+  expect(after?.id).toBe(JSON.parse(await Bun.file("Sync/pic.json").text()).id);
+  expect(after?.extraData).toBe("mine");
+  expect(before?.extraData).toBe("Generated Data");
+});
+
+test("edit: an item from a tdata bundle takes the edit, not the bundle", async () => {
+  await Bun.write("Sync/b.2.png", png);
+  await Bun.write(
+    "Sync/tdata.1.json",
+    JSON.stringify([JSON.parse(json("2", "b", ["old"]))]),
+  );
+  await editSyncItem({
+    name: "b.2",
+    type: "img",
+    title: "b",
+    tags: ["new"],
+    extraData: "edited",
+  });
+  expect(ls("Sync")).toEqual(["b.2.json", "b.2.png"]);
+  await syncContent();
+  expect(contentDataDB.data["2"]).toMatchObject({
+    tags: ["new"],
+    extraData: "edited",
+  });
+});
+
+test("edit: unknown, blank and path-like names are rejected", async () => {
+  await Bun.write("Sync/a.1.png", png);
+  const input = { type: "img" as const, title: "t", tags: [], extraData: "" };
+  await expect(editSyncItem({ ...input, name: "../x" })).rejects.toThrow();
+  await expect(editSyncItem({ ...input, name: "nope" })).rejects.toThrow();
+  await expect(
+    editSyncItem({ ...input, name: "a.1", title: "  " }),
+  ).rejects.toThrow();
+  expect(ls("Sync")).toEqual(["a.1.png"]);
+});
+
+test("remove: files and sidecar move to UnSyncable, nothing is deleted", async () => {
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/cover.a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a"));
+  await Bun.write("Sync/keep.2.png", png);
+  await removeSyncItem({ name: "a.1", type: "img" });
+  expect(ls("UnSyncable")).toEqual(["a.1.json", "a.1.png", "cover.a.1.png"]);
+  expect(ls("Sync")).toEqual(["keep.2.png"]);
+  await syncContent();
+  expect(Object.keys(contentDataDB.data)).toHaveLength(1);
+});
+
+test("remove: a bundled folder item leaves no entry behind, a name clash changes nothing", async () => {
+  mkdirSync("Sync/g.3.gallery");
+  await Bun.write(
+    "Sync/tdata.1.json",
+    JSON.stringify([JSON.parse(json("3", "g"))]),
+  );
+  await Bun.write("UnSyncable/g.3.json", "earlier");
+  await expect(
+    removeSyncItem({ name: "g.3", type: "gallery" }),
+  ).rejects.toThrow();
+  expect(ls("Sync")).toEqual(["g.3.gallery", "g.3.json"]);
+  await Bun.file("UnSyncable/g.3.json").delete();
+  await removeSyncItem({ name: "g.3", type: "gallery" });
+  expect(ls("Sync")).toEqual([]);
+  expect(ls("UnSyncable")).toEqual(["g.3.gallery", "g.3.json"]);
 });
