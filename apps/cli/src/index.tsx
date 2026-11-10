@@ -1,50 +1,37 @@
 import {
   appendFileSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
-  renameSync,
   writeFileSync,
 } from "node:fs";
+import {
+  type Config,
+  createEnqueue,
+  downloadItem,
+  loadConfig,
+  moveFinished,
+} from "@tagapp/utils/download";
+import type { ContentWebType } from "@tagapp/utils/types";
 import { Box, render, Text, useApp } from "ink";
-import PQueue from "p-queue";
 import { useEffect, useState } from "react";
 
 import type YTDlpWrap from "yt-dlp-wrap-plus";
 
 const { default: YTDlpWrapRuntime } = require("yt-dlp-wrap-plus");
 
-import type { ContentWebType } from "@tagapp/utils/types";
 import { parseArgs, USAGE } from "./lib/args";
-import { type Config, loadConfig } from "./lib/config";
 import {
   COMPLETED_DIR,
+  CONFIG_FILE,
+  COOKIES_DIR,
   ERROR_LOG,
-  fileBase,
   QUEUE_FILE,
   TMP_DIR,
 } from "./lib/constants";
-import { createFlag } from "./lib/createFlags";
-import { downloadContent } from "./lib/downloadContent";
-import { getImageExtensionFromURL } from "./lib/getImageExtensionFromURL";
 
 const readQueue = (): ContentWebType[] =>
   JSON.parse(readFileSync(QUEUE_FILE, "utf-8"));
 const ytDlp: YTDlpWrap = new YTDlpWrapRuntime();
-
-// 1 concurrent download per scraper, max 3 overall. Fresh queues for every run.
-function createEnqueue() {
-  const scraperQueues = new Map<string, PQueue>();
-  const globalThrottle = new PQueue({ concurrency: 3 });
-  return (scraper: string, task: () => Promise<void>) => {
-    let queue = scraperQueues.get(scraper);
-    if (!queue) {
-      queue = new PQueue({ concurrency: 1 });
-      scraperQueues.set(scraper, queue);
-    }
-    return queue.add(() => globalThrottle.add(task));
-  };
-}
 
 type Status = "queued" | "downloading" | "completed" | "failed";
 interface TaskState {
@@ -58,16 +45,7 @@ interface TaskState {
 }
 
 function moveFilesToCompleted(item: ContentWebType) {
-  const base = fileBase(item.title, item.id);
-  for (const file of readdirSync(TMP_DIR)) {
-    // Match ".<id>." so one id can't match a longer id that contains it.
-    // Skip yt-dlp / partial-download leftovers: they stay in ./tmp so the next run can resume.
-    if (/\.(part(-Frag\d+)?|ytdl|temp)$/.test(file)) continue;
-    if (file.includes(`.${item.id}.`)) {
-      renameSync(`${TMP_DIR}/${file}`, `${COMPLETED_DIR}/${file}`);
-    }
-  }
-  writeFileSync(`${COMPLETED_DIR}/${base}.json`, JSON.stringify(item, null, 2));
+  moveFinished(item, TMP_DIR, COMPLETED_DIR);
   writeFileSync(
     QUEUE_FILE,
     JSON.stringify(
@@ -108,45 +86,11 @@ function App({
   async function processTask(item: ContentWebType, index: number) {
     updateTask(index, { status: "downloading" });
     try {
-      if (item.download?.type === "direct") {
-        if (!item.cover || !item.contentUrl)
-          throw new Error("Missing URLs for direct download");
-        const base = fileBase(item.title, item.id);
-
-        updateTask(index, { percent: 10, speed: "Fetch", eta: "Cover" });
-        await downloadContent(
-          item.cover,
-          `${TMP_DIR}/cover.${base}.${getImageExtensionFromURL(item.cover)}`,
-          config.userAgent,
-        );
-
-        updateTask(index, { percent: 50, speed: "Fetch", eta: "Content" });
-        await downloadContent(
-          item.contentUrl,
-          `${TMP_DIR}/${base}.${getImageExtensionFromURL(item.contentUrl)}`,
-          config.userAgent,
-        );
-      } else {
-        const flags = await createFlag(item, config.userAgent);
-        await new Promise<void>((resolve, reject) => {
-          ytDlp
-            .exec(flags)
-            .on("progress", (p) =>
-              updateTask(index, {
-                percent: p.percent ?? 0,
-                speed: p.currentSpeed ?? "0B/s",
-                eta: p.eta ?? "--:--",
-              }),
-            )
-            .on("error", reject)
-            // A null code means the process was killed by a signal: that's a failure too.
-            .on("close", (code) =>
-              code === 0
-                ? resolve()
-                : reject(new Error(`yt-dlp exited with code ${code}`)),
-            );
-        });
-      }
+      await downloadItem(
+        item,
+        { config, tmpDir: TMP_DIR, cookiesDir: COOKIES_DIR, ytDlp },
+        (p) => updateTask(index, p),
+      );
 
       moveFilesToCompleted(item);
       updateTask(index, {
@@ -236,7 +180,7 @@ async function main() {
 
   let config: Config;
   try {
-    config = loadConfig();
+    config = loadConfig(CONFIG_FILE);
   } catch (e) {
     console.error((e as Error).message);
     process.exit(1);

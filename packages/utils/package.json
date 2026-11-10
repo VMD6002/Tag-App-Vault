@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "exports": {
     ".": "./src/index.ts",
-    "./types": "./src/types/index.ts"
+    "./types": "./src/types/index.ts",
+    "./download": "./src/download/index.ts"
   },
   "scripts": {
     "type:check": "tsc -b",
@@ -14,6 +15,8 @@
   "dependencies": {
     "filenamify": "^7.0.3",
     "fuse.js": "^7.5.0",
+    "p-queue": "^10.0.0",
+    "yt-dlp-wrap-plus": "^2.5.0",
     "zod": "^4.6.7"
   }
 }

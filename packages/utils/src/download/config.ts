@@ -1,5 +1,4 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { CONFIG_FILE } from "./constants";
 
 export interface Config {
   userAgent: string;
@@ -16,7 +15,7 @@ const write = (path: string, data: object) =>
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
 
 /** Reads `config.json`, creating it with defaults if missing. Throws on invalid JSON (the file is left untouched). */
-export function loadConfig(path = CONFIG_FILE): Config {
+export function loadConfig(path: string): Config {
   if (!existsSync(path)) {
     write(path, DEFAULT_CONFIG);
     return { ...DEFAULT_CONFIG };

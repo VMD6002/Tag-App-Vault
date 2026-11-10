@@ -15,7 +15,6 @@
       "dependencies": {
         "@tagapp/utils": "workspace:*",
         "ink": "^8.0.0",
-        "p-queue": "^10.0.0",
         "p-timeout": "^8.0.0",
         "react": "^19.3.1",
         "react-devtools-core": "^8.0.0",
@@ -103,6 +102,7 @@
         "fuse.js": "^7.5.0",
         "lowdb": "^7.0.1",
         "nanoid": "^5.1.16",
+        "yt-dlp-wrap-plus": "^2.5.0",
         "zod": "^4.6.7",
       },
     },
@@ -112,6 +112,8 @@
       "dependencies": {
         "filenamify": "^7.0.3",
         "fuse.js": "^7.5.0",
+        "p-queue": "^10.0.0",
+        "yt-dlp-wrap-plus": "^2.5.0",
         "zod": "^4.6.7",
       },
     },

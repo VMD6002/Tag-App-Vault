@@ -1,6 +1,6 @@
 import type { ContentWebType } from "@tagapp/utils/types";
-import { fileBase, TMP_DIR } from "./constants";
 import { downloadContent } from "./downloadContent";
+import { fileBase } from "./files";
 import { getImageExtensionFromURL } from "./getImageExtensionFromURL";
 
 // --continue + --no-overwrites: resume .part files from a previous run, skip finished files.
@@ -24,14 +24,11 @@ const tokenize = (s: string) =>
 export async function createFlag(
   item: ContentWebType,
   userAgent: string,
+  /** Where yt-dlp writes, and where `meta:yt-cookie` looks for `<Site>.txt`. */
+  { tmpDir, cookiesDir }: { tmpDir: string; cookiesDir: string },
 ): Promise<string[]> {
   const base = fileBase(item.title, item.id);
-  const flags = [
-    item.url,
-    "-o",
-    `${TMP_DIR}/${base}.%(ext)s`,
-    ...DEFAULT_FLAGS,
-  ];
+  const flags = [item.url, "-o", `${tmpDir}/${base}.%(ext)s`, ...DEFAULT_FLAGS];
 
   const itemFlags = item.download?.flags
     ? tokenize(item.download.flags.value).filter((t) => !BLOCKED_FLAGS.has(t))
@@ -49,7 +46,7 @@ export async function createFlag(
       .find((t) => t.startsWith("Site:"))
       ?.slice("Site:".length);
     if (!site) throw new Error("No site tag found for cookies");
-    const cookies = `./cookies/${site}.txt`;
+    const cookies = `${cookiesDir}/${site}.txt`;
     if (!(await Bun.file(cookies).exists()))
       throw new Error(`No cookies file found for site ${site}`);
     flags.push("--cookies", cookies);
@@ -59,14 +56,14 @@ export async function createFlag(
     if (!item.cover) throw new Error("No cover found");
     await downloadContent(
       item.cover,
-      `${TMP_DIR}/cover.${base}.${getImageExtensionFromURL(item.cover)}`,
+      `${tmpDir}/cover.${base}.${getImageExtensionFromURL(item.cover)}`,
       userAgent,
     );
   } else {
     flags.push(
       "--write-thumbnail",
       "-o",
-      `thumbnail:${TMP_DIR}/cover.${base}.%(ext)s`,
+      `thumbnail:${tmpDir}/cover.${base}.%(ext)s`,
     );
   }
 
