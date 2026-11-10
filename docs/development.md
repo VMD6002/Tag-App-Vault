@@ -37,7 +37,7 @@ Bun workspaces. Hono + oRPC (`/rpc`). Vite + React + wouter (hash router). LowDB
 
 ## React Doctor
 
-[React Doctor](https://github.com/millionco/react-doctor) is a dev dependency of `apps/web` (script `doctor`, root alias `doctor:web`). It is a static React linter configured in `apps/web/doctor.config.json` (skips `components/ui` and `dist`; one ignored false positive for `saveJsonFile.ts`). The script runs `react-doctor --yes` (non-interactive). Its telemetry and score upload are on by default and are not disabled in the script (opt out with `--no-telemetry`).
+[React Doctor](https://github.com/millionco/react-doctor) is a dev dependency of `apps/web` (script `doctor`, root alias `doctor:web`). It is a static React linter configured in `apps/web/doctor.config.json` (skips `components/ui` and `dist`; ignores `js-set-map-lookups` as not worth the extra code; scoped overrides for verified false positives: `saveJsonFile.ts` revoke, the jotai derived-object atoms in `atom.ts` and `UpdateModal/atom.ts` (jotai only recomputes when a dependency changes), and the `ContentCard.tsx` article click, whose checkbox and title link are the keyboard controls). The script runs `react-doctor --yes` (non-interactive). Its telemetry and score upload are on by default and are not disabled in the script (opt out with `--no-telemetry`).
 
 ## Code conventions
 
