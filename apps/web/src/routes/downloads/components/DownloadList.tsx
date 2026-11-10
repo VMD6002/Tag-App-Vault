@@ -9,21 +9,21 @@ import DownloadRow from "./DownloadRow";
 
 /** The error / loading / empty / list body. `canEdit` is false while read-only. */
 export default function DownloadList({
-  d: { queue, rows, cancel, remove },
+  d: { live, running, rows, cancel, remove },
   canEdit,
 }: {
   d: ReturnType<typeof useDownloads>;
   canEdit: boolean;
 }) {
-  if (queue.isError)
+  if (live.isError && !live.data)
     return (
       <ErrorState
         title="Couldn't read the download queue"
-        message={queue.error.message}
-        onRetry={() => void queue.refetch()}
+        message={live.error.message}
+        onRetry={() => void live.refetch()}
       />
     );
-  if (queue.isPending)
+  if (live.isPending)
     return <LoadingState label="Reading the download queue…" />;
   if (rows.length === 0)
     return (
@@ -39,6 +39,7 @@ export default function DownloadList({
         <DownloadRow
           key={row.id}
           row={row}
+          running={running}
           onCancel={canEdit ? (id) => cancel.mutate({ id }) : undefined}
           onRemove={canEdit ? (id) => remove.mutate({ ids: [id] }) : undefined}
         />

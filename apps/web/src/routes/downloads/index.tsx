@@ -19,7 +19,7 @@ export default function DownloadsPage() {
         Title="Downloads"
         description={
           tags
-            ? "The server's download queue. Finished items go straight into the library; failed ones stay here."
+            ? "The server's download queue and history. Finished items go straight into the library; failed ones stay in the queue."
             : "The server's download queue. Starting downloads shows up when the TagApp browser extension is connected."
         }
       >
@@ -34,7 +34,7 @@ export default function DownloadsPage() {
         onClose={() => setLogOpen(false)}
         canClear={canEdit}
       />
-      {d.live.isError && (
+      {d.live.isError && d.live.data && (
         <p role="alert" className="mb-3 text-sm text-destructive">
           Live progress is unavailable: {d.live.error.message}{" "}
           <button

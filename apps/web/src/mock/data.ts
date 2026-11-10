@@ -478,31 +478,98 @@ export function buildSync(scenario: Scenario): MockSyncItem[] {
   });
 }
 
-/** What `downloads.getQueue` returns: the page uses id, title and scraper only. */
-export type MockQueueItem = {
+/** One entry of the `downloads.watch` snapshot (`DownloadTask` of the server). */
+export type MockTask = {
   id: string;
   title: string;
-  type: CType;
-  tags: string[];
-  url: string;
   scraper: string;
+  url: string;
+  cover?: string;
+  type?: CType;
+  status:
+    | "queued"
+    | "downloading"
+    | "importing"
+    | "completed"
+    | "failed"
+    | "cancelled";
+  percent: number;
+  speed: string;
+  eta: string;
+  error?: string;
+  queuedAt: number;
+  startedAt?: number;
+  finishedAt?: number;
+  added?: number;
 };
 
-export function buildQueue(scenario: Scenario): MockQueueItem[] {
-  if (scenario === "empty") return [];
-  const count = scenario === "stress" ? 24 : 5;
+/**
+ * The initial download list: the first library items as completed history (with covers), a run in
+ * progress (one downloading item, frozen: only "Cancel" moves it), one failure and queued items.
+ */
+export function buildDownloads(scenario: Scenario, db: MockDb) {
+  if (scenario === "empty") return { running: false, tasks: [] as MockTask[] };
+  const now = Math.floor(Date.now() / 1000);
   const scrapers = ["Example Videos", "Sample Gallery", "direct"];
-  return Array.from({ length: count }, (_, i) => ({
+  const task = (i: number, rest: Partial<MockTask>): MockTask => ({
     id: `queue_dl_${pad(i + 1)}`,
     title:
       scenario === "stress" && i % 4 === 0
         ? (LONG_TITLES[i % LONG_TITLES.length] as string)
         : `Queued download ${i + 1}`,
-    type: TYPES[i % TYPES.length] as CType,
-    tags: [],
-    url: `https://example.invalid/item/${i + 1}`,
     scraper: scrapers[i % scrapers.length] as string,
-  }));
+    url: `https://example.invalid/item/${i + 1}`,
+    cover: `https://example.invalid/cover/${i + 1}.jpg`,
+    status: "queued",
+    percent: 0,
+    speed: "",
+    eta: "--:--",
+    queuedAt: now - 7200 + i * 60,
+    ...rest,
+  });
+  const count = scenario === "stress" ? 24 : 5;
+  const open = Array.from({ length: count }, (_, i) =>
+    task(
+      i,
+      i === 0
+        ? {
+            status: "downloading",
+            percent: 40,
+            speed: "1.4MiB/s",
+            eta: "00:03",
+            startedAt: now - 60,
+          }
+        : i === 1
+          ? {
+              status: "failed",
+              percent: 60,
+              error:
+                `Mock failure: id queue_dl_002 is already in the library, and the files stay in Download/done/queue_dl_002. ${"More detail. ".repeat(scenario === "stress" ? 6 : 0)}`.trim(),
+              startedAt: now - 3000,
+              finishedAt: now - 2900,
+            }
+          : {},
+    ),
+  );
+  const done: MockTask[] = Object.values(db.contents)
+    .slice(0, scenario === "stress" ? 12 : 3)
+    .map((c, i) => ({
+      id: c.id,
+      title: c.title,
+      scraper: scrapers[i % scrapers.length] as string,
+      url: `https://example.invalid/done/${i + 1}`,
+      cover: `https://example.invalid/cover/done-${i + 1}.jpg`,
+      type: c.type,
+      status: "completed",
+      percent: 100,
+      speed: "",
+      eta: "--:--",
+      queuedAt: now - 90000 - i * 3600,
+      startedAt: now - 89900 - i * 3600,
+      finishedAt: now - 89800 - i * 3600,
+      added: c.added,
+    }));
+  return { running: true, tasks: [...open, ...done] };
 }
 
 /** What `downloads.getErrorLog` returns: `[title]: message` plus a stack per failure, like the server. */

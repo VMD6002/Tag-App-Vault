@@ -1,7 +1,7 @@
+import type { DownloadTask as Row } from "@tagapp/api";
 import { Square, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { DownloadRow as Row } from "../merge";
 
 const STATUS: Record<
   Row["status"],
@@ -10,8 +10,7 @@ const STATUS: Record<
     variant: "default" | "secondary" | "destructive" | "outline";
   }
 > = {
-  idle: { label: "Queued, not started", variant: "outline" },
-  queued: { label: "Queued", variant: "outline" },
+  queued: { label: "Queued, not started", variant: "outline" },
   downloading: { label: "Downloading", variant: "default" },
   importing: { label: "Importing", variant: "default" },
   completed: { label: "In the library", variant: "secondary" },
@@ -20,14 +19,19 @@ const STATUS: Record<
 };
 
 // Not part of a run's active work: safe to drop from the queue
-const REMOVABLE = new Set<Row["status"]>(["idle", "failed", "cancelled"]);
+const REMOVABLE = new Set<Row["status"]>(["queued", "failed", "cancelled"]);
+
+const date = (seconds: number) => new Date(seconds * 1000).toLocaleString();
 
 export default function DownloadRow({
   row,
+  running,
   onCancel,
   onRemove,
 }: {
   row: Row;
+  /** A run is going: queued rows are part of it (cancel, not remove). */
+  running: boolean;
   /** Both are undefined while read-only. */
   onCancel?: (id: string) => void;
   onRemove?: (id: string) => void;
@@ -42,7 +46,8 @@ export default function DownloadRow({
           {row.scraper}
           <Badge variant={variant}>{label}</Badge>
           {onCancel &&
-            (row.status === "queued" || row.status === "downloading") && (
+            ((row.status === "queued" && running) ||
+              row.status === "downloading") && (
               <Button
                 variant="outline"
                 size="xs"
@@ -51,19 +56,21 @@ export default function DownloadRow({
                 <Square /> Cancel
               </Button>
             )}
-          {onRemove && REMOVABLE.has(row.status) && (
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() => onRemove(row.id)}
-              title="Remove from the queue"
-            >
-              <Trash2 /> Remove
-            </Button>
-          )}
+          {onRemove &&
+            REMOVABLE.has(row.status) &&
+            !(row.status === "queued" && running) && (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => onRemove(row.id)}
+                title="Remove from the queue"
+              >
+                <Trash2 /> Remove
+              </Button>
+            )}
         </span>
       </div>
-      {row.status !== "idle" && (
+      {row.status !== "queued" && (
         <div className="flex items-center gap-3 text-xs text-muted-foreground tabular-nums">
           <div
             role="progressbar"
@@ -86,6 +93,12 @@ export default function DownloadRow({
           )}
         </div>
       )}
+      <p className="text-xs text-muted-foreground">
+        Queued {date(row.queuedAt)}
+        {row.startedAt && ` · Started ${date(row.startedAt)}`}
+        {row.finishedAt && ` · Finished ${date(row.finishedAt)}`}
+        {row.added && ` · Added to the library ${date(row.added)}`}
+      </p>
       {row.error && <p className="text-sm text-destructive">{row.error}</p>}
     </li>
   );

@@ -1,15 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { orpc } from "@/lib/orpc";
-import { mergeRows } from "./merge";
 
-/** Queue + live task state merged into rows, the effects that keep them fresh, and the mutations. */
+/** The server's merged list (queue + history, live progress included), the effects that keep it fresh, and the mutations. */
 export function useDownloads() {
-  const queue = useQuery({
-    ...orpc.downloads.getQueue.queryOptions(),
-    refetchOnMount: "always",
-  });
   // The stream keeps only the latest snapshot. It closes on unmount (gcTime 0 drops the query, so a
   // remount reconnects); on a stream error React Query retries with its backoff (1 s, 2 s, ... 4 times).
   const live = useQuery(
@@ -21,25 +16,11 @@ export function useDownloads() {
   );
   const snapshot = live.data;
   const running = snapshot?.running ?? false;
-
-  // A status change that ends a run or a task leaves the queue file different: reread it
-  const finished = snapshot?.tasks.filter(
-    (t) => t.status === "completed" || t.status === "failed",
-  ).length;
-  const signature = snapshot && `${snapshot.running}:${finished}`;
-  const last = useRef(signature);
-  const { refetch: refetchQueue } = queue;
-  useEffect(() => {
-    if (last.current !== undefined && signature !== last.current)
-      void refetchQueue();
-    last.current = signature;
-  }, [signature, refetchQueue]);
+  const rows = snapshot?.tasks ?? [];
 
   // A failed task appended to error.log: mark it stale (refetches it when the dialog is open)
   const queryClient = useQueryClient();
-  const failedCount = snapshot?.tasks.filter(
-    (t) => t.status === "failed",
-  ).length;
+  const failedCount = rows.filter((t) => t.status === "failed").length;
   // biome-ignore lint/correctness/useExhaustiveDependencies: run when the failed count changes
   useEffect(() => {
     void queryClient.invalidateQueries({
@@ -65,15 +46,15 @@ export function useDownloads() {
   );
   const remove = useMutation(
     orpc.downloads.remove.mutationOptions({
-      onSuccess: () => void refetchQueue(),
       onError: (e) => toast.error(`Couldn't remove: ${e.message}`),
     }),
   );
 
-  const rows = useMemo(
-    () => mergeRows(queue.data ?? [], snapshot?.tasks ?? []),
-    [queue.data, snapshot?.tasks],
+  const clearFinished = useMutation(
+    orpc.downloads.clearFinished.mutationOptions({
+      onError: (e) => toast.error(`Couldn't clear: ${e.message}`),
+    }),
   );
 
-  return { queue, live, running, rows, start, cancel, remove };
+  return { live, running, rows, start, cancel, remove, clearFinished };
 }

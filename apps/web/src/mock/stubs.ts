@@ -4,13 +4,13 @@
 import type { ContentServerType } from "@tagapp/utils/types";
 import {
   buildDb,
+  buildDownloads,
   buildErrorLog,
-  buildQueue,
   buildSync,
   countTags,
   type MockDb,
-  type MockQueueItem,
   type MockSyncItem,
+  type MockTask,
   RATIO_BY_ID,
   type Scenario,
 } from "./data";
@@ -26,8 +26,6 @@ type State = {
   /** Items waiting in Sync, by id. */
   pending: Record<string, MockSyncItem>;
   tags: Record<string, number>;
-  /** Download queue and the progress of the current fake run. */
-  queue: MockQueueItem[];
   errorLog: string;
 };
 
@@ -37,7 +35,6 @@ const state: State = {
   db: buildDb("normal"),
   pending: {},
   tags: {},
-  queue: [],
   errorLog: "",
 };
 
@@ -51,7 +48,7 @@ export function configureMock(
   state.affects = affects;
   state.db = buildDb(scenario);
   state.pending = Object.fromEntries(buildSync(scenario).map((c) => [c.id, c]));
-  state.queue = buildQueue(scenario);
+  Object.assign(dl, buildDownloads(scenario, state.db));
   state.errorLog = buildErrorLog(scenario);
   state.tags = {
     ...countTags(state.db),
@@ -92,58 +89,52 @@ const pending = (name: string, type: string) => {
 };
 
 // ── Downloads: "Start downloads" replays one fake run, pushed to the open watch streams ──────────
-type Task = {
-  id: string;
-  title: string;
-  scraper: string;
-  status:
-    | "queued"
-    | "downloading"
-    | "importing"
-    | "completed"
-    | "failed"
-    | "cancelled";
-  percent: number;
-  speed: string;
-  eta: string;
-  error?: string;
-};
+const now = () => Math.floor(Date.now() / 1000);
+/** The whole list (queue + history); like the server, `completed` entries are history. */
 const dl = {
   running: false,
-  tasks: [] as Task[],
+  tasks: [] as MockTask[],
   listeners: new Set<() => void>(),
 };
+const isActive = (t: MockTask) =>
+  t.status === "queued" ||
+  t.status === "downloading" ||
+  t.status === "importing";
+/** Queue order, then completed history, newest first. */
 const snapshot = () => ({
   running: dl.running,
-  tasks: dl.tasks.map((t) => ({ ...t })),
+  tasks: [
+    ...dl.tasks.filter((t) => t.status !== "completed"),
+    ...dl.tasks
+      .filter((t) => t.status === "completed")
+      .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0)),
+  ].map((t) => ({ ...t })),
 });
 const notify = () => {
   for (const l of dl.listeners) l();
 };
 
 function startRun() {
-  if (dl.running || state.queue.length === 0) return false;
+  const todo = dl.tasks.filter((t) => t.status !== "completed");
+  if (dl.running || todo.length === 0) return false;
   dl.running = true;
-  dl.tasks = state.queue.map((q) => ({
-    id: q.id,
-    title: q.title,
-    scraper: q.scraper,
-    status: "queued",
-    percent: 0,
-    speed: "",
-    eta: "--:--",
-  }));
+  for (const t of todo)
+    Object.assign(t, {
+      status: "queued",
+      percent: 0,
+      speed: "",
+      eta: "--:--",
+      error: undefined,
+      startedAt: undefined,
+      finishedAt: undefined,
+    });
   // Stress: the last item fails and stays in the queue
-  const failing = state.scenario === "stress" ? dl.tasks.at(-1)?.id : undefined;
+  const failing = state.scenario === "stress" ? todo.at(-1)?.id : undefined;
   const timer = setInterval(() => {
-    const open = dl.tasks.filter(
-      (t) =>
-        t.status !== "completed" &&
-        t.status !== "failed" &&
-        t.status !== "cancelled",
-    );
+    const open = todo.filter(isActive);
     for (const t of open.slice(0, 3)) {
       if (t.status === "importing") {
+        t.finishedAt = now();
         if (t.id === failing) {
           t.status = "failed";
           state.errorLog += `[${t.title}]: Mock failure: already in the library\n    at importStaged (mock/import.ts:1:1)\n`;
@@ -151,11 +142,13 @@ function startRun() {
         } else {
           t.status = "completed";
           t.percent = 100;
-          state.queue = state.queue.filter((q) => q.id !== t.id);
+          t.type = "img";
+          t.added = t.finishedAt;
         }
       } else if (t.percent >= 100) t.status = "importing";
       else {
         t.status = "downloading";
+        t.startedAt ??= now();
         t.percent = Math.min(100, t.percent + 8 + Math.random() * 14);
         t.speed = t.scraper === "direct" ? "Fetch" : "1.4MiB/s";
         t.eta =
@@ -185,21 +178,17 @@ function cancelRun(id?: string) {
       t.status = "cancelled";
       t.speed = "";
       t.eta = "--:--";
+      t.finishedAt = now();
       cancelled++;
     }
+  if (!dl.tasks.some(isActive)) dl.running = false;
   notify();
   return cancelled;
 }
 
 function removeItems(ids: string[]) {
   const busy = ids.find((id) =>
-    dl.tasks.some(
-      (t) =>
-        t.id === id &&
-        (t.status === "queued" ||
-          t.status === "downloading" ||
-          t.status === "importing"),
-    ),
+    dl.tasks.some((t) => t.id === id && isActive(t)),
   );
   if (busy)
     throw new MockError(
@@ -207,13 +196,22 @@ function removeItems(ids: string[]) {
       409,
       `"${busy}" is queued or running: cancel it first`,
     );
-  const removed = state.queue
-    .filter((q) => ids.includes(q.id))
-    .map((q) => q.id);
-  state.queue = state.queue.filter((q) => !ids.includes(q.id));
-  dl.tasks = dl.tasks.filter((t) => !ids.includes(t.id));
+  const removed = dl.tasks
+    .filter((t) => ids.includes(t.id) && t.status !== "completed")
+    .map((t) => t.id);
+  dl.tasks = dl.tasks.filter((t) => !removed.includes(t.id));
   notify();
   return removed;
+}
+
+/** Completed history only, like the server: nothing else (and no library item) is touched. */
+function clearFinished(ids?: string[]) {
+  const before = dl.tasks.length;
+  dl.tasks = dl.tasks.filter(
+    (t) => t.status !== "completed" || (ids && !ids.includes(t.id)),
+  );
+  notify();
+  return before - dl.tasks.length;
 }
 
 /** An oRPC event iterator: `event: message` + `data: {"json": …}` per snapshot, `event: done` at the end. */
@@ -308,7 +306,6 @@ const handlers: Record<string, Handler> = {
     recount();
     return state.db.contents;
   },
-  "downloads/getQueue": () => state.queue,
   "downloads/start": () => ({ started: startRun() }),
   "downloads/cancel": (i: { id?: string }) => ({ cancelled: cancelRun(i?.id) }),
   "downloads/getErrorLog": () => ({
@@ -318,6 +315,9 @@ const handlers: Record<string, Handler> = {
   "downloads/clearErrorLog": () => {
     state.errorLog = "";
   },
+  "downloads/clearFinished": (i?: { ids?: string[] }) => ({
+    cleared: clearFinished(i?.ids),
+  }),
   "downloads/remove": (i: { ids: string[] }) => ({
     removed: removeItems(i.ids),
   }),

@@ -5,7 +5,7 @@ import type { useDownloads } from "../useDownloads";
 
 /** Header buttons. `canEdit` is false while read-only (no extension connected). */
 export default function DownloadActions({
-  d: { queue, running, rows, start, cancel, remove },
+  d: { live, running, rows, start, cancel, remove, clearFinished },
   canEdit,
   onOpenLog,
 }: {
@@ -27,16 +27,28 @@ export default function DownloadActions({
         if (ok) remove.mutate({ ids: clearable });
       });
 
+  const finished = rows.filter((r) => r.status === "completed").length;
+  const clearDone = () =>
+    confirm
+      .destructive({
+        title: "Clear finished downloads?",
+        description: `${finished} completed ${finished === 1 ? "download" : "downloads"} will be removed from this list. The items stay in the library.`,
+        confirmText: "Clear",
+      })
+      .then((ok) => {
+        if (ok) clearFinished.mutate({});
+      });
+
   return (
     <>
       <Button
         variant="outline"
         size="sm"
-        disabled={queue.isFetching}
-        onClick={() => void queue.refetch()}
-        title="Read the queue again"
+        disabled={live.isFetching}
+        onClick={() => void live.refetch()}
+        title="Reconnect to the server"
       >
-        <RefreshCw className={queue.isFetching ? "animate-spin" : ""} />
+        <RefreshCw className={live.isFetching ? "animate-spin" : ""} />
         Refresh
       </Button>
       <Button
@@ -67,6 +79,17 @@ export default function DownloadActions({
           onClick={() => void clearFailed()}
         >
           Clear failed
+        </Button>
+      )}
+      {canEdit && finished > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={clearFinished.isPending}
+          onClick={() => void clearDone()}
+          title="Removes completed entries from the history; the library is untouched"
+        >
+          Clear finished
         </Button>
       )}
       {canEdit && (
