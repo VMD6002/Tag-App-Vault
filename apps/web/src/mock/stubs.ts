@@ -4,8 +4,10 @@
 import type { ContentServerType } from "@tagapp/utils/types";
 import {
   buildDb,
+  buildSync,
   countTags,
   type MockDb,
+  type MockSyncItem,
   RATIO_BY_ID,
   type Scenario,
 } from "./data";
@@ -18,6 +20,8 @@ type State = {
   /** Which RPC routes the loading / error scenarios apply to. */
   affects: (route: string) => boolean;
   db: MockDb;
+  /** Items waiting in Sync, by id. */
+  pending: Record<string, MockSyncItem>;
   tags: Record<string, number>;
 };
 
@@ -25,6 +29,7 @@ const state: State = {
   scenario: "normal",
   affects: () => true,
   db: buildDb("normal"),
+  pending: {},
   tags: {},
 };
 
@@ -37,6 +42,7 @@ export function configureMock(
   state.scenario = scenario;
   state.affects = affects;
   state.db = buildDb(scenario);
+  state.pending = Object.fromEntries(buildSync(scenario).map((c) => [c.id, c]));
   state.tags = {
     ...countTags(state.db),
     ...(scenario === "empty" ? {} : { "Topic:Unused_example": 0 }),
@@ -64,6 +70,14 @@ const notFound = (what: string) =>
 const doc = (id: string) => {
   const c = state.db.contents[id];
   if (!c) throw notFound(`Content with id ${id}`);
+  return c;
+};
+
+const pending = (name: string, type: string) => {
+  const c = Object.values(state.pending).find(
+    (p) => p.name === name && p.type === type,
+  );
+  if (!c) throw notFound(`"${name}" in Sync`);
   return c;
 };
 
@@ -106,7 +120,35 @@ const handlers: Record<string, Handler> = {
     recount();
     return i;
   },
-  "main/sync": () => state.db.contents,
+  "main/getSyncData": () => ({
+    contents: state.pending,
+    unsyncable: ["notes.xyz"],
+    orphanJsons: [],
+  }),
+  "main/editSyncItem": (i: {
+    name: string;
+    type: string;
+    title: string;
+    tags: string[];
+    extraData: string;
+  }) => {
+    const c = pending(i.name, i.type);
+    Object.assign(c, {
+      title: i.title,
+      tags: i.tags,
+      extraData: i.extraData,
+    });
+  },
+  "main/removeSyncItem": (i: { name: string; type: string }) => {
+    delete state.pending[pending(i.name, i.type).id];
+  },
+  "main/sync": () => {
+    for (const { name: _n, ext: _e, ...c } of Object.values(state.pending))
+      state.db.contents[c.id] = c;
+    state.pending = {};
+    recount();
+    return state.db.contents;
+  },
   "fix/hardResetTagCount": () => {
     state.tags = countTags(state.db);
     return state.tags;

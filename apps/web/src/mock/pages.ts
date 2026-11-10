@@ -44,6 +44,15 @@ export const MOCK_PAGES: MockPage[] = [
     applySearch: true,
   },
   {
+    slug: "sync",
+    title: "Sync preview (/sync)",
+    note: "Real route: pending items, own filters, edit / remove / Sync (fake server, memory only). Edit, remove and sync need 'extension connected'.",
+    scenarios: ALL,
+    path: () => "/sync",
+    search: 'input[aria-label="Search titles"]',
+    applySearch: true,
+  },
+  {
     slug: "tags",
     title: "Tags (/tags)",
     note: "Real route: tag search, grouped counts, remove-unused and recount actions.",

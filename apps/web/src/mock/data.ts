@@ -409,3 +409,71 @@ export function countTags(db: MockDb): Record<string, number> {
     for (const t of c.tags) counts[t] = (counts[t] ?? 0) + 1;
   return counts;
 }
+
+/** What `getSyncData` returns per pending item: the item plus its disk name and extensions. */
+export type MockSyncItem = ContentServerType & { name: string; ext: string[] };
+
+export function buildSync(scenario: Scenario): MockSyncItem[] {
+  if (scenario === "empty") return [];
+  const stress = scenario === "stress";
+  const seeds: Seed[] = [
+    {
+      id: "gen_syncPhoto01",
+      title: "Generated item with no metadata",
+      type: "img",
+      tags: [],
+      notes: "Generated Data",
+    },
+    {
+      id: "queue_vid_0001",
+      title: "Downloaded clip with a caption",
+      type: "video",
+      tags: [...T.video, "meta:caption"],
+    },
+    {
+      id: "queue_gal_0002",
+      title: "Downloaded gallery",
+      type: "gallery",
+      tags: ["Type:Gallery", "Topic:Travel"],
+    },
+    {
+      id: "queue_aud_0003",
+      title: "Downloaded album",
+      type: "audio",
+      tags: ["Type:Audio", "Topic:Music"],
+    },
+    {
+      id: "queue_txt_0004",
+      title: "Downloaded story",
+      type: "txt",
+      tags: ["Type:Text", "Topic:Fiction"],
+    },
+    ...(stress
+      ? Array.from({ length: 30 }, (_, i): Seed => {
+          const type = TYPES[i % TYPES.length] as CType;
+          return {
+            id: `gen_syncStress${String(i).padStart(3, "0")}`,
+            title:
+              i % 4 === 0
+                ? (LONG_TITLES[i % LONG_TITLES.length] as string)
+                : `Pending item ${i + 1}`,
+            type,
+            tags: i % 5 === 0 ? [] : manyTags(2 + ((i * 7) % 30)),
+          };
+        })
+      : []),
+  ];
+  return seeds.map((s, i) => {
+    const name = `${s.title}.${s.id}`;
+    return {
+      ...toItem(s, i),
+      name,
+      ext:
+        s.type === "img"
+          ? ["webp", "png"]
+          : s.type === "video"
+            ? ["jpg", "mp4", "vtt"]
+            : [],
+    };
+  });
+}
