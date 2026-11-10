@@ -1,9 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, Square, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { tagsAtom } from "@/atom";
+import { confirm } from "@/components/craft/confirm-dialog";
 import {
   EmptyState,
   ErrorState,
@@ -28,9 +29,26 @@ const STATUS: Record<
   importing: { label: "Importing", variant: "default" },
   completed: { label: "In the library", variant: "secondary" },
   failed: { label: "Failed", variant: "destructive" },
+  cancelled: { label: "Cancelled", variant: "secondary" },
 };
 
-function Row({ row }: { row: DownloadRow }) {
+// Not part of a run's active work: safe to drop from the queue
+const REMOVABLE = new Set<DownloadRow["status"]>([
+  "idle",
+  "failed",
+  "cancelled",
+]);
+
+function Row({
+  row,
+  onCancel,
+  onRemove,
+}: {
+  row: DownloadRow;
+  /** Both are undefined while read-only. */
+  onCancel?: (id: string) => void;
+  onRemove?: (id: string) => void;
+}) {
   const { label, variant } = STATUS[row.status];
   const live = row.status === "downloading" || row.status === "importing";
   return (
@@ -40,6 +58,26 @@ function Row({ row }: { row: DownloadRow }) {
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
           {row.scraper}
           <Badge variant={variant}>{label}</Badge>
+          {onCancel &&
+            (row.status === "queued" || row.status === "downloading") && (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => onCancel(row.id)}
+              >
+                <Square /> Cancel
+              </Button>
+            )}
+          {onRemove && REMOVABLE.has(row.status) && (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => onRemove(row.id)}
+              title="Remove from the queue"
+            >
+              <Trash2 /> Remove
+            </Button>
+          )}
         </span>
       </div>
       {row.status !== "idle" && (
@@ -53,7 +91,7 @@ function Row({ row }: { row: DownloadRow }) {
             className="h-1.5 flex-1 bg-muted"
           >
             <div
-              className={`h-full ${row.status === "failed" ? "bg-destructive" : "bg-primary"}`}
+              className={`h-full ${row.status === "failed" ? "bg-destructive" : row.status === "cancelled" ? "bg-muted-foreground" : "bg-primary"}`}
               style={{ width: `${Math.min(100, Math.max(0, row.percent))}%` }}
             />
           </div>
@@ -114,10 +152,36 @@ export default function DownloadsPage() {
     }),
   );
 
+  const cancel = useMutation(
+    orpc.downloads.cancel.mutationOptions({
+      onError: (e) => toast.error(`Couldn't cancel: ${e.message}`),
+    }),
+  );
+  const remove = useMutation(
+    orpc.downloads.remove.mutationOptions({
+      onSuccess: () => void refetchQueue(),
+      onError: (e) => toast.error(`Couldn't remove: ${e.message}`),
+    }),
+  );
+
   const rows = useMemo(
     () => mergeRows(queue.data ?? [], snapshot?.tasks ?? []),
     [queue.data, snapshot?.tasks],
   );
+
+  const clearable = rows
+    .filter((r) => r.status === "failed" || r.status === "cancelled")
+    .map((r) => r.id);
+  const clearFailed = () =>
+    confirm
+      .destructive({
+        title: "Clear failed items?",
+        description: `${clearable.length} failed or cancelled ${clearable.length === 1 ? "item" : "items"} will be removed from the queue. Files of a failed import move to Sync, where you can fix or delete them; incomplete downloads are deleted.`,
+        confirmText: "Clear",
+      })
+      .then((ok) => {
+        if (ok) remove.mutate({ ids: clearable });
+      });
 
   return (
     <>
@@ -139,6 +203,27 @@ export default function DownloadsPage() {
           <RefreshCw className={queue.isFetching ? "animate-spin" : ""} />
           Refresh
         </Button>
+        {!!tags && running && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={cancel.isPending}
+            onClick={() => cancel.mutate({})}
+            title="Stops queued and downloading items; importing ones finish"
+          >
+            Cancel all
+          </Button>
+        )}
+        {!!tags && clearable.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={remove.isPending}
+            onClick={() => void clearFailed()}
+          >
+            Clear failed
+          </Button>
+        )}
         {!!tags && (
           <Button
             size="sm"
@@ -178,7 +263,12 @@ export default function DownloadsPage() {
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map((row) => (
-            <Row key={row.id} row={row} />
+            <Row
+              key={row.id}
+              row={row}
+              onCancel={tags ? (id) => cancel.mutate({ id }) : undefined}
+              onRemove={tags ? (id) => remove.mutate({ ids: [id] }) : undefined}
+            />
           ))}
         </ul>
       )}
