@@ -154,6 +154,8 @@ function App() {
     }
   }
 
+  // Runs once on mount: enqueues every download; re-running would enqueue them again
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only enqueue, see above
   useEffect(() => {
     downloadData.forEach((item, i) => {
       enqueueTask(item.scraper, () => processTask(item, i));
