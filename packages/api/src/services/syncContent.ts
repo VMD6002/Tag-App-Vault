@@ -3,18 +3,20 @@ import { CTypeDir } from "@tagapp/utils";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
 import { withSyncLock } from "../lib/syncLock.js";
+import { SYNC } from "./getSyncData.js";
 import { prepareSync } from "./prepareSync.js";
 
-export const syncContent = () =>
+/** Syncs every ready item of `dir` (./Sync, or a download staging folder) into the library. */
+export const syncContent = (dir = SYNC) =>
   withSyncLock(async () => {
-    const syncData = await prepareSync();
+    const syncData = await prepareSync(dir);
 
     for (const { ext, name, ...data } of Object.values(syncData)) {
       const { id, type, tags } = data;
       const isMedia = type === "img" || type === "video";
       const dest = `./media/${CTypeDir[type]}`;
 
-      // [path inside ./Sync, path inside the media dir]
+      // [path inside dir, path inside the media dir]
       const moves: [string, string][] = isMedia
         ? [[`${name}.${ext[1]}`, `${name}.${ext[1]}`]]
         : [[`${name}.${type}`, name]];
@@ -32,7 +34,7 @@ export const syncContent = () =>
       let recorded = false;
       try {
         for (const [from, to] of moves) {
-          const move: [string, string] = [`./Sync/${from}`, `${dest}/${to}`];
+          const move: [string, string] = [`${dir}/${from}`, `${dest}/${to}`];
           await rename(...move);
           moved.push(move);
         }
@@ -46,7 +48,7 @@ export const syncContent = () =>
         await Promise.all([contentDataDB.write(), tagDB.write()]);
 
         // The sidecar goes last: it is the only copy of the metadata until the DB is on disk.
-        await Bun.file(`./Sync/${name}.json`)
+        await Bun.file(`${dir}/${name}.json`)
           .delete()
           .catch((error) =>
             console.error(`Could not remove sidecar of ${id}:`, error),

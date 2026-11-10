@@ -3,42 +3,39 @@ import type { ContentWebType } from "@tagapp/utils/types";
 import { filesOf, getSyncData, SYNC } from "./getSyncData.js";
 
 /** Splits every `tdata.*.json` into one `<title>.<id>.json` per item, then removes it. */
-export async function splitTData() {
-  const names = await readdir(SYNC);
+export async function splitTData(dir = SYNC) {
+  const names = await readdir(dir);
   for (const file of names.filter(
     (f) => f.startsWith("tdata.") && f.endsWith(".json"),
   )) {
-    const items: ContentWebType[] = await Bun.file(`${SYNC}/${file}`).json();
+    const items: ContentWebType[] = await Bun.file(`${dir}/${file}`).json();
     await Promise.all(
       Object.values(items).map((item) =>
-        Bun.write(
-          `${SYNC}/${item.title}.${item.id}.json`,
-          JSON.stringify(item),
-        ),
+        Bun.write(`${dir}/${item.title}.${item.id}.json`, JSON.stringify(item)),
       ),
     );
-    await Bun.file(`${SYNC}/${file}`).delete();
+    await Bun.file(`${dir}/${file}`).delete();
   }
 }
 
 /**
- * The writing half of a scan: splits bundles, generates missing image covers,
+ * The writing half of a scan of `dir` (./Sync by default): splits bundles, generates missing image covers,
  * writes missing or outdated sidecars, renames items to `<title>.<id>` and moves
  * leftovers to ./UnSyncable. Returns the items that are ready to sync.
  */
-export async function prepareSync() {
-  await splitTData();
-  const { contents, unsyncable } = await getSyncData();
+export async function prepareSync(dir = SYNC) {
+  await splitTData(dir);
+  const { contents, unsyncable } = await getSyncData(dir);
 
   for (const item of Object.values(contents)) {
     const { name: oldName, type, ext, ...rest } = item;
     const newName = `${item.title}.${item.id}`;
     try {
       if (type === "img" && !ext[0]) {
-        await new Bun.Image(`${SYNC}/${oldName}.${ext[1]}`)
+        await new Bun.Image(`${dir}/${oldName}.${ext[1]}`)
           .resize(800, 800, { fit: "inside", withoutEnlargement: true })
           .webp({ quality: 80 })
-          .write(`${SYNC}/cover.${oldName}.webp`);
+          .write(`${dir}/cover.${oldName}.webp`);
         ext[0] = "webp";
       }
 
@@ -47,10 +44,10 @@ export async function prepareSync() {
         const from = filesOf(oldName, type, ext);
         const to = filesOf(newName, type, ext);
         await Promise.all(
-          from.map((f, i) => rename(`${SYNC}/${f}`, `${SYNC}/${to[i]}`)),
+          from.map((f, i) => rename(`${dir}/${f}`, `${dir}/${to[i]}`)),
         );
-        await Bun.write(`${SYNC}/${newName}.json`, JSON.stringify(rest));
-        await rm(`${SYNC}/${oldName}.json`, { force: true });
+        await Bun.write(`${dir}/${newName}.json`, JSON.stringify(rest));
+        await rm(`${dir}/${oldName}.json`, { force: true });
         item.name = newName;
       }
     } catch (error) {
@@ -63,7 +60,7 @@ export async function prepareSync() {
   // Anything not consumed above can't be synced
   await Promise.all(
     unsyncable.map((name) =>
-      rename(`${SYNC}/${name}`, `./UnSyncable/${name}`).catch((error) =>
+      rename(`${dir}/${name}`, `./UnSyncable/${name}`).catch((error) =>
         console.error(`[Sync Failed] Could not move ${name}:`, error),
       ),
     ),
