@@ -5,16 +5,31 @@ import {
   LoadingState,
 } from "@/components/craft/EmptyState";
 import type { useDownloads } from "../useDownloads";
-import DownloadRow from "./DownloadRow";
+import DownloadCard from "./DownloadCard";
+import DownloadSection from "./DownloadSection";
+import type { Row } from "./status";
 
-/** The error / loading / empty / list body. `canEdit` is false while read-only. */
+const GROUPS: [string, (r: Row) => boolean][] = [
+  [
+    "Active and queued",
+    (r) => ["queued", "downloading", "importing"].includes(r.status),
+  ],
+  [
+    "Failed and cancelled",
+    (r) => r.status === "failed" || r.status === "cancelled",
+  ],
+  ["Finished", (r) => r.status === "completed"],
+];
+
+/** The error / loading / empty states, else the cards in sections. `canEdit` is false while read-only. */
 export default function DownloadList({
-  d: { live, running, rows, cancel, remove },
+  d,
   canEdit,
 }: {
   d: ReturnType<typeof useDownloads>;
   canEdit: boolean;
 }) {
+  const { live, rows } = d;
   if (live.isError && !live.data)
     return (
       <ErrorState
@@ -33,17 +48,16 @@ export default function DownloadList({
         description="Items the browser extension sends to the server show up here."
       />
     );
-  return (
-    <ul className="flex flex-col gap-2">
-      {rows.map((row) => (
-        <DownloadRow
-          key={row.id}
-          row={row}
-          running={running}
-          onCancel={canEdit ? (id) => cancel.mutate({ id }) : undefined}
-          onRemove={canEdit ? (id) => remove.mutate({ ids: [id] }) : undefined}
-        />
-      ))}
-    </ul>
-  );
+  return GROUPS.map(([title, match]) => {
+    const group = rows.filter(match);
+    return (
+      group.length > 0 && (
+        <DownloadSection key={title} title={title} count={group.length}>
+          {group.map((row) => (
+            <DownloadCard key={row.id} row={row} d={d} canEdit={canEdit} />
+          ))}
+        </DownloadSection>
+      )
+    );
+  });
 }

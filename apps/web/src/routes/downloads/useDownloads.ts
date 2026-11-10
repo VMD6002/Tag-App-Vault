@@ -18,6 +18,17 @@ export function useDownloads() {
   const running = snapshot?.running ?? false;
   const rows = snapshot?.tasks ?? [];
 
+  // Library items of the completed rows: their local cover and page (the remote cover is the fallback).
+  // Refetched whenever the number of completed rows changes (a download just finished or was cleared).
+  const completedCount = rows.filter((t) => t.status === "completed").length;
+  const { data: library } = useQuery({
+    queryKey: ["downloads", "library", completedCount],
+    queryFn: () => orpc.main.getAllContent.call({}),
+    enabled: completedCount > 0,
+    gcTime: 0,
+    retry: 0,
+  });
+
   // A failed task appended to error.log: mark it stale (refetches it when the dialog is open)
   const queryClient = useQueryClient();
   const failedCount = rows.filter((t) => t.status === "failed").length;
@@ -56,5 +67,5 @@ export function useDownloads() {
     }),
   );
 
-  return { live, running, rows, start, cancel, remove, clearFinished };
+  return { live, running, rows, library, start, cancel, remove, clearFinished };
 }
