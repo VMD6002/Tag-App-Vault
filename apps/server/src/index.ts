@@ -1,6 +1,6 @@
 import { networkInterfaces } from "node:os";
 import { RPCHandler } from "@orpc/server/fetch";
-import { router, settingsDB } from "@tagapp/api";
+import { router, setQueue, settingsDB } from "@tagapp/api";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
@@ -56,9 +56,7 @@ app.post("/downloads/set", async (c) => {
   // const res = contentWebSchema.array().safeParse(body);
   const res = contentWebSchema.array().parse(body);
 
-  await Bun.write("./Download/tmp.json", JSON.stringify(res, null, 2));
-
-  return c.json(res);
+  return c.json(await setQueue(res));
 });
 
 const handler = new RPCHandler(router);
