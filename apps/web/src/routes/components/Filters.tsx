@@ -193,6 +193,22 @@ export default function Filters() {
       <ResultsBar
         left={
           <>
+            {!!tags && (
+              <Button
+                size="sm"
+                variant={selectionOn ? "default" : "outline"}
+                aria-pressed={selectionOn}
+                onClick={toggleSelectionMode}
+                title={
+                  selectionOn
+                    ? "Stop selecting and clear the selection"
+                    : "Pick several items to edit their tags or remove them together"
+                }
+              >
+                <ListChecks />
+                {selectionOn ? "Done selecting" : "Select items"}
+              </Button>
+            )}
             <p aria-live="polite" className="text-sm text-muted-foreground">
               {selectionOn ? (
                 <>
@@ -258,22 +274,6 @@ export default function Filters() {
         }
         right={
           <>
-            {!!tags && (
-              <Button
-                size="sm"
-                variant={selectionOn ? "default" : "outline"}
-                aria-pressed={selectionOn}
-                onClick={toggleSelectionMode}
-                title={
-                  selectionOn
-                    ? "Stop selecting and clear the selection"
-                    : "Pick several items to edit their tags or remove them together"
-                }
-              >
-                <ListChecks />
-                {selectionOn ? "Done selecting" : "Select items"}
-              </Button>
-            )}
             <Label htmlFor="order-latest-switch" className="text-sm">
               Newest first
             </Label>
