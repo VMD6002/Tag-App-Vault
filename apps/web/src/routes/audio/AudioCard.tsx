@@ -36,7 +36,7 @@ export default function AudioCard({
         );
         break;
       case "cover":
-        updateCover(data.cover!);
+        if (data.cover) updateCover(data.cover);
         break;
       default:
         break;
@@ -104,7 +104,7 @@ export default function AudioCard({
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={() => removeContentCover(data.cover!)}
+              onClick={() => data.cover && removeContentCover(data.cover)}
               title="Delete this track's cover image (the track itself is kept)"
               aria-label={`Delete cover image of ${data.name}`}
               className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"

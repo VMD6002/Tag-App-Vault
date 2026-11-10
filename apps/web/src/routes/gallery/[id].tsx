@@ -45,7 +45,7 @@ export default function GalleryPage() {
   }, [doc.title, doc.id, getGalleryDataMutation.mutate]);
 
   const coverUrl = doc.cover
-    ? `/media/Galleries/${encodedTitle}/${encodeURIComponent(doc.cover!)}`
+    ? `/media/Galleries/${encodedTitle}/${encodeURIComponent(doc.cover)}`
     : null;
 
   const setCover = useCallback(

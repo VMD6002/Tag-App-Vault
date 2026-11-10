@@ -192,7 +192,7 @@ export default function GalleryContentCard({
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={() => removeContentCover(data.cover!)}
+              onClick={() => data.cover && removeContentCover(data.cover)}
               title="Delete this file's cover image (the file itself is kept)"
               aria-label={`Delete cover image of ${data.name}`}
               className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"

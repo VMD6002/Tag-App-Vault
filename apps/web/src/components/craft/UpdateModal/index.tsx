@@ -73,6 +73,13 @@ export default function UpdateModal({
   const isDisabled = useAtomValue(updateInputDisabledAtom);
   const exists = useAtomValue(updateExistsAtom);
   const resetFuntions = useAtomValue(updateResetOptionsAtom);
+  const {
+    title: resetTitle,
+    tags: resetTags,
+    cover: resetCover,
+    contentUrl: resetContentUrl,
+    extraData: resetExtraData,
+  } = resetFuntions ?? {};
   const close = useCallback(() => setModalOpen(false), [setModalOpen]);
 
   return (
@@ -100,11 +107,7 @@ export default function UpdateModal({
       <Field
         label="Title"
         htmlFor="update-title"
-        onReset={
-          resetFuntions?.title
-            ? () => setTitle(resetFuntions.title!())
-            : undefined
-        }
+        onReset={resetTitle ? () => setTitle(resetTitle()) : undefined}
       >
         <Input
           id="update-title"
@@ -115,11 +118,7 @@ export default function UpdateModal({
       </Field>
       <Field
         label="Tags"
-        onReset={
-          resetFuntions?.tags
-            ? () => setUpdateTags(resetFuntions.tags!())
-            : undefined
-        }
+        onReset={resetTags ? () => setUpdateTags(resetTags()) : undefined}
       >
         <MultiSelect
           options={(tags ?? []).map((o) => ({
@@ -137,11 +136,7 @@ export default function UpdateModal({
           <Field
             label="Cover"
             htmlFor="update-cover"
-            onReset={
-              resetFuntions?.cover
-                ? () => setCover(resetFuntions.cover!())
-                : undefined
-            }
+            onReset={resetCover ? () => setCover(resetCover()) : undefined}
           >
             <Input
               id="update-cover"
@@ -156,8 +151,8 @@ export default function UpdateModal({
             label="Content URL"
             htmlFor="update-content-url"
             onReset={
-              resetFuntions?.contentUrl
-                ? () => setContentUrl(resetFuntions.contentUrl!())
+              resetContentUrl
+                ? () => setContentUrl(resetContentUrl())
                 : undefined
             }
           >
@@ -172,9 +167,7 @@ export default function UpdateModal({
         <Field
           label="Notes"
           onReset={
-            resetFuntions?.extraData
-              ? () => setExtraData(resetFuntions.extraData!())
-              : undefined
+            resetExtraData ? () => setExtraData(resetExtraData()) : undefined
           }
         >
           <div className="max-h-40 overflow-y-auto border border-input">
