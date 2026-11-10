@@ -15,6 +15,8 @@ import type YTDlpWrap from "yt-dlp-wrap-plus";
 const { default: YTDlpWrapRuntime } = require("yt-dlp-wrap-plus");
 
 import type { ContentWebType } from "@tagapp/utils/types";
+import { parseArgs, USAGE } from "./lib/args";
+import { type Config, loadConfig } from "./lib/config";
 import {
   COMPLETED_DIR,
   ERROR_LOG,
@@ -26,25 +28,22 @@ import { createFlag } from "./lib/createFlags";
 import { downloadContent } from "./lib/downloadContent";
 import { getImageExtensionFromURL } from "./lib/getImageExtensionFromURL";
 
-mkdirSync(TMP_DIR, { recursive: true });
-mkdirSync(COMPLETED_DIR, { recursive: true });
-
 const readQueue = (): ContentWebType[] =>
   JSON.parse(readFileSync(QUEUE_FILE, "utf-8"));
-const downloadData = readQueue();
 const ytDlp: YTDlpWrap = new YTDlpWrapRuntime();
 
-// 1 concurrent download per scraper, max 3 overall.
-const scraperQueues = new Map<string, PQueue>();
-const globalThrottle = new PQueue({ concurrency: 3 });
-
-function enqueueTask(scraper: string, task: () => Promise<void>) {
-  let queue = scraperQueues.get(scraper);
-  if (!queue) {
-    queue = new PQueue({ concurrency: 1 });
-    scraperQueues.set(scraper, queue);
-  }
-  return queue.add(() => globalThrottle.add(task));
+// 1 concurrent download per scraper, max 3 overall. Fresh queues for every run.
+function createEnqueue() {
+  const scraperQueues = new Map<string, PQueue>();
+  const globalThrottle = new PQueue({ concurrency: 3 });
+  return (scraper: string, task: () => Promise<void>) => {
+    let queue = scraperQueues.get(scraper);
+    if (!queue) {
+      queue = new PQueue({ concurrency: 1 });
+      scraperQueues.set(scraper, queue);
+    }
+    return queue.add(() => globalThrottle.add(task));
+  };
 }
 
 type Status = "queued" | "downloading" | "completed" | "failed";
@@ -62,6 +61,8 @@ function moveFilesToCompleted(item: ContentWebType) {
   const base = fileBase(item.title, item.id);
   for (const file of readdirSync(TMP_DIR)) {
     // Match ".<id>." so one id can't match a longer id that contains it.
+    // Skip yt-dlp / partial-download leftovers: they stay in ./tmp so the next run can resume.
+    if (/\.(part(-Frag\d+)?|ytdl|temp)$/.test(file)) continue;
     if (file.includes(`.${item.id}.`)) {
       renameSync(`${TMP_DIR}/${file}`, `${COMPLETED_DIR}/${file}`);
     }
@@ -77,7 +78,15 @@ function moveFilesToCompleted(item: ContentWebType) {
   );
 }
 
-function App() {
+function App({
+  downloadData,
+  config,
+  enqueueTask,
+}: {
+  downloadData: ContentWebType[];
+  config: Config;
+  enqueueTask: ReturnType<typeof createEnqueue>;
+}) {
   const { exit } = useApp();
   const [tasks, setTasks] = useState<TaskState[]>(() =>
     downloadData.map(({ id, title, scraper }) => ({
@@ -108,15 +117,17 @@ function App() {
         await downloadContent(
           item.cover,
           `${TMP_DIR}/cover.${base}.${getImageExtensionFromURL(item.cover)}`,
+          config.userAgent,
         );
 
         updateTask(index, { percent: 50, speed: "Fetch", eta: "Content" });
         await downloadContent(
           item.contentUrl,
           `${TMP_DIR}/${base}.${getImageExtensionFromURL(item.contentUrl)}`,
+          config.userAgent,
         );
       } else {
-        const flags = await createFlag(item);
+        const flags = await createFlag(item, config.userAgent);
         await new Promise<void>((resolve, reject) => {
           ytDlp
             .exec(flags)
@@ -210,4 +221,49 @@ function App() {
   );
 }
 
-render(<App />);
+async function main() {
+  let args: ReturnType<typeof parseArgs>;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (e) {
+    console.error(`${(e as Error).message}\n\n${USAGE}`);
+    process.exit(1);
+  }
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
+
+  let config: Config;
+  try {
+    config = loadConfig();
+  } catch (e) {
+    console.error((e as Error).message);
+    process.exit(1);
+  }
+
+  // ./tmp is never cleared: leftovers let the next run resume partial downloads.
+  mkdirSync(TMP_DIR, { recursive: true });
+  mkdirSync(COMPLETED_DIR, { recursive: true });
+
+  for (let attempt = 0; ; attempt++) {
+    const instance = render(
+      <App
+        downloadData={readQueue()}
+        config={config}
+        enqueueTask={createEnqueue()}
+      />,
+    );
+    await instance.waitUntilExit();
+
+    // Items that failed are still in tmp.json.
+    if (readQueue().length === 0 || attempt >= args.retries) break;
+    const of = Number.isFinite(args.retries) ? `/${args.retries}` : "";
+    console.log(
+      `Retrying in ${config.retryDelayMinutes} min (attempt ${attempt + 1}${of})...`,
+    );
+    await Bun.sleep(config.retryDelayMinutes * 60_000);
+  }
+}
+
+await main();

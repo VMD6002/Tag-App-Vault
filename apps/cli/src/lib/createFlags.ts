@@ -3,7 +3,16 @@ import { fileBase, TMP_DIR } from "./constants";
 import { downloadContent } from "./downloadContent";
 import { getImageExtensionFromURL } from "./getImageExtensionFromURL";
 
-const DEFAULT_FLAGS = ["--embed-thumbnail", "-R", "3"];
+// --continue + --no-overwrites: resume .part files from a previous run, skip finished files.
+const DEFAULT_FLAGS = [
+  "--embed-thumbnail",
+  "-R",
+  "3",
+  "--continue",
+  "--no-overwrites",
+];
+// Item flags that would defeat resuming.
+const BLOCKED_FLAGS = new Set(["--no-part", "--no-continue"]);
 
 // Splits on whitespace but keeps quoted values (with spaces) intact.
 const tokenize = (s: string) =>
@@ -12,7 +21,10 @@ const tokenize = (s: string) =>
     (m) => m[1] ?? m[2] ?? m[0],
   );
 
-export async function createFlag(item: ContentWebType): Promise<string[]> {
+export async function createFlag(
+  item: ContentWebType,
+  userAgent: string,
+): Promise<string[]> {
   const base = fileBase(item.title, item.id);
   const flags = [
     item.url,
@@ -21,7 +33,16 @@ export async function createFlag(item: ContentWebType): Promise<string[]> {
     ...DEFAULT_FLAGS,
   ];
 
-  if (item.download?.flags) flags.push(...tokenize(item.download.flags.value));
+  const itemFlags = item.download?.flags
+    ? tokenize(item.download.flags.value).filter((t) => !BLOCKED_FLAGS.has(t))
+    : [];
+  flags.push(...itemFlags);
+  if (
+    !itemFlags.some(
+      (t) => t === "--user-agent" || t.startsWith("--user-agent="),
+    )
+  )
+    flags.push("--user-agent", userAgent);
 
   if (item.tags.includes("meta:yt-cookie")) {
     const site = item.tags
@@ -39,6 +60,7 @@ export async function createFlag(item: ContentWebType): Promise<string[]> {
     await downloadContent(
       item.cover,
       `${TMP_DIR}/cover.${base}.${getImageExtensionFromURL(item.cover)}`,
+      userAgent,
     );
   } else {
     flags.push(
