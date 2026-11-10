@@ -4,9 +4,11 @@
 import type { ContentServerType } from "@tagapp/utils/types";
 import {
   buildDb,
+  buildQueue,
   buildSync,
   countTags,
   type MockDb,
+  type MockQueueItem,
   type MockSyncItem,
   RATIO_BY_ID,
   type Scenario,
@@ -23,6 +25,8 @@ type State = {
   /** Items waiting in Sync, by id. */
   pending: Record<string, MockSyncItem>;
   tags: Record<string, number>;
+  /** Download queue and the progress of the current fake run. */
+  queue: MockQueueItem[];
 };
 
 const state: State = {
@@ -31,6 +35,7 @@ const state: State = {
   db: buildDb("normal"),
   pending: {},
   tags: {},
+  queue: [],
 };
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -43,6 +48,7 @@ export function configureMock(
   state.affects = affects;
   state.db = buildDb(scenario);
   state.pending = Object.fromEntries(buildSync(scenario).map((c) => [c.id, c]));
+  state.queue = buildQueue(scenario);
   state.tags = {
     ...countTags(state.db),
     ...(scenario === "empty" ? {} : { "Topic:Unused_example": 0 }),
@@ -80,6 +86,103 @@ const pending = (name: string, type: string) => {
   if (!c) throw notFound(`"${name}" in Sync`);
   return c;
 };
+
+// ── Downloads: "Start downloads" replays one fake run, pushed to the open watch streams ──────────
+type Task = {
+  id: string;
+  title: string;
+  scraper: string;
+  status: "queued" | "downloading" | "importing" | "completed" | "failed";
+  percent: number;
+  speed: string;
+  eta: string;
+  error?: string;
+};
+const dl = {
+  running: false,
+  tasks: [] as Task[],
+  listeners: new Set<() => void>(),
+};
+const snapshot = () => ({
+  running: dl.running,
+  tasks: dl.tasks.map((t) => ({ ...t })),
+});
+const notify = () => {
+  for (const l of dl.listeners) l();
+};
+
+function startRun() {
+  if (dl.running || state.queue.length === 0) return false;
+  dl.running = true;
+  dl.tasks = state.queue.map((q) => ({
+    id: q.id,
+    title: q.title,
+    scraper: q.scraper,
+    status: "queued",
+    percent: 0,
+    speed: "",
+    eta: "--:--",
+  }));
+  // Stress: the last item fails and stays in the queue
+  const failing = state.scenario === "stress" ? dl.tasks.at(-1)?.id : undefined;
+  const timer = setInterval(() => {
+    const open = dl.tasks.filter(
+      (t) => t.status !== "completed" && t.status !== "failed",
+    );
+    for (const t of open.slice(0, 3)) {
+      if (t.status === "importing") {
+        if (t.id === failing) {
+          t.status = "failed";
+          t.error = `Mock failure: id ${t.id} is already in the library, and the files stay in Download/done/${t.id}. ${"More detail. ".repeat(6)}`;
+        } else {
+          t.status = "completed";
+          t.percent = 100;
+          state.queue = state.queue.filter((q) => q.id !== t.id);
+        }
+      } else if (t.percent >= 100) t.status = "importing";
+      else {
+        t.status = "downloading";
+        t.percent = Math.min(100, t.percent + 8 + Math.random() * 14);
+        t.speed = t.scraper === "direct" ? "Fetch" : "1.4MiB/s";
+        t.eta =
+          t.percent >= 100
+            ? "00:00"
+            : `00:0${Math.ceil((100 - t.percent) / 20)}`;
+      }
+    }
+    if (!open.length) {
+      dl.running = false;
+      clearInterval(timer);
+    }
+    notify();
+  }, 400);
+  notify();
+  return true;
+}
+
+/** An oRPC event iterator: `event: message` + `data: {"json": …}` per snapshot, `event: done` at the end. */
+function watchResponse() {
+  const enc = new TextEncoder();
+  let push: () => void;
+  return new Response(
+    new ReadableStream({
+      start(c) {
+        push = () =>
+          c.enqueue(
+            enc.encode(
+              `event: message\ndata: ${JSON.stringify({ json: snapshot(), meta: [] })}\n\n`,
+            ),
+          );
+        dl.listeners.add(push);
+        push();
+      },
+      cancel() {
+        dl.listeners.delete(push);
+      },
+    }),
+    { headers: { "Content-Type": "text/event-stream" } },
+  );
+}
 
 const handlers: Record<string, Handler> = {
   "main/getSettings": () => ({ port: 5001, prefix: "/" }),
@@ -149,6 +252,8 @@ const handlers: Record<string, Handler> = {
     recount();
     return state.db.contents;
   },
+  "downloads/getQueue": () => state.queue,
+  "downloads/start": () => ({ started: startRun() }),
   "fix/hardResetTagCount": () => {
     state.tags = countTags(state.db);
     return state.tags;
@@ -258,6 +363,7 @@ async function answer(req: Request): Promise<Response> {
   // "No results" on an item page means the item doesn't exist (the library uses a preset filter)
   if (state.scenario === "noresults" && route === "main/getContent")
     return errorJson("NOT_FOUND", 404, "Mock: this item doesn't exist");
+  if (route === "downloads/watch") return watchResponse();
   const handler = handlers[route];
   if (!handler) return errorJson("NOT_FOUND", 404, `No mock for ${route}`);
   const body = await req.json().catch(() => ({}));

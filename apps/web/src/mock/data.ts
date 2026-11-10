@@ -477,3 +477,30 @@ export function buildSync(scenario: Scenario): MockSyncItem[] {
     };
   });
 }
+
+/** What `downloads.getQueue` returns: the page uses id, title and scraper only. */
+export type MockQueueItem = {
+  id: string;
+  title: string;
+  type: CType;
+  tags: string[];
+  url: string;
+  scraper: string;
+};
+
+export function buildQueue(scenario: Scenario): MockQueueItem[] {
+  if (scenario === "empty") return [];
+  const count = scenario === "stress" ? 24 : 5;
+  const scrapers = ["Example Videos", "Sample Gallery", "direct"];
+  return Array.from({ length: count }, (_, i) => ({
+    id: `queue_dl_${pad(i + 1)}`,
+    title:
+      scenario === "stress" && i % 4 === 0
+        ? (LONG_TITLES[i % LONG_TITLES.length] as string)
+        : `Queued download ${i + 1}`,
+    type: TYPES[i % TYPES.length] as CType,
+    tags: [],
+    url: `https://example.invalid/item/${i + 1}`,
+    scraper: scrapers[i % scrapers.length] as string,
+  }));
+}

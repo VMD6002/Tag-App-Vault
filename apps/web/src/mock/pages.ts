@@ -53,6 +53,13 @@ export const MOCK_PAGES: MockPage[] = [
     applySearch: true,
   },
   {
+    slug: "downloads",
+    title: "Downloads (/downloads)",
+    note: "Real route: queue plus a fake progress stream that replays one run when 'Start downloads' is pressed (needs 'extension connected').",
+    scenarios: ["normal", "stress", "empty", "loading", "error"],
+    path: () => "/downloads",
+  },
+  {
     slug: "tags",
     title: "Tags (/tags)",
     note: "Real route: tag search, grouped counts, remove-unused and recount actions.",
