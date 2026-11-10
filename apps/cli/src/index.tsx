@@ -108,9 +108,9 @@ function App({
   async function processTask(item: ContentWebType, index: number) {
     updateTask(index, { status: "downloading" });
     try {
-      if (item.download?.type === "curl") {
+      if (item.download?.type === "direct") {
         if (!item.cover || !item.contentUrl)
-          throw new Error("Missing URLs for curl download");
+          throw new Error("Missing URLs for direct download");
         const base = fileBase(item.title, item.id);
 
         updateTask(index, { percent: 10, speed: "Fetch", eta: "Cover" });

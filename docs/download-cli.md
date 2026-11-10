@@ -35,7 +35,7 @@ A missing (or wrongly typed) key falls back to its default; missing keys are wri
 
 | `item.download?.type`   | Behaviour                                                                                                              |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `curl`                  | Fetches `item.cover` and `item.contentUrl` with `fetch` (`userAgent` from config, streamed to disk). Both are required |
+| `direct`                | Fetches `item.cover` and `item.contentUrl` with `fetch` (`userAgent` from config, streamed to disk). Both are required |
 | anything else or absent | Runs yt-dlp (`yt-dlp-wrap-plus`) with flags from `createFlag`                                                          |
 
 yt-dlp flags (`lib/createFlags.ts`): the item URL, `-o ./tmp/<base>.%(ext)s`, `--embed-thumbnail -R 3 --continue --no-overwrites`, then `download.flags.value` split on whitespace (quoted values stay whole; `--no-part` and `--no-continue` are dropped so resuming keeps working), `--user-agent <config userAgent>` unless the item flags set one, then the meta tags below.
@@ -43,7 +43,8 @@ yt-dlp flags (`lib/createFlags.ts`): the item URL, `-o ./tmp/<base>.%(ext)s`, `-
 - `meta:yt-cookie`: needs a `Site:<name>` tag and `./cookies/<name>.txt`, else the task fails; adds `--cookies`.
 - `meta:different-cover`: downloads `item.cover` itself (needs `cover`); otherwise `--write-thumbnail` with the thumbnail output `cover.<base>.%(ext)s`.
 - Tag semantics: [domain model](./domain-model.md#meta-tags).
-- Resuming: yt-dlp keeps `.part` files and `--continue` picks them up on the next run; `--no-overwrites` skips files that already finished. `curl` downloads write to `<file>.part` and rename on success; an existing finished file is skipped (no HTTP range resume, so a partial `.part` is refetched in full).
+- Resuming: yt-dlp keeps `.part` files and `--continue` picks them up on the next run; `--no-overwrites` skips files that already finished. `direct` downloads (and the `meta:different-cover` cover) write to `<file>.part` and rename on success; an existing finished file is skipped (no HTTP range resume, so a partial `.part` is refetched in full).
+- Fetch retries (`lib/downloadContent.ts`): network errors, `429` and `5xx` are retried up to 3 attempts in total, waiting 2s then 4s; other `4xx` fail at once. Longer outages are left to `--retry`.
 - Cover extension for direct downloads comes from the URL's `ext` query parameter, else the path extension; no extension throws (`getImageExtensionFromURL`).
 
 ## File naming and completion
