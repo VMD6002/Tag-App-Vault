@@ -26,14 +26,14 @@ Other commands: [development](./development.md).
 
 Site `:5000`, `root * .`, gzip/zstd, `Access-Control-Allow-Origin *` for GET/OPTIONS.
 
-| Path                                                 | Behaviour                                                                                                             |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `/media/.sync/*`                                     | serves `./Sync` (prefix stripped), `Cache-Control: no-store`; used by the web `/sync` preview                         |
-| `/media/Images/.covers/*`, `/media/Videos/.covers/*` | `Cache-Control: no-store`; `try_files` tries `.avif .jpg .jpeg .png .webp` appended to the path, then the path itself |
-| `/media/Images/*`                                    | same `try_files`, no cache header                                                                                     |
-| `/media/Videos/*`                                    | `try_files` the path, then `.mp4`, `.webm`, `.mkv` appended                                                           |
-| other `/media/*`                                     | plain `file_server`                                                                                                   |
-| everything else                                      | `reverse_proxy localhost:5001`                                                                                        |
+| Path                                                 | Behaviour                                                                                                                  |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `/media/.sync/*`                                     | serves `Sync/` under the site root (rewrite, not a new `root`), `Cache-Control: no-store`; used by the web `/sync` preview |
+| `/media/Images/.covers/*`, `/media/Videos/.covers/*` | `Cache-Control: no-store`; `try_files` tries `.avif .jpg .jpeg .png .webp` appended to the path, then the path itself      |
+| `/media/Images/*`                                    | same `try_files`, no cache header                                                                                          |
+| `/media/Videos/*`                                    | `try_files` the path, then `.mp4`, `.webm`, `.mkv` appended                                                                |
+| other `/media/*`                                     | plain `file_server`                                                                                                        |
+| everything else                                      | `reverse_proxy localhost:5001`                                                                                             |
 
 - The fallbacks let URLs omit the extension: the image and video pages request `/media/<Dir>/<encoded title.id>` and `/media/<Dir>/.covers/cover.<encoded title.id>` with no extension.
 - Gallery, audio and txt folders are served by the plain rule, which is why their cover dirs are not under `.covers`: [disk layout](./disk-layout.md).

@@ -10,8 +10,9 @@
     }
 
     # Items waiting in ./Sync, for the web /sync preview
+    # Rewrite instead of a new root, so it follows the site root (a relative root resolves against Caddy's cwd)
     handle_path /media/.sync/* {
-        root * ./Sync
+        rewrite * /Sync{path}
         header Cache-Control "no-store, no-cache, must-revalidate"
         file_server
     }
