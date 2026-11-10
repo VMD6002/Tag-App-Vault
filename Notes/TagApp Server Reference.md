@@ -266,7 +266,7 @@ Tags starting with `meta:` change behaviour rather than describing content.
 | `meta:caption`         | Sync          | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten.                                                            |
 | `meta:autoplay`        | Web (gallery) | Enables gallery autoplay.                                                                                                                                                  |
 | `meta:yt-cookie`       | CLI           | Download with `./cookies/<Site>.txt` (relative to the CLI's cwd, so `Download/cookies/`). Requires a `Site:<name>` tag and that cookie file, otherwise the download fails. |
-| `meta:different-cover` | CLI           | Download the cover from the item's `cover` URL (with `curl`-style download) instead of yt-dlp's thumbnail. Requires `cover` to be set.                                     |
+| `meta:different-cover` | CLI           | Download the cover from the item's `cover` URL (direct fetch) instead of yt-dlp's thumbnail. Requires `cover` to be set.                                                   |
 
 ---
 

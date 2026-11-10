@@ -20,15 +20,15 @@ All commands, conventions and the production layout: [docs/development.md](docs/
 
 ## Architecture
 
-| Path             | Role                                                                              |
-| ---------------- | --------------------------------------------------------------------------------- |
-| `apps/server`    | Hono entry: mounts oRPC at `/rpc`, `POST /downloads/set`, serves the built web UI |
-| `apps/web`       | React SPA to browse and edit the library; also hosts dev-only mock pages          |
-| `apps/cli`       | Download worker: reads the queue, runs yt-dlp or curl, drops results into `Sync/` |
-| `apps/Caddyfile` | `:5000`: serves `/media/*` from disk, proxies the rest to the server on `:5001`   |
-| `packages/api`   | oRPC routers, sync/delete/update services, LowDB stores (`@tagapp/api`)           |
-| `packages/utils` | Shared Zod schemas and types, filtering, helpers (`@tagapp/utils`)                |
-| `Notes/`         | Human guide to the folder layout                                                  |
+| Path             | Role                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `apps/server`    | Hono entry: mounts oRPC at `/rpc`, `POST /downloads/set`, serves the built web UI           |
+| `apps/web`       | React SPA to browse and edit the library; also hosts dev-only mock pages                    |
+| `apps/cli`       | Download worker: reads the queue, runs yt-dlp or a direct fetch, drops results into `Sync/` |
+| `apps/Caddyfile` | `:5000`: serves `/media/*` from disk, proxies the rest to the server on `:5001`             |
+| `packages/api`   | oRPC routers, sync/delete/update services, LowDB stores (`@tagapp/api`)                     |
+| `packages/utils` | Shared Zod schemas and types, filtering, helpers (`@tagapp/utils`)                          |
+| `Notes/`         | Human guide to the folder layout                                                            |
 
 ```
 browser --> Caddy :5000 --/media/*--> media/ (files on disk)
