@@ -26,8 +26,8 @@ export const typeInfo: Record<CType, { label: string; Icon: LucideIcon }> = {
 
 type Props = {
   content: ContentServerType;
-  /** Page of the item. */
-  url: string;
+  /** Page of the item; without it the title is plain text (items still waiting to sync). */
+  url?: string;
   /** Cover image URL; empty when the item has none (or it failed to load). */
   cover: string | null;
   onCoverError?: () => void;
@@ -96,16 +96,22 @@ const ContentCard = memo(
 
         <div className="grid grid-cols-1 gap-3 p-3">
           <div className="min-w-0">
-            <a
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              title={`Open ${content.title} in a new tab`}
-              className="block text-sm leading-snug font-semibold [overflow-wrap:anywhere] hover:underline focus-visible:underline"
-            >
-              {content.title}
-            </a>
+            {url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title={`Open ${content.title} in a new tab`}
+                className="block text-sm leading-snug font-semibold [overflow-wrap:anywhere] hover:underline focus-visible:underline"
+              >
+                {content.title}
+              </a>
+            ) : (
+              <p className="text-sm leading-snug font-semibold [overflow-wrap:anywhere]">
+                {content.title}
+              </p>
+            )}
             <p
               title={`ID: ${content.id}`}
               className="mt-1 truncate font-mono text-[11px] text-muted-foreground"
