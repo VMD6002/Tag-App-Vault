@@ -2,6 +2,7 @@ import { useSetAtom } from "jotai";
 import { Pencil, Trash2 } from "lucide-react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { confirm } from "@/components/craft/confirm-dialog";
 import TagChips from "@/components/craft/library/TagChips";
@@ -81,7 +82,10 @@ export default function DocInfoSection() {
       {doc.extraData.trim() && (
         <section aria-label="Notes" className="border-t pt-3">
           <div className="prose prose-sm dark:prose-invert max-w-none [overflow-wrap:anywhere]">
-            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw, rehypeSanitize]}
+            >
               {doc.extraData}
             </Markdown>
           </div>

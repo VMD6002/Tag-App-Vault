@@ -21,6 +21,7 @@ Scope: `apps/web` (`tag-app-web`), the React SPA that browses and edits the libr
 - Page code lives in `routes/<type>/`, shared pieces in `routes/components/`, generic pieces in `components/`.
 - `DocProvider` sits inside a route matching `DOC_ROUTE`; without that wrapper `Switch` would match it for every URL and the 404 would never render.
 - Media URLs are built from `encodeURIComponent("<title>.<id>")` against `/media/...` ([deployment](./deployment.md)).
+- Item notes (`DocInfoSection`) and text chapters (`routes/txt/[id].tsx`) render markdown with `rehype-raw` then `rehype-sanitize` (default schema), so embedded HTML is allowed but scripts, event handlers and `<iframe>`/`<video>` are stripped. `/reference` renders a bundled file without sanitizing.
 
 ## State
 

@@ -12,6 +12,7 @@ export default function ReferencePage() {
         description="How the server stores files and what each folder is for."
       />
       <article className="prose dark:prose-invert mb-10 max-w-none break-words [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto">
+        {/* react-doctor-disable-next-line react-doctor/react-markdown-unsanitized-raw-html -- bundled repo file (Notes/*.md?raw), not user content */}
         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
           {reference}
         </Markdown>

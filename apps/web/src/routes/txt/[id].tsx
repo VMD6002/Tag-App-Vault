@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useSearchParams } from "wouter";
@@ -272,7 +273,10 @@ export default function TextPage() {
           ) : null}
           {currentTxt && (
             <article className="prose prose-lg dark:prose-invert mx-auto mb-8 max-w-[68ch] break-words">
-              <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw, rehypeSanitize]}
+              >
                 {currentTxt.replaceAll("https://<SERVER_URL>", "/")}
               </Markdown>
             </article>
