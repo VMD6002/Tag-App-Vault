@@ -92,7 +92,13 @@ type Task = {
   id: string;
   title: string;
   scraper: string;
-  status: "queued" | "downloading" | "importing" | "completed" | "failed";
+  status:
+    | "queued"
+    | "downloading"
+    | "importing"
+    | "completed"
+    | "failed"
+    | "cancelled";
   percent: number;
   speed: string;
   eta: string;
@@ -127,7 +133,10 @@ function startRun() {
   const failing = state.scenario === "stress" ? dl.tasks.at(-1)?.id : undefined;
   const timer = setInterval(() => {
     const open = dl.tasks.filter(
-      (t) => t.status !== "completed" && t.status !== "failed",
+      (t) =>
+        t.status !== "completed" &&
+        t.status !== "failed" &&
+        t.status !== "cancelled",
     );
     for (const t of open.slice(0, 3)) {
       if (t.status === "importing") {
@@ -158,6 +167,48 @@ function startRun() {
   }, 400);
   notify();
   return true;
+}
+
+/** Like the server: queued and downloading items stop (importing ones finish), they stay in the queue. */
+function cancelRun(id?: string) {
+  let cancelled = 0;
+  for (const t of dl.tasks)
+    if (
+      (id === undefined || t.id === id) &&
+      (t.status === "queued" || t.status === "downloading")
+    ) {
+      t.status = "cancelled";
+      t.speed = "";
+      t.eta = "--:--";
+      cancelled++;
+    }
+  notify();
+  return cancelled;
+}
+
+function removeItems(ids: string[]) {
+  const busy = ids.find((id) =>
+    dl.tasks.some(
+      (t) =>
+        t.id === id &&
+        (t.status === "queued" ||
+          t.status === "downloading" ||
+          t.status === "importing"),
+    ),
+  );
+  if (busy)
+    throw new MockError(
+      "CONFLICT",
+      409,
+      `"${busy}" is queued or running: cancel it first`,
+    );
+  const removed = state.queue
+    .filter((q) => ids.includes(q.id))
+    .map((q) => q.id);
+  state.queue = state.queue.filter((q) => !ids.includes(q.id));
+  dl.tasks = dl.tasks.filter((t) => !ids.includes(t.id));
+  notify();
+  return removed;
 }
 
 /** An oRPC event iterator: `event: message` + `data: {"json": …}` per snapshot, `event: done` at the end. */
@@ -254,6 +305,10 @@ const handlers: Record<string, Handler> = {
   },
   "downloads/getQueue": () => state.queue,
   "downloads/start": () => ({ started: startRun() }),
+  "downloads/cancel": (i: { id?: string }) => ({ cancelled: cancelRun(i?.id) }),
+  "downloads/remove": (i: { ids: string[] }) => ({
+    removed: removeItems(i.ids),
+  }),
   "fix/hardResetTagCount": () => {
     state.tags = countTags(state.db);
     return state.tags;
