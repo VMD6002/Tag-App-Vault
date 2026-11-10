@@ -504,3 +504,13 @@ export function buildQueue(scenario: Scenario): MockQueueItem[] {
     scraper: scrapers[i % scrapers.length] as string,
   }));
 }
+
+/** What `downloads.getErrorLog` returns: `[title]: message` plus a stack per failure, like the server. */
+export function buildErrorLog(scenario: Scenario) {
+  if (scenario === "empty") return "";
+  const entry = (i: number) =>
+    `[Queued download ${i}]: Mock failure: yt-dlp exited with code 1\n    at downloadItem (mock/download.ts:${10 + i}:5)\n    at async runItem (mock/runner.ts:${20 + i}:9)\n`;
+  return Array.from({ length: scenario === "stress" ? 400 : 3 }, (_, i) =>
+    entry(i + 1),
+  ).join("");
+}

@@ -4,6 +4,7 @@
 import type { ContentServerType } from "@tagapp/utils/types";
 import {
   buildDb,
+  buildErrorLog,
   buildQueue,
   buildSync,
   countTags,
@@ -27,6 +28,7 @@ type State = {
   tags: Record<string, number>;
   /** Download queue and the progress of the current fake run. */
   queue: MockQueueItem[];
+  errorLog: string;
 };
 
 const state: State = {
@@ -36,6 +38,7 @@ const state: State = {
   pending: {},
   tags: {},
   queue: [],
+  errorLog: "",
 };
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -49,6 +52,7 @@ export function configureMock(
   state.db = buildDb(scenario);
   state.pending = Object.fromEntries(buildSync(scenario).map((c) => [c.id, c]));
   state.queue = buildQueue(scenario);
+  state.errorLog = buildErrorLog(scenario);
   state.tags = {
     ...countTags(state.db),
     ...(scenario === "empty" ? {} : { "Topic:Unused_example": 0 }),
@@ -142,6 +146,7 @@ function startRun() {
       if (t.status === "importing") {
         if (t.id === failing) {
           t.status = "failed";
+          state.errorLog += `[${t.title}]: Mock failure: already in the library\n    at importStaged (mock/import.ts:1:1)\n`;
           t.error = `Mock failure: id ${t.id} is already in the library, and the files stay in Download/done/${t.id}. ${"More detail. ".repeat(6)}`;
         } else {
           t.status = "completed";
@@ -306,6 +311,13 @@ const handlers: Record<string, Handler> = {
   "downloads/getQueue": () => state.queue,
   "downloads/start": () => ({ started: startRun() }),
   "downloads/cancel": (i: { id?: string }) => ({ cancelled: cancelRun(i?.id) }),
+  "downloads/getErrorLog": () => ({
+    text: state.errorLog,
+    truncated: state.scenario === "stress",
+  }),
+  "downloads/clearErrorLog": () => {
+    state.errorLog = "";
+  },
   "downloads/remove": (i: { ids: string[] }) => ({
     removed: removeItems(i.ids),
   }),

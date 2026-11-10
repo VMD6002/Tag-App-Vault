@@ -1,7 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
-import { Download, RefreshCw, Square, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { Download, FileText, RefreshCw, Square, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { tagsAtom } from "@/atom";
 import { confirm } from "@/components/craft/confirm-dialog";
@@ -14,6 +14,7 @@ import TitleHeader from "@/components/craft/TitleHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { orpc } from "@/lib/orpc";
+import ErrorLogDialog from "./components/ErrorLogDialog";
 import { type DownloadRow, mergeRows } from "./downloads.merge";
 
 const STATUS: Record<
@@ -140,6 +141,19 @@ export default function DownloadsPage() {
     last.current = signature;
   }, [signature, refetchQueue]);
 
+  // A failed task appended to error.log: mark it stale (refetches it when the dialog is open)
+  const queryClient = useQueryClient();
+  const failedCount = snapshot?.tasks.filter(
+    (t) => t.status === "failed",
+  ).length;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: run when the failed count changes
+  useEffect(() => {
+    void queryClient.invalidateQueries({
+      queryKey: orpc.downloads.getErrorLog.key(),
+    });
+  }, [failedCount, queryClient]);
+  const [logOpen, setLogOpen] = useState(false);
+
   const start = useMutation(
     orpc.downloads.start.mutationOptions({
       onSuccess: ({ started }) => {
@@ -203,6 +217,15 @@ export default function DownloadsPage() {
           <RefreshCw className={queue.isFetching ? "animate-spin" : ""} />
           Refresh
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setLogOpen(true)}
+          title="Failures recorded in Download/error.log"
+        >
+          <FileText />
+          Error log
+        </Button>
         {!!tags && running && (
           <Button
             variant="outline"
@@ -234,6 +257,11 @@ export default function DownloadsPage() {
           </Button>
         )}
       </TitleHeader>
+      <ErrorLogDialog
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        canClear={!!tags}
+      />
       {live.isError && (
         <p role="alert" className="mb-3 text-sm text-destructive">
           Live progress is unavailable: {live.error.message}{" "}
