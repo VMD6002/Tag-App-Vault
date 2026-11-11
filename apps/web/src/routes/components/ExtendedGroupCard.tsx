@@ -6,7 +6,6 @@ import { clearFilterForNavigationAtom, tagsAtom } from "@/atom";
 import { confirm } from "@/components/craft/confirm-dialog";
 import GroupCard from "@/components/craft/library/GroupCard";
 import { Button } from "@/components/ui/button";
-import { useGroupCover } from "@/hooks/useGroupCover";
 
 /** Group card of the library: opens the group; Edit and Disband (hidden without the extension). Tags: its own plus its children's. */
 const ExtendedGroupCard = memo(
@@ -24,7 +23,6 @@ const ExtendedGroupCard = memo(
   }) => {
     const tags = useAtomValue(tagsAtom);
     const clearFilter = useSetAtom(clearFilterForNavigationAtom);
-    const cover = useGroupCover()(group, items);
     const name = group.title || group.id;
     const childTags = useMemo(
       () => [...new Set(items.flatMap((c) => c.tags))],
@@ -35,7 +33,7 @@ const ExtendedGroupCard = memo(
       <GroupCard
         group={group}
         count={items.length}
-        cover={cover}
+        cover={group.cover || null}
         childTags={childTags}
         onOpen={clearFilter}
         actions={

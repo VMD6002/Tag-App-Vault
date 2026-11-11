@@ -33,7 +33,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { run, useGroupActions } from "@/hooks/useGroupActions";
-import { useGroupCover } from "@/hooks/useGroupCover";
 import { orpc } from "@/lib/orpc";
 
 const NO_ITEMS: never[] = [];
@@ -41,7 +40,6 @@ const NO_ITEMS: never[] = [];
 /** `/group`: every group, empty ones included. Fix Data, merge, disband and delete (with the extension). */
 export default function GroupsPage() {
   const tags = useAtomValue(tagsAtom);
-  const coverOf = useGroupCover();
   // Always fresh on open: the library and group pages change this data
   const contentQ = useQuery(
     orpc.main.getAllContent.queryOptions({
@@ -351,7 +349,7 @@ export default function GroupsPage() {
                 key={g.id}
                 group={g}
                 count={kids.length}
-                cover={coverOf(g, kids)}
+                cover={g.cover || null}
                 selection={
                   tags
                     ? {

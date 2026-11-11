@@ -1,3 +1,4 @@
+import { getCoverUrl } from "@tagapp/utils";
 import type {
   ContentServerType,
   GroupsDB,
@@ -9,7 +10,6 @@ import ModalShell from "@/components/craft/ModalShell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { run } from "@/hooks/useGroupActions";
-import { getCoverUrl } from "@/lib/coverUrl";
 import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
 

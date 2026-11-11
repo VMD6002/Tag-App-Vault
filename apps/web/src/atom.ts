@@ -1,4 +1,4 @@
-import type { GroupCoverPickType, GroupSortType } from "@tagapp/utils/types";
+import type { GroupSortType } from "@tagapp/utils/types";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
@@ -33,11 +33,6 @@ export const searchDescriptionAtom = atom(false);
 export const groupSortAtom = atomWithStorage<GroupSortType>(
   "group_sort",
   "newestChild",
-);
-/** Device-local (Settings page): which child's cover a cover-less group card shows. */
-export const groupCoverPickAtom = atomWithStorage<GroupCoverPickType>(
-  "group_cover_pick",
-  "newest",
 );
 
 /** Live re-filtering on every change instead of the Filter button. */

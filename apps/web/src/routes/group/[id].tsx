@@ -1,3 +1,4 @@
+import { getCoverUrl } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { FolderOpen, SearchX } from "lucide-react";
@@ -25,8 +26,6 @@ import GroupStatsModal from "@/components/craft/group/GroupStatsModal";
 import UpdateModal from "@/components/craft/UpdateModal";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { run, useGroupActions } from "@/hooks/useGroupActions";
-import { useGroupCover } from "@/hooks/useGroupCover";
-import { getCoverUrl } from "@/lib/coverUrl";
 import { orpc } from "@/lib/orpc";
 import TIMEOUTS from "@/lib/TIMEOUTS";
 import { allContentAtom, allGroupsAtom, filteredAtom } from "../atom";
@@ -68,7 +67,6 @@ function Child({ id }: { id: string }) {
     () => allContent.filter((c) => c.groups?.includes(id)),
     [allContent, id],
   );
-  const coverOf = useGroupCover();
   const { addToGroups, removeItems, disband, fix, changed } =
     useGroupActions(loadAllContent);
   const setSelection = useSetAtom(selectionEntriesAtom);
@@ -193,7 +191,7 @@ function Child({ id }: { id: string }) {
       <GroupHeader
         group={group}
         count={children.length}
-        cover={coverOf(group, children)}
+        cover={group.cover || null}
         onStats={() => setStatsOpen(true)}
         onEdit={() => setEditOpen(true)}
         onFix={() => void fix(id)}

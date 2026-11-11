@@ -1,4 +1,4 @@
-import { getCoverUrl } from "@/lib/coverUrl";
+import { getCoverUrl } from "@tagapp/utils";
 import type { useDownloads } from "../useDownloads";
 import DownloadCardActions from "./DownloadCardActions";
 import DownloadCover from "./DownloadCover";

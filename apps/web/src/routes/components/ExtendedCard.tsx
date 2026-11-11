@@ -1,3 +1,4 @@
+import { getCoverUrl } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
 import { useAtomValue, useSetAtom } from "jotai";
 import { memo, useCallback, useMemo, useState } from "react";
@@ -12,7 +13,6 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
-import { getCoverUrl } from "@/lib/coverUrl";
 import { selectEntryAtom, selectionOnAtom } from "../atom.selection";
 import { useServerActions } from "../contexts/Server.Context";
 

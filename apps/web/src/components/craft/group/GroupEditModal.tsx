@@ -14,7 +14,7 @@ import { orpc } from "@/lib/orpc";
 
 /**
  * Edit a group like the item edit modal: title and the group's OWN tags up top; cover URL (empty
- * clears it and the card falls back to a child's cover), description (markdown) and id under
+ * clears it: the card shows black), description (markdown) and id under
  * "More fields". Changing the id rewrites it on every item; an id that already exists merges this
  * group into it.
  */

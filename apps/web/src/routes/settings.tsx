@@ -1,7 +1,7 @@
-import type { GroupCoverPickType, GroupSortType } from "@tagapp/utils/types";
+import type { GroupSortType } from "@tagapp/utils/types";
 import { useAtom } from "jotai";
 import { Link } from "wouter";
-import { groupCoverPickAtom, groupSortAtom } from "@/atom";
+import { groupSortAtom } from "@/atom";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,15 +31,9 @@ const groupSortLabels: Record<GroupSortType, string> = {
   created: "Group created",
   updated: "Group last updated",
 };
-const groupCoverLabels: Record<GroupCoverPickType, string> = {
-  newest: "Newest item's cover",
-  oldest: "Oldest item's cover",
-  firstWithCover: "First item with a cover",
-};
 
 export default function SettingsPage() {
   const [groupSort, setGroupSort] = useAtom(groupSortAtom);
-  const [groupCover, setGroupCover] = useAtom(groupCoverPickAtom);
   const [sortMode, setSortMode] = useAtom(defaultSortModeAtom);
   const [viewMode, setViewMode] = useAtom(defaultViewModeAtom);
   const [autoPlay, setAutoPlay] = useAtom(defaultAutoPlayAtom);
@@ -160,32 +154,6 @@ export default function SettingsPage() {
             Where group cards sit among the items. Applies the next time the
             library is filtered.
           </p>
-        </div>
-        <div className="grid gap-1.5">
-          <Label>Cover of groups without one</Label>
-          <Select
-            value={groupCover}
-            items={groupCoverLabels}
-            onValueChange={(v) => v && setGroupCover(v as GroupCoverPickType)}
-          >
-            <SelectTrigger className="w-56" aria-label="Group cover">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent
-              alignItemWithTrigger={false}
-              className="w-auto min-w-(--anchor-width)"
-            >
-              <SelectGroup>
-                {(Object.keys(groupCoverLabels) as GroupCoverPickType[]).map(
-                  (m) => (
-                    <SelectItem key={m} value={m}>
-                      {groupCoverLabels[m]}
-                    </SelectItem>
-                  ),
-                )}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
         </div>
       </section>
     </>

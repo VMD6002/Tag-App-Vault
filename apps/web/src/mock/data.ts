@@ -1,6 +1,10 @@
 // Invented placeholder data for the dev-only #/mock pages. Nothing here is real; covers are
 // generated as gradient data URIs by stubs.ts, so no image is ever requested from the network.
-import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
+import {
+  setInitialGroupCover,
+  VIEW_HIDE_IN_LIBRARY_TAG,
+  VIEW_IN_LIBRARY_TAG,
+} from "@tagapp/utils";
 import type { ContentServerType, CType, GroupsDB } from "@tagapp/utils/types";
 
 export type Scenario =
@@ -483,6 +487,13 @@ function addGroups(db: MockDb, scenario: Scenario) {
       const c = db.contents[id];
       if (c) c.groups = [...(c.groups ?? []), g.id];
     }
+    // like the server: the first children set the cover; the stress group and the empty one stay black
+    if (g.id !== GROUP_ID.stress)
+      setInitialGroupCover(
+        db.groups[g.id] ?? {},
+        false,
+        g.children.flatMap((id) => db.contents[id] ?? []),
+      );
   });
   const optIn = db.contents.gen_imgBridge01;
   if (optIn) optIn.tags = [...optIn.tags, VIEW_IN_LIBRARY_TAG];

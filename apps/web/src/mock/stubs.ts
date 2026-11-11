@@ -95,7 +95,9 @@ const doc = (id: string) => {
 };
 
 /** Runs a pure group op from `@tagapp/utils` on the fake db; its errors become BAD_REQUEST like the server's. */
-const groupOp = <T>(fn: (s: GroupState, now: number) => T) => {
+const groupOp = <T>(
+  fn: (s: GroupState<ContentServerType>, now: number) => T,
+) => {
   try {
     // The ops mutate these two records in place, which are the fake db's own
     const res = fn(
