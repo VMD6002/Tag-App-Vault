@@ -1,19 +1,36 @@
 import { rename } from "node:fs/promises";
 import { ORPCError } from "@orpc/server";
-import { CAPTION_TAG, CTypeDir, eqSet, SetDifferenceES6 } from "@tagapp/utils";
+import {
+  addGroupItems,
+  CAPTION_TAG,
+  CTypeDir,
+  eqSet,
+  removeGroupItems,
+  SetDifferenceES6,
+} from "@tagapp/utils";
 import { contentDataDB } from "../db/contentData.js";
+import { groupsDB } from "../db/groups.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
 import { hasBasename, renameByBasename } from "../lib/fsBaseNameFunctions.js";
 import type { DocType } from "../routers/main.js";
 
 export async function setDoc(input: DocType) {
-  const NewData = input;
+  // `groups` (optional) is the item's complete group list: `[]` clears it, absent leaves it alone
+  const { groups: wantedGroups, ...NewData } = input;
 
   const OldData = contentDataDB.data[NewData.id];
 
   if (!OldData)
     throw new ORPCError("NOT_FOUND", {
       message: `Doc with id ${NewData.id} doesn't exist`,
+    });
+
+  // Before any file moves: every wanted group must exist
+  const nextGroups = wantedGroups && [...new Set(wantedGroups)];
+  const unknown = nextGroups?.find((g) => !groupsDB.data[g]);
+  if (unknown)
+    throw new ORPCError("BAD_REQUEST", {
+      message: `Group ${unknown} doesn't exist`,
     });
 
   // To change file Name when content Title is changed
@@ -105,8 +122,23 @@ export async function setDoc(input: DocType) {
     ...NewData,
   };
   contentDataDB.data[NewData.id] = updatedData;
+  // Joining/leaving goes through the groups ops (cover set once, group `lastUpdated`); they mutate the stored record, so run them after the merge (a joined cover uses the new title)
+  let groupsChanged = false;
+  if (nextGroups) {
+    const state = { contentData: contentDataDB.data, groups: groupsDB.data };
+    const now = Math.floor(Date.now() / 1000);
+    const had = OldData.groups ?? [];
+    const itemIds = [NewData.id];
+    const joined = nextGroups.filter((g) => !had.includes(g));
+    const left = had.filter((g) => !nextGroups.includes(g));
+    for (const id of joined) addGroupItems(state, { id, itemIds }, now);
+    for (const id of left) removeGroupItems(state, { id, itemIds }, now);
+    groupsChanged = joined.length + left.length > 0;
+  }
+
   await contentDataDB.write();
   await tagDB.write();
+  if (groupsChanged) await groupsDB.write();
   console.log(`Contents of ${NewData.id} Updated`);
   return updatedData;
 }

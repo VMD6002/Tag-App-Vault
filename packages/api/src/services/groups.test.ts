@@ -352,3 +352,79 @@ test("renaming an item keeps its groups", async () => {
   });
   expectConsistent();
 });
+
+test("setContent groups: join and leave with the item, counts stay right, a cover is set once, empty clears", async () => {
+  const doc = (id: string, groups?: string[], tags: string[] = []) => ({
+    id,
+    title: `T${id}`,
+    tags,
+    extraData: "",
+    groups,
+  });
+  seed(
+    [
+      { ...item("1", ["t"], ["a"]), cover: "c1.webp" },
+      { ...item("2", [], []), cover: "c2.webp" },
+      { ...item("3", [], []), cover: "c3.webp" },
+    ],
+    [
+      group("a"), // already has child 1, no cover: stays without
+      { ...group("empty"), cover: "" },
+      { ...group("own", ["gt"]), cover: "/own.webp" },
+    ],
+  );
+  // absent `groups` leaves them alone
+  await setDoc(doc("1", undefined, ["t", "n"]));
+  expect(contentDataDB.data["1"]?.groups).toEqual(["a"]);
+
+  await setDoc(doc("2", ["empty", "own", "a"], ["n"]));
+  expect(contentDataDB.data["2"]?.groups).toEqual(["empty", "own", "a"]);
+  expect(groupsDB.data.empty?.cover).toBe("/media/Texts/T2.2/.media/c2.webp");
+  expect(groupsDB.data.own?.cover).toBe("/own.webp");
+  expect(groupsDB.data.a?.cover).toBeUndefined();
+
+  // a later joiner does not replace the cover; leaving keeps it (set once)
+  await setDoc(doc("3", ["empty"]));
+  expect(groupsDB.data.empty?.cover).toBe("/media/Texts/T2.2/.media/c2.webp");
+  await setDoc(doc("2", ["own"], ["n"]));
+  expect(contentDataDB.data["2"]?.groups).toEqual(["own"]);
+  expect(groupsDB.data.empty?.cover).toBe("/media/Texts/T2.2/.media/c2.webp");
+
+  // `[]` clears and drops the key; join + title change together
+  await setDoc({ ...doc("1", []), title: "Renamed", tags: ["t", "n"] });
+  expect(contentDataDB.data["1"]?.groups).toBeUndefined();
+  expect(existsSync("media/Texts/Renamed.1")).toBe(true);
+  expectConsistent();
+});
+
+test("setContent groups: an unknown group id changes nothing, not even the title", async () => {
+  seed([item("1", ["t"], ["a"])], [group("a")]);
+  await expect(
+    setDoc({
+      id: "1",
+      title: "Renamed",
+      tags: [],
+      extraData: "",
+      groups: ["a", "nope"],
+    }),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  expect(contentDataDB.data["1"]).toMatchObject({ title: "T1", groups: ["a"] });
+  expect(existsSync("media/Texts/T1.1")).toBe(true);
+  expectConsistent();
+});
+
+test("setContent groups: renaming and joining an empty group in one save sets the cover from the new title", async () => {
+  seed(
+    [{ ...item("1", [], []), cover: "c1.webp" }],
+    [{ ...group("empty"), cover: "" }],
+  );
+  await setDoc({
+    id: "1",
+    title: "New",
+    tags: [],
+    extraData: "",
+    groups: ["empty"],
+  });
+  expect(groupsDB.data.empty?.cover).toBe("/media/Texts/New.1/.media/c1.webp");
+  expectConsistent();
+});

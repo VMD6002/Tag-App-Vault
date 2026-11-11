@@ -46,13 +46,14 @@ const docValidator = z.object({
   title: z.string(),
   tags: z.string().array(),
   extraData: z.string(),
+  groups: z.string().array().optional(),
 });
 
 export type DocType = z.infer<typeof docValidator>;
 
 export const setContent = os
   .input(docValidator)
-  .handler(async ({ input }) => await set(input));
+  .handler(({ input }) => withSyncLock(() => set(input)));
 
 export const setCover = os
   .input(
