@@ -104,6 +104,7 @@ type Seed = {
   tags: string[];
   cover?: string;
   notes?: string;
+  groups?: string[];
 };
 
 const T = {
@@ -306,6 +307,7 @@ const toItem = (s: Seed, i: number): ContentServerType => ({
   tags: s.tags,
   cover: s.cover,
   extraData: s.notes ?? "",
+  ...(s.groups && { groups: s.groups }),
   added: BASE - i * DAY * 1.7,
   lastUpdated: BASE - i * DAY,
 });
@@ -533,12 +535,15 @@ export function buildSync(scenario: Scenario): MockSyncItem[] {
       title: "Downloaded clip with a caption",
       type: "video",
       tags: [...T.video, "meta:caption"],
+      groups: ["grp_mockCooking1"],
     },
     {
       id: "queue_gal_0002",
       title: "Downloaded gallery",
       type: "gallery",
       tags: ["Type:Gallery", "Topic:Travel"],
+      // the second id has no record: shown as plain text, created when the item syncs
+      groups: [GROUP_ID.normal, "grp_notYetKnown"],
     },
     {
       id: "queue_aud_0003",
@@ -563,6 +568,8 @@ export function buildSync(scenario: Scenario): MockSyncItem[] {
                 : `Pending item ${i + 1}`,
             type,
             tags: i % 5 === 0 ? [] : manyTags(2 + ((i * 7) % 30)),
+            groups:
+              i % 6 === 0 ? [GROUP_ID.stress, GROUP_ID.normal] : undefined,
           };
         })
       : []),
