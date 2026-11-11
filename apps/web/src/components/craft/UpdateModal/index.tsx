@@ -58,9 +58,12 @@ function Field({
 export default function UpdateModal({
   className = "",
   updateContentFunc,
+  extra,
 }: {
   updateContentFunc: () => void;
   className?: string;
+  /** Extra fields under Tags (the library's groups section). */
+  extra?: ReactNode;
 }) {
   const tags = useAtomValue(tagsAtom);
   const { theme } = useTheme();
@@ -131,6 +134,7 @@ export default function UpdateModal({
           onChange={setUpdateTags}
         />
       </Field>
+      {extra}
       <SeeMore>
         {cover && (
           <Field

@@ -2,6 +2,7 @@ import type { ContentServerType } from "@tagapp/utils/types";
 import { useAtomValue, useSetAtom } from "jotai";
 import { memo, useCallback, useMemo, useState } from "react";
 import { tagsAtom } from "@/atom";
+import { addToGroupAtom } from "@/components/craft/AddToGroupModal.atom";
 import { confirm } from "@/components/craft/confirm-dialog";
 import ContentCard from "@/components/craft/library/ContentCard";
 import {
@@ -29,6 +30,7 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
   const setExtraData = useSetAtom(updateExtraDataAtom);
   const setUpdateTags = useSetAtom(updateTagsAtom);
 
+  const setAddToGroup = useSetAtom(addToGroupAtom);
   const selectionOn = useAtomValue(selectionOnAtom);
   const selectEntry = useSetAtom(selectEntryAtom);
 
@@ -82,6 +84,7 @@ const ExtendedCard = memo(({ Content }: { Content: ContentServerType }) => {
       }}
       onEdit={tags ? updateSetupFunc : undefined}
       onRemove={tags ? removeContent : undefined}
+      onAddToGroup={tags ? () => setAddToGroup([Content.id]) : undefined}
     />
   );
 });
