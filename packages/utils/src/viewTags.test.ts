@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { parseViewTags, VIEW_IN_LIBRARY_TAG } from "./viewTags";
+import {
+  parseViewTags,
+  VIEW_HIDE_IN_LIBRARY_TAG,
+  VIEW_IN_LIBRARY_TAG,
+} from "./viewTags";
 
 test("maps each kind of view tag", () => {
   expect(
@@ -46,4 +50,5 @@ test("first conflicting tag wins", () => {
 
 test("view:in-library is a display no-op (filterLibrary reads it)", () => {
   expect(parseViewTags([VIEW_IN_LIBRARY_TAG])).toEqual({});
+  expect(parseViewTags([VIEW_HIDE_IN_LIBRARY_TAG])).toEqual({});
 });

@@ -20,6 +20,9 @@ export type GalleryViewMode = (typeof galleryViewModes)[number];
 /** Reserved `view:` tag read by `filterLibrary`, not a display option (so not in `VIEW_TAGS`): a grouped item carrying it still shows in the main library. */
 export const VIEW_IN_LIBRARY_TAG = "view:in-library";
 
+/** Reserved tag read by `filterLibrary`: the item is left out of the main library unless the query's `any`/`all` names this tag. `/group/:id` ignores it. */
+export const VIEW_HIDE_IN_LIBRARY_TAG = "view:hide-in-library";
+
 export type ViewTagValues = Partial<{
   sortMode: SortMode;
   viewMode: GalleryViewMode;

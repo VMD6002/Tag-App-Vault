@@ -23,7 +23,7 @@ import {
   updateGroup,
 } from "./groups";
 import type { ContentServerType, GroupType } from "./types";
-import { VIEW_IN_LIBRARY_TAG } from "./viewTags";
+import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "./viewTags";
 
 const item = (
   id: string,
@@ -87,6 +87,34 @@ describe("filterLibrary", () => {
       "d",
       "solo",
     ]);
+  });
+  describe("view:hide-in-library", () => {
+    const H = VIEW_HIDE_IN_LIBRARY_TAG;
+    const hidden = () => ({
+      ...content(),
+      h: item("h", 9, { tags: [H, "Type:X"] }),
+      // grouped + opted in + hidden: hidden wins
+      k: item("k", 8, { groups: ["g2"], tags: [VIEW_IN_LIBRARY_TAG, H] }),
+    });
+    const ids = (query: object) =>
+      labels(filterLibrary({ ...q, ...query }, hidden(), groups()));
+    test("drops the item in both modes", () => {
+      expect(ids({})).not.toContain("h");
+      expect(ids({})).not.toContain("k");
+      expect(ids({ itemsOnly: true })).not.toContain("h");
+      expect(ids({ showGrouped: true })).not.toContain("h");
+    });
+    test("any or all containing the tag shows it; other tags or wildcards do not", () => {
+      expect(ids({ any: [H] })).toContain("h");
+      expect(ids({ all: [H] })).toEqual(expect.arrayContaining(["h", "k"]));
+      expect(ids({ all: [H, "Type:X"] })).toEqual(["h"]);
+      expect(ids({ any: ["Type:X"] })).not.toContain("h");
+      expect(ids({ any: ["view:*"] })).not.toContain("h");
+      expect(ids({ none: [H] })).not.toContain("h");
+    });
+    test("ignoreHidden (group pages) keeps it", () => {
+      expect(ids({ itemsOnly: true, ignoreHidden: true })).toContain("h");
+    });
   });
   test("no groups record means nothing is hidden", () => {
     expect(labels(filterLibrary(q, content()))).toHaveLength(5);

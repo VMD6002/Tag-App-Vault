@@ -9,7 +9,7 @@ import { GroupSortSchema } from "@tagapp/utils/types";
 import Fuse from "fuse.js";
 import z from "zod";
 import { childrenByGroup, groupSortKey } from "./groups";
-import { VIEW_IN_LIBRARY_TAG } from "./viewTags";
+import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "./viewTags";
 
 export const FilterQuerySchema = z.object({
   any: z.string().array(), // 1st array - content with at least one of these tags
@@ -21,6 +21,7 @@ export const FilterQuerySchema = z.object({
   // Groups (used by `filterLibrary` only). Optional, so other callers keep today's behaviour.
   showGrouped: z.boolean().optional(), // list every grouped item, not only `view:in-library` ones
   itemsOnly: z.boolean().optional(), // advanced search mode 2: items only, no group cards
+  ignoreHidden: z.boolean().optional(), // `/group/:id`: do not apply `view:hide-in-library`
   searchDescription: z.boolean().optional(), // search `extraData` too
   groupSort: GroupSortSchema.optional(), // default "newestChild"
 });
@@ -89,6 +90,8 @@ export type LibraryEntry =
  *
  * - A grouped item (a group id that has a record in `groups`) is hidden unless it has
  *   `view:in-library` or `showGrouped`/`itemsOnly` is on.
+ * - An item with `view:hide-in-library` is dropped (both modes) unless `any` or `all` contains that
+ *   tag exactly, or `ignoreHidden` is on (group pages). Group cards are not affected.
  * - Mode 1 (default): items and group cards, searched by title. Mode 2 (`itemsOnly`): every item,
  *   grouped or not, searched directly, no cards. `searchDescription` adds `extraData` to the
  *   searched fields in either mode.
@@ -112,6 +115,7 @@ export function filterLibrary(
     itemsOnly,
     searchDescription,
     groupSort,
+    ignoreHidden,
   } = query;
   const hasAny = !!any?.length;
   const hasAll = !!all?.length;
@@ -122,11 +126,16 @@ export function filterLibrary(
     (!hasAll || ArrayHasAll(tags, all));
   const notExcluded = (tags: string[]) =>
     !hasNone || !ArrayHasAnyModified(tags, none);
+  const hiddenOk =
+    ignoreHidden ||
+    !!any?.includes(VIEW_HIDE_IN_LIBRARY_TAG) ||
+    !!all?.includes(VIEW_HIDE_IN_LIBRARY_TAG);
   const itemShown = (c: ContentServerType) =>
-    itemsOnly ||
-    showGrouped ||
-    !c.groups?.some((id) => groups[id]) ||
-    c.tags.includes(VIEW_IN_LIBRARY_TAG);
+    (hiddenOk || !c.tags.includes(VIEW_HIDE_IN_LIBRARY_TAG)) &&
+    (itemsOnly ||
+      showGrouped ||
+      !c.groups?.some((id) => groups[id]) ||
+      c.tags.includes(VIEW_IN_LIBRARY_TAG));
 
   let items = Object.values(contentData).filter(
     (c) =>
