@@ -7,6 +7,7 @@ import {
   resetFilterAtom,
   tagsAtom,
 } from "@/atom";
+import AddToGroupModal from "@/components/craft/AddToGroupModal";
 import BulkUpdateModal from "@/components/craft/BulkUpdateModal";
 import { confirm } from "@/components/craft/confirm-dialog";
 import {
@@ -17,10 +18,14 @@ import {
 import TitleHeader from "@/components/craft/TitleHeader";
 import UpdateModal from "@/components/craft/UpdateModal";
 import { Button } from "@/components/ui/button";
+import { useGroupActions } from "@/hooks/useGroupActions";
 import TIMEOUTS from "@/lib/TIMEOUTS";
-import { filteredAtom } from "./atom";
+import { allGroupsAtom, filteredAtom } from "./atom";
+import { selectionEntriesAtom, selectionOnAtom } from "./atom.selection";
 import ExtendedCard from "./components/ExtendedCard";
+import ExtendedGroupCard from "./components/ExtendedGroupCard";
 import Filters from "./components/Filters";
+import ItemGroupsField from "./components/ItemGroupsField";
 import { ServerProvider, useServerActions } from "./contexts/Server.Context";
 
 function Child() {
@@ -38,6 +43,10 @@ function Child() {
 
   const filtered = useAtomValue(filteredAtom);
   const filterActive = useAtomValue(filterActiveAtom);
+  const groups = useAtomValue(allGroupsAtom);
+  const { addToGroups, disband } = useGroupActions(loadAllContent);
+  const setSelection = useSetAtom(selectionEntriesAtom);
+  const setSelectionOn = useSetAtom(selectionOnAtom);
 
   const initializeFilterDataFromURL = useSetAtom(
     initializeFilterDataFromURLAtom,
@@ -69,7 +78,21 @@ function Child() {
     <>
       {!!tags && (
         <>
-          <UpdateModal updateContentFunc={updateContentFunc} />
+          <UpdateModal
+            updateContentFunc={updateContentFunc}
+            extra={<ItemGroupsField onChanged={loadAllContent} />}
+          />
+          <AddToGroupModal
+            groups={groups}
+            addToGroups={async (itemIds, groupIds, newTitle) => {
+              const ok = await addToGroups(itemIds, groupIds, newTitle);
+              if (ok) {
+                setSelection([]); // the items may have left the list
+                setSelectionOn(false);
+              }
+              return ok;
+            }}
+          />
           <BulkUpdateModal bulkUpdateContentFunc={bulkUpdateContentFunc} />
         </>
       )}
@@ -134,9 +157,18 @@ function Child() {
         )
       ) : (
         <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4">
-          {filtered.map((data) => (
-            <ExtendedCard key={data.id} Content={data} />
-          ))}
+          {filtered.map((entry) =>
+            entry.kind === "item" ? (
+              <ExtendedCard key={entry.item.id} Content={entry.item} />
+            ) : (
+              <ExtendedGroupCard
+                key={entry.group.id}
+                group={entry.group}
+                items={entry.children}
+                onDisband={disband}
+              />
+            ),
+          )}
         </div>
       )}
     </>

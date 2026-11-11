@@ -1,5 +1,6 @@
 import {
-  filterData as filterContent,
+  filterLibrary,
+  type LibraryEntry,
   sanitizeStringForFileName,
 } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
@@ -21,7 +22,12 @@ import {
   updateTitleAtom,
 } from "@/components/craft/UpdateModal/atom";
 import { orpc } from "@/lib/orpc";
-import { allContentAtom, filteredAtom, serverTagsAtom } from "../atom";
+import {
+  allContentAtom,
+  allGroupsAtom,
+  filteredAtom,
+  serverTagsAtom,
+} from "../atom";
 import {
   selectionEntriesAtom,
   selectionOnAtom,
@@ -32,6 +38,7 @@ import {
 const useServer = () => {
   const setFiltered = useSetAtom(filteredAtom);
   const setAllContent = useSetAtom(allContentAtom);
+  const setAllGroups = useSetAtom(allGroupsAtom);
   const store = useStore();
   const realtime = useAtomValue(realtimeFilterAtom);
   const filterQuery = useAtomValue(FilterQueryAtom);
@@ -53,34 +60,54 @@ const useServer = () => {
   const runFilter = useCallback(() => {
     const all = store.get(allContentAtom);
     setFiltered(
-      filterContent(
+      filterLibrary(
         store.get(FilterQueryAtom),
         Object.fromEntries(all.map((c) => [c.id, c])),
+        store.get(allGroupsAtom),
       ),
     );
   }, [store, setFiltered]);
 
-  // Edit, bulk edit and delete patch both lists so an edited item doesn't vanish from the view
+  // Edit, bulk edit and delete patch both lists so an edited item doesn't vanish from the view.
+  // `fn` maps the whole library; the result is matched by id into the shown rows and cards (a card
+  // whose children are all gone drops out).
   const patchContent = useCallback(
     (fn: (old: ContentServerType[]) => ContentServerType[]) => {
-      setAllContent(fn);
-      setFiltered(fn);
+      const next = new Map(fn(store.get(allContentAtom)).map((c) => [c.id, c]));
+      setAllContent([...next.values()]);
+      setFiltered((old) =>
+        old.flatMap((e): LibraryEntry[] => {
+          if (e.kind === "item") {
+            const item = next.get(e.item.id);
+            return item ? [{ ...e, item }] : [];
+          }
+          const children = e.children.flatMap((c) => next.get(c.id) ?? []);
+          return children.length ? [{ ...e, children }] : [];
+        }),
+      );
     },
-    [setAllContent, setFiltered],
+    [store, setAllContent, setFiltered],
   );
 
-  const getAllContentMutation = useMutation(
-    orpc.main.getAllContent.mutationOptions({
-      onSuccess: (res) => {
-        getServerTagsMutation.mutate({});
-        setAllContent(Object.values(res));
-        runFilter();
-      },
-      onError: () => {
-        console.warn("DB, online ?");
-      },
-    }),
-  );
+  // Items, groups and tags load together, so the filter never sees one without the other
+  const getAllContentMutation = useMutation({
+    mutationFn: async () => {
+      const [content, groups] = await Promise.all([
+        orpc.main.getAllContent.call({}),
+        orpc.groups.list.call({}),
+      ]);
+      return { content, groups };
+    },
+    onSuccess: ({ content, groups }) => {
+      getServerTagsMutation.mutate({});
+      setAllContent(Object.values(content));
+      setAllGroups(groups);
+      runFilter();
+    },
+    onError: () => {
+      console.warn("DB, online ?");
+    },
+  });
 
   const [selectedEntries, setSelectedEntries] = useAtom(selectionEntriesAtom);
   const setSelectionModeOn = useSetAtom(selectionOnAtom);
@@ -110,7 +137,7 @@ const useServer = () => {
   }, [realtime, filterQuery, filterData]);
 
   const loadAllContent = useCallback(
-    () => getAllContentMutation.mutate({}),
+    () => getAllContentMutation.mutate(),
     [getAllContentMutation.mutate],
   );
 

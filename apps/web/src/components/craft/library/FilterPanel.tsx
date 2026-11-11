@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 export function FilterField({
   label,
@@ -32,6 +33,7 @@ export function FilterPanel({
   activeCount,
   realtime,
   onRealtimeChange,
+  extra,
   children,
 }: {
   search: string;
@@ -43,6 +45,8 @@ export function FilterPanel({
   /** Re-filter live as the search and filters change. */
   realtime: boolean;
   onRealtimeChange: (v: boolean) => void;
+  /** Row under the fields (the library's advanced search); it brings its own placement classes. */
+  extra?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -87,8 +91,14 @@ export function FilterPanel({
       <div className="order-2 grid gap-3 sm:order-none sm:col-span-2 sm:row-start-2 sm:grid-cols-2 lg:grid-cols-4">
         {children}
       </div>
+      {extra}
       {activeCount > 0 && (
-        <div className="order-4 flex items-center justify-between gap-3 border-t pt-2 text-xs text-muted-foreground sm:order-none sm:col-span-2 sm:row-start-3">
+        <div
+          className={cn(
+            "order-4 flex items-center justify-between gap-3 border-t pt-2 text-xs text-muted-foreground sm:order-none sm:col-span-2",
+            extra ? "sm:row-start-4" : "sm:row-start-3",
+          )}
+        >
           <span>
             {activeCount} {activeCount === 1 ? "filter" : "filters"} set.
             {realtime ? "" : " Press Filter to apply."}

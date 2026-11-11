@@ -17,6 +17,7 @@ const TextPage = lazy(() => import("./routes/txt/[id]"));
 const AudioPage = lazy(() => import("./routes/audio/[id]"));
 const GenerateJSONPage = lazy(() => import("./routes/generateJSON"));
 const SettingsPage = lazy(() => import("./routes/settings"));
+const GroupPage = lazy(() => import("./routes/group/[id]"));
 const ReferencePage = lazy(() => import("./routes/reference"));
 
 export const queryClient = new QueryClient({
@@ -57,6 +58,9 @@ export default function AppLayout() {
               </Route>
               <Route path="/settings">
                 <SettingsPage />
+              </Route>
+              <Route path="/group/:id">
+                <GroupPage />
               </Route>
               <Route path="/reference">
                 <ReferencePage />

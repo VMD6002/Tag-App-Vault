@@ -1,20 +1,25 @@
 import { contentTypes } from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { ListChecks, Pencil, Trash2 } from "lucide-react";
+import { FolderPlus, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import {
   allAtom,
   anyAtom,
+  itemsOnlyAtom,
   noneAtom,
   orderByLatestAtom,
   realtimeFilterAtom,
   resetFilterAtom,
   searchAtom,
+  searchDescriptionAtom,
+  showGroupedAtom,
   tagsAtom,
   typesAtom,
 } from "@/atom";
+import { addToGroupAtom } from "@/components/craft/AddToGroupModal.atom";
 import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
 import { confirm } from "@/components/craft/confirm-dialog";
+import AdvancedSearch from "@/components/craft/library/AdvancedSearch";
 import { typeInfo } from "@/components/craft/library/ContentCard";
 import {
   FilterField,
@@ -26,7 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { filteredAtom, serverTagsAtom } from "../atom";
+import { entryItems, filteredAtom, serverTagsAtom } from "../atom";
 import {
   selectAllAtom,
   selectionEntriesAtom,
@@ -45,7 +50,10 @@ export default function Filters() {
 
   const serverTags = useAtomValue(serverTagsAtom);
 
-  const filtered = useAtomValue(filteredAtom);
+  const entries = useAtomValue(filteredAtom);
+  // Group cards can't be selected or edited in bulk; selection and the counts work on item rows
+  const filtered = useMemo(() => entryItems(entries), [entries]);
+  const groupCount = entries.length - filtered.length;
 
   const [search, setSearch] = useAtom(searchAtom);
   const [types, setTypes] = useAtom(typesAtom);
@@ -54,7 +62,11 @@ export default function Filters() {
   const [none, setNone] = useAtom(noneAtom);
   const [orderByLatest, setOrderByLatest] = useAtom(orderByLatestAtom);
   const [realtime, setRealtime] = useAtom(realtimeFilterAtom);
+  const showGrouped = useAtomValue(showGroupedAtom);
+  const itemsOnly = useAtomValue(itemsOnlyAtom);
+  const searchDescription = useAtomValue(searchDescriptionAtom);
   const reset = useSetAtom(resetFilterAtom);
+  const setAddToGroup = useSetAtom(addToGroupAtom);
 
   const selectedEntries = useAtomValue(selectionEntriesAtom);
   const selectionOn = useAtomValue(selectionOnAtom);
@@ -141,7 +153,10 @@ export default function Filters() {
     none.length +
     all.length +
     types.length +
-    (search.trim() ? 1 : 0);
+    (search.trim() ? 1 : 0) +
+    Number(showGrouped) +
+    Number(itemsOnly) +
+    Number(searchDescription);
 
   const noneSelected = selectedEntries.length < 1;
 
@@ -155,6 +170,7 @@ export default function Filters() {
         onRealtimeChange={setRealtime}
         onClear={reset}
         activeCount={activeCount}
+        extra={<AdvancedSearch />}
       >
         <FilterField label="Type" hint="any of these">
           <MultiSelect
@@ -228,6 +244,15 @@ export default function Filters() {
                     {filtered.length}
                   </span>{" "}
                   {filtered.length === 1 ? "item" : "items"}
+                  {groupCount > 0 && (
+                    <>
+                      ,{" "}
+                      <span className="font-semibold text-foreground tabular-nums">
+                        {groupCount}
+                      </span>{" "}
+                      {groupCount === 1 ? "group" : "groups"}
+                    </>
+                  )}
                 </>
               )}
             </p>
@@ -256,6 +281,20 @@ export default function Filters() {
                 >
                   <Pencil />
                   Edit tags
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={noneSelected}
+                  onClick={() => setAddToGroup(selectedEntries)}
+                  title={
+                    noneSelected
+                      ? "Select items first"
+                      : "Put the selected items in a group"
+                  }
+                >
+                  <FolderPlus />
+                  Add to group…
                 </Button>
                 <Button
                   size="sm"
