@@ -264,9 +264,11 @@ Tags starting with `meta:` change behaviour rather than describing content.
 | Meta tag               | Used by       | Effect                                                                                                                                                                     |
 | ---------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `meta:caption`         | Sync          | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten.                                                            |
-| `meta:autoplay`        | Web (gallery) | Enables gallery autoplay.                                                                                                                                                  |
+| `meta:autoplay`        | Web (gallery) | Deprecated alias of `view:autoplay` (see below).                                                                                                                           |
 | `meta:yt-cookie`       | CLI           | Download with `./cookies/<Site>.txt` (relative to the CLI's cwd, so `Download/cookies/`). Requires a `Site:<name>` tag and that cookie file, otherwise the download fails. |
 | `meta:different-cover` | CLI           | Download the cover from the item's `cover` URL (direct fetch) instead of yt-dlp's thumbnail. Requires `cover` to be set.                                                   |
+
+Display preferences use the separate `view:` prefix, read only by the web app: `view:sort-a-z`, `view:sort-z-a`, `view:sort-newest`, `view:sort-oldest`, `view:sort-modified-newest`, `view:sort-modified-oldest`, `view:list`, `view:grid-auto`, `view:grid-2`, `view:grid-3`, `view:grid-4`, `view:autoplay`, `view:no-autoplay`, `view:width-<10..100>`. They set a gallery's defaults; the viewer's own choice still wins. Details: `docs/domain-model.md` (View tags).
 
 ---
 
