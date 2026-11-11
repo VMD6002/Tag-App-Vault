@@ -147,7 +147,7 @@ export default function GroupsPage() {
     void confirm
       .destructive({
         title: "Disband this group?",
-        description: `"${g.title || g.id}" is removed and its ${counts[g.id] ?? 0} items go back to the library. The items are kept.`,
+        description: `"${g.title || g.id}" is removed and its ${counts[g.id] ?? 0} ${(counts[g.id] ?? 0) === 1 ? "item goes" : "items go"} back to the library. The items are kept.`,
         confirmText: "Disband",
       })
       .then((ok) => {
