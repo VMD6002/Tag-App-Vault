@@ -17,10 +17,10 @@ export const galleryViewModes = [
 ] as const;
 export type GalleryViewMode = (typeof galleryViewModes)[number];
 
-/** Reserved `view:` tag read by `filterLibrary`, not a display option (so not in `VIEW_TAGS`): a grouped item carrying it still shows in the main library. */
+/** Reserved `view:` tag read by `filterLibrary`, not a display option (so not in `VIEW_TAGS`): a grouped item carrying it still shows in the main library (moot when `groupedInLibrary` is "show"). */
 export const VIEW_IN_LIBRARY_TAG = "view:in-library";
 
-/** Reserved tag read by `filterLibrary`: the item is left out of the main library unless the query's `any`/`all` names this tag. `/group/:id` ignores it. */
+/** Reserved tag read by `filterLibrary`: the item, or a group card when on the group's own tags, is left out of the main library unless the query's `any`/`all` names this tag. `/group/:id` ignores it. */
 export const VIEW_HIDE_IN_LIBRARY_TAG = "view:hide-in-library";
 
 export type ViewTagValues = Partial<{

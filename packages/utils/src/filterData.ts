@@ -5,7 +5,7 @@ import type {
   GroupsDB,
   GroupType,
 } from "@tagapp/utils/types";
-import { GroupSortSchema } from "@tagapp/utils/types";
+import { GroupedInLibrarySchema, GroupSortSchema } from "@tagapp/utils/types";
 import Fuse from "fuse.js";
 import z from "zod";
 import { childrenByGroup, groupSortKey } from "./groups";
@@ -24,6 +24,7 @@ export const FilterQuerySchema = z.object({
   ignoreHidden: z.boolean().optional(), // `/group/:id`: do not apply `view:hide-in-library`
   searchDescription: z.boolean().optional(), // search `extraData` too
   groupSort: GroupSortSchema.optional(), // default "newestChild"
+  groupedInLibrary: GroupedInLibrarySchema.optional(), // default "hide"; "show": grouped items show like any item
 });
 
 export type FilterQueryType = z.infer<typeof FilterQuerySchema>;
@@ -89,9 +90,11 @@ export type LibraryEntry =
  * Library rows for a query: items and group cards, sorted together (`docs/groups.md`).
  *
  * - A grouped item (a group id that has a record in `groups`) is hidden unless it has
- *   `view:in-library` or `showGrouped`/`itemsOnly` is on.
- * - An item with `view:hide-in-library` is dropped (both modes) unless `any` or `all` contains that
- *   tag exactly, or `ignoreHidden` is on (group pages). Group cards are not affected.
+ *   `view:in-library` or `showGrouped`/`itemsOnly` is on, or `groupedInLibrary` is "show" (then
+ *   only `view:hide-in-library` hides it, like any item).
+ * - An item, or a group card (the group's own tags), with `view:hide-in-library` is dropped (both
+ *   modes) unless `any` or `all` contains that tag exactly, or `ignoreHidden` is on (group pages).
+ *   Children of a hidden card follow the grouped-item rule above.
  * - Mode 1 (default): items and group cards, searched by title. Mode 2 (`itemsOnly`): every item,
  *   grouped or not, searched directly, no cards. `searchDescription` adds `extraData` to the
  *   searched fields in either mode.
@@ -115,6 +118,7 @@ export function filterLibrary(
     itemsOnly,
     searchDescription,
     groupSort,
+    groupedInLibrary,
     ignoreHidden,
   } = query;
   const hasAny = !!any?.length;
@@ -134,6 +138,7 @@ export function filterLibrary(
     (hiddenOk || !c.tags.includes(VIEW_HIDE_IN_LIBRARY_TAG)) &&
     (itemsOnly ||
       showGrouped ||
+      groupedInLibrary === "show" ||
       !c.groups?.some((id) => groups[id]) ||
       c.tags.includes(VIEW_IN_LIBRARY_TAG));
 
@@ -152,6 +157,8 @@ export function filterLibrary(
     : Object.values(groups).filter((g) => {
         const kids = children[g.id];
         if (!kids?.length || !notExcluded(g.tags)) return false;
+        if (!hiddenOk && g.tags.includes(VIEW_HIDE_IN_LIBRARY_TAG))
+          return false;
         if (!allTypes && !kids.some((c) => types.includes(c.type)))
           return false;
         return (

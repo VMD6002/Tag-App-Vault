@@ -115,6 +115,72 @@ describe("filterLibrary", () => {
       expect(ids({ itemsOnly: true, ignoreHidden: true })).toContain("h");
     });
   });
+  describe("group card with view:hide-in-library on its own tags", () => {
+    const H = VIEW_HIDE_IN_LIBRARY_TAG;
+    const g = () => {
+      const x = groups();
+      x.g1.tags = [H, "Own:1"];
+      return x;
+    };
+    const ids = (query: object) =>
+      labels(filterLibrary({ ...q, ...query }, content(), g()));
+    test("the card is dropped, its children follow the grouped-item rules", () => {
+      expect(ids({})).toEqual(["[g2]", "d", "solo"]); // a, b, c stay hidden (grouped)
+      expect(ids({ showGrouped: true })).toEqual([
+        "c",
+        "[g2]",
+        "b",
+        "a",
+        "d",
+        "solo",
+      ]);
+      expect(ids({ itemsOnly: true })).toEqual(["c", "b", "a", "d", "solo"]);
+    });
+    test("any or all containing the tag exactly shows it", () => {
+      expect(ids({ any: [H] })).toEqual(["[g1]"]);
+      expect(ids({ all: [H, "Own:1"] })).toEqual(["[g1]"]);
+      expect(ids({ any: ["view:*"] })).not.toContain("[g1]");
+      expect(ids({ any: ["Own:1"] })).not.toContain("[g1]");
+    });
+    test("a tag only on a child does not hide the card", () => {
+      const c = content();
+      c.a.tags = [H];
+      expect(labels(filterLibrary(q, c, groups()))).toContain("[g1]");
+    });
+  });
+  describe("groupedInLibrary: show", () => {
+    const H = VIEW_HIDE_IN_LIBRARY_TAG;
+    const show = { ...q, groupedInLibrary: "show" as const };
+    test("grouped items show like any item next to the cards", () => {
+      expect(labels(filterLibrary(show, content(), groups()))).toEqual(
+        labels(filterLibrary({ ...q, showGrouped: true }, content(), groups())),
+      );
+      expect(
+        labels(
+          filterLibrary(
+            { ...q, groupedInLibrary: "hide" },
+            content(),
+            groups(),
+          ),
+        ),
+      ).toEqual(labels(filterLibrary(q, content(), groups())));
+    });
+    test("view:hide-in-library still hides items, with the any/all exception", () => {
+      const c = {
+        ...content(),
+        h: item("h", 9, { groups: ["g1"], tags: [H] }),
+      };
+      expect(labels(filterLibrary(show, c, groups()))).not.toContain("h");
+      expect(
+        labels(filterLibrary({ ...show, any: [H] }, c, groups())),
+      ).toContain("h");
+    });
+    test("a hidden card stays hidden", () => {
+      const g = groups();
+      g.g1.tags = [H];
+      expect(labels(filterLibrary(show, content(), g))).not.toContain("[g1]");
+    });
+  });
   test("no groups record means nothing is hidden", () => {
     expect(labels(filterLibrary(q, content()))).toHaveLength(5);
   });

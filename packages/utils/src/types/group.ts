@@ -50,3 +50,7 @@ export type GroupChangeIdType = z.infer<typeof GroupChangeIdSchema>;
 /** Library sort position of a group card. */
 export const GroupSortSchema = z.enum(["newestChild", "created", "updated"]);
 export type GroupSortType = z.infer<typeof GroupSortSchema>;
+
+/** Device-local library setting: are grouped items hidden from the library (default) or shown like any item? */
+export const GroupedInLibrarySchema = z.enum(["hide", "show"]);
+export type GroupedInLibraryType = z.infer<typeof GroupedInLibrarySchema>;
