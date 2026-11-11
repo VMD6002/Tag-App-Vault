@@ -55,7 +55,7 @@ async function persist(w: {
  * delta, then writes. Op errors are bad input (they throw before changing anything).
  */
 export const runGroupOp = <R extends object>(
-  op: (s: GroupState, now: number) => R,
+  op: (s: GroupState<ContentServerType>, now: number) => R,
   touches: { content?: boolean } = {},
 ) =>
   withSyncLock(async () => {

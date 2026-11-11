@@ -290,6 +290,49 @@ test("sync creates the group records it doesn't know, existing ones stay", async
   expectConsistent();
 });
 
+test("sync sets the cover of a childless group once: stub or existing, never non-empty or with children", async () => {
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  seed(
+    [item("old", [], ["busy"])],
+    [
+      { ...group("empty"), cover: "" },
+      { ...group("own"), cover: "/own.webp" },
+      group("busy"),
+    ],
+  );
+  mkdirSync("media/Images/.covers", { recursive: true });
+  const send = async (id: string, groups: string[]) => {
+    await Bun.write(`Sync/${id}.${id}.png`, png);
+    await Bun.write(`Sync/cover.${id}.${id}.png`, png);
+    await Bun.write(
+      `Sync/${id}.${id}.json`,
+      JSON.stringify({
+        id,
+        title: id,
+        tags: [],
+        extraData: "",
+        added: 1,
+        lastUpdated: 1,
+        groups,
+      }),
+    );
+  };
+  await send("p1", ["empty", "own", "busy", "stub"]);
+  await syncContent();
+  const url = "/media/Images/.covers/cover.p1.p1"; // the library card URL: no extension
+  expect(groupsDB.data.empty?.cover).toBe(url);
+  expect(groupsDB.data.stub?.cover).toBe(url);
+  expect(groupsDB.data.own?.cover).toBe("/own.webp");
+  expect(groupsDB.data.busy?.cover).toBeUndefined();
+  // a second item does not replace it
+  await send("p2", ["stub"]);
+  await syncContent();
+  expect(groupsDB.data.stub?.cover).toBe(url);
+});
+
 test("hardResetTagCount counts group tags", async () => {
   seed([item("1", ["a", "b"])], [group("g", ["a", "gt"])]);
   tagDB.data = {};

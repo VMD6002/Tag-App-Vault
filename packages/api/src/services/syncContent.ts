@@ -1,5 +1,6 @@
 import { rename } from "node:fs/promises";
-import { CTypeDir } from "@tagapp/utils";
+import { CTypeDir, groupChildren, setInitialGroupCover } from "@tagapp/utils";
+import type { GroupType } from "@tagapp/utils/types";
 import { contentDataDB } from "../db/contentData.js";
 import { groupsDB } from "../db/groups.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
@@ -35,6 +36,8 @@ export const syncContent = (dir = SYNC) =>
       const moved: [string, string][] = [];
       let recorded = false;
       let newGroups: ReturnType<typeof addMissingGroups> = [];
+      // groups whose cover this item set, with the cover to put back on failure
+      const covered: [GroupType, string | undefined][] = [];
       try {
         for (const [from, to] of moves) {
           const move: [string, string] = [`${dir}/${from}`, `${dest}/${to}`];
@@ -42,18 +45,24 @@ export const syncContent = (dir = SYNC) =>
           moved.push(move);
         }
 
-        contentDataDB.data = {
-          [id]: isMedia ? data : { ...data, cover: ext[0] },
-          ...contentDataDB.data,
-        };
+        const item = isMedia ? data : { ...data, cover: ext[0] };
+        // before the item is in: a group "had children" when one already pointed at it
+        const empty = [...new Set(data.groups)].filter(
+          (g) => !groupChildren(contentDataDB.data, g).length,
+        );
+        contentDataDB.data = { [id]: item, ...contentDataDB.data };
         IncrementTagCount(tags);
         // a group id the Vault doesn't know gets a record (title = id)
         newGroups = addMissingGroups(stubsFor(data.groups));
+        for (const g of empty.flatMap((g) => groupsDB.data[g] ?? [])) {
+          const before = g.cover;
+          if (setInitialGroupCover(g, false, [item])) covered.push([g, before]);
+        }
         recorded = true;
         await Promise.all([
           contentDataDB.write(),
           tagDB.write(),
-          newGroups.length && groupsDB.write(),
+          (newGroups.length || covered.length) && groupsDB.write(),
         ]);
 
         // The sidecar goes last: it is the only copy of the metadata until the DB is on disk.
@@ -69,6 +78,7 @@ export const syncContent = (dir = SYNC) =>
           delete contentDataDB.data[id];
           DecrementTagCount(tags);
           dropGroups(newGroups);
+          for (const [g, cover] of covered) g.cover = cover;
         }
         for (const [src, dst] of moved.reverse()) {
           await rename(dst, src).catch((rollbackError) =>
