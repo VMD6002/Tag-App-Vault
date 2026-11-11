@@ -45,7 +45,7 @@ const ContentMold = ({
     return (
       <LazyVideo
         src={contentUrl}
-        className="max-h-80 min-h-36 w-full object-contain"
+        className="max-h-[var(--media-max,20rem)] min-h-[var(--media-min,9rem)] w-full object-contain"
         AutoPlay={currentMode !== "cover" ? autoPlay : false}
       />
     );
@@ -54,7 +54,7 @@ const ContentMold = ({
     <img
       src={coverUrl || contentUrl}
       alt=""
-      className="max-h-80 min-h-36 w-full object-contain"
+      className="max-h-[var(--media-max,20rem)] min-h-[var(--media-min,9rem)] w-full object-contain"
       loading="lazy"
     />
   );
