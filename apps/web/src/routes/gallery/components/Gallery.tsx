@@ -95,9 +95,9 @@ export default function Gallery({ filter }: { filter: GalleryFilter }) {
 
   const isList = galleryViewMode === "list";
 
-  // --media-min/--media-max size each card's media (GalleryContentCard); fewer columns get taller media, capped in rem for very large screens.
+  // --media-min/--media-max size each card's media (GalleryContentCard); fewer columns get taller media, capped in rem for very large screens; the single-column list has no cap and media fills the column width.
   const layoutClasses = {
-    list: "flex flex-col mx-auto gap-6 [--media-min:16rem] [--media-max:min(85vh,80rem)]",
+    list: "flex flex-col mx-auto gap-6 [--media-min:16rem] [--media-max:none]",
     responsive:
       "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 [--media-min:9rem] [--media-max:clamp(20rem,60vh,40rem)]",
     "grid-2":
