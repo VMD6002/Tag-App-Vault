@@ -1,11 +1,18 @@
 import { os } from "@orpc/server";
 import { contentDataDB } from "../db/contentData.js";
+import { groupsDB } from "../db/groups.js";
 import { tagDB } from "../db/tags.js";
 
 export const hardResetTagCount = os.handler(async () => {
   tagDB.data = {};
   for (const item of Object.values(contentDataDB.data)) {
     item.tags.forEach((tag) => {
+      tagDB.data[tag] = (tagDB.data[tag] ?? 0) + 1;
+    });
+  }
+  // group tags count like item tags
+  for (const group of Object.values(groupsDB.data)) {
+    group.tags.forEach((tag) => {
       tagDB.data[tag] = (tagDB.data[tag] ?? 0) + 1;
     });
   }
