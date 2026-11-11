@@ -1,7 +1,8 @@
+import { getCoverUrl } from "./coverUrl";
 import type {
   ContentJsonType,
+  ContentServerType,
   GroupChangeIdType,
-  GroupCoverPickType,
   GroupCreateType,
   GroupDeleteType,
   GroupFixType,
@@ -64,21 +65,25 @@ export const groupTagStats = (children: Item[]) => {
 export const sharedChildren = <T extends Item>(children: T[]) =>
   children.filter((c) => (c.groups?.length ?? 0) > 1);
 
-/** The group's own cover, else a child's by `pick`. Plain URL, or undefined. */
-export const pickGroupCover = (
+/**
+ * Sets the group's cover once: a group with no children and an empty cover gets the cover URL the UI
+ * shows (`/${getCoverUrl(item)}`) of the first of `items` that has one. Returns whether it was set.
+ */
+export function setInitialGroupCover(
   group: Pick<GroupType, "cover">,
-  children: Pick<Item, "cover" | "added">[],
-  pick: GroupCoverPickType = "newest",
-) => {
-  if (group.cover) return group.cover;
-  const ordered =
-    pick === "firstWithCover"
-      ? children
-      : [...children].sort((a, b) =>
-          pick === "newest" ? b.added - a.added : a.added - b.added,
-        );
-  return ordered.find((c) => c.cover)?.cover;
-};
+  hadChildren: boolean,
+  items: Parameters<typeof getCoverUrl>[0][],
+) {
+  if (hadChildren || group.cover) return false;
+  for (const item of items) {
+    const url = getCoverUrl(item);
+    if (url) {
+      group.cover = `/${url}`;
+      return true;
+    }
+  }
+  return false;
+}
 
 /** Sort position of a group card. Without children `newestChild` falls back to `added`. */
 export const groupSortKey = (
@@ -145,7 +150,7 @@ const need = (s: GroupState, id: string) => {
   return group;
 };
 
-const needItems = (s: GroupState, ids: string[]) =>
+const needItems = <T extends Item>(s: GroupState<T>, ids: string[]) =>
   [...new Set(ids)].map((id) => {
     const item = s.contentData[id];
     if (!item) throw new Error(`Content with id ${id} doesn't exist`);
@@ -202,9 +207,9 @@ export function updateGroup(
   return { group, tagDelta: d.done() };
 }
 
-/** Adds the group id to the items. Returns the items that changed. */
+/** Adds the group id to the items (the first ones into an empty group set its cover). Returns the items that changed. */
 export function addGroupItems(
-  s: GroupState,
+  s: GroupState<ContentServerType>,
   input: GroupItemsType,
   now: number,
 ) {
@@ -212,8 +217,10 @@ export function addGroupItems(
   const changed = needItems(s, input.itemIds).filter(
     (i) => !i.groups?.includes(input.id),
   );
+  const hadChildren = groupChildren(s.contentData, input.id).length > 0;
   for (const item of changed)
     setItemGroups(item, [...(item.groups ?? []), input.id], now);
+  setInitialGroupCover(group, hadChildren, changed);
   if (changed.length) group.lastUpdated = now;
   return { group, changed };
 }

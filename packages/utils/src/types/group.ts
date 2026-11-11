@@ -50,10 +50,3 @@ export type GroupChangeIdType = z.infer<typeof GroupChangeIdSchema>;
 /** Library sort position of a group card. */
 export const GroupSortSchema = z.enum(["newestChild", "created", "updated"]);
 export type GroupSortType = z.infer<typeof GroupSortSchema>;
-/** Which child's cover a cover-less group shows. */
-export const GroupCoverPickSchema = z.enum([
-  "newest",
-  "oldest",
-  "firstWithCover",
-]);
-export type GroupCoverPickType = z.infer<typeof GroupCoverPickSchema>;

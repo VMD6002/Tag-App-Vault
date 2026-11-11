@@ -1,8 +1,10 @@
-import { CTypeDir } from "@tagapp/utils";
-import type { ContentServerType } from "@tagapp/utils/types";
+import { CTypeDir } from "./constants";
+import type { ContentServerType } from "./types";
 
 /** Library cover URL of an item (relative to the site root), null when it has none. */
-export function getCoverUrl(Content: ContentServerType) {
+export function getCoverUrl(
+  Content: Pick<ContentServerType, "type" | "title" | "id" | "cover">,
+) {
   const pathPrefix = `media/${CTypeDir[Content.type]}`;
   const encodedTitle = encodeURIComponent(`${Content.title}.${Content.id}`);
   const encodedCover = Content.cover ? encodeURIComponent(Content.cover) : null;

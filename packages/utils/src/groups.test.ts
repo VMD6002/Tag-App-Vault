@@ -15,7 +15,6 @@ import {
   groupTagStats,
   mergeGroups,
   newGroupId,
-  pickGroupCover,
   planDeleteGroup,
   referencedGroups,
   removeGroupItems,
@@ -237,20 +236,6 @@ describe("group helpers", () => {
     expect(groupIdsOf(Object.values(c)).sort()).toEqual(["g1", "g2"]);
     expect(referencedGroups([c.a], groups()).map((g) => g.id)).toEqual(["g1"]);
   });
-  test("pickGroupCover: own cover wins, then newest / oldest / first with cover", () => {
-    const kids = [
-      item("x", 1, { cover: "old" }),
-      item("y", 2),
-      item("z", 3, { cover: "new" }),
-    ];
-    expect(pickGroupCover({ cover: "own" }, kids, "newest")).toBe("own");
-    expect(pickGroupCover({}, kids)).toBe("new");
-    expect(pickGroupCover({}, kids, "oldest")).toBe("old");
-    expect(pickGroupCover({}, [...kids].reverse(), "firstWithCover")).toBe(
-      "new",
-    );
-    expect(pickGroupCover({}, [item("n", 1)], "newest")).toBeUndefined();
-  });
   test("groupSortKey per mode", () => {
     const g = grp("g", { added: 3, lastUpdated: 4 });
     const kids = [item("x", 8), item("y", 9)];
@@ -369,6 +354,38 @@ describe("group ops", () => {
     removeGroupItems(s, { id: "g2", itemIds: ["solo"] }, 101);
     expect(s.contentData.solo?.groups).toBeUndefined();
     expect(() => addGroupItems(s, { id: "nope", itemIds: [] }, 1)).toThrow();
+  });
+  test("addItems sets the cover once: first added item with a cover, only for a childless group without one", () => {
+    const gal = (id: string, cover?: string) =>
+      item(id, 1, { type: "gallery", cover });
+    const mk = (g: Partial<GroupType>) => ({
+      contentData: {
+        n: gal("n"),
+        y: gal("y", "c y.jpg"),
+        z: gal("z", "z.jpg"),
+        k: item("k", 1, { groups: ["g"] }),
+      },
+      groups: { g: grp("g", g), e: grp("e", g) },
+    });
+    const s = mk({ cover: "" });
+    addGroupItems(s, { id: "e", itemIds: ["n", "y", "z"] }, 5);
+    expect(s.groups.e?.cover).toBe("/media/Galleries/y.y/c%20y.jpg");
+    // already has children: kept (empty here)
+    addGroupItems(s, { id: "g", itemIds: ["y"] }, 5);
+    expect(s.groups.g?.cover).toBe("");
+    // non-empty cover is never overwritten
+    const t = mk({ cover: "/own.png" });
+    addGroupItems(t, { id: "e", itemIds: ["y"] }, 5);
+    expect(t.groups.e?.cover).toBe("/own.png");
+    // no item has a cover: stays empty
+    const u = mk({});
+    addGroupItems(u, { id: "e", itemIds: ["n"] }, 5);
+    expect(u.groups.e?.cover).toBeUndefined();
+    // img items always have a library cover
+    const v = mk({});
+    (v.contentData as Record<string, ContentServerType>).i = item("i", 1);
+    addGroupItems(v, { id: "e", itemIds: ["i"] }, 5);
+    expect(v.groups.e?.cover).toBe("/media/Images/.covers/cover.i.i");
   });
   test("disband keeps items, strips the id, drops tag counts", () => {
     const { s, r } = run((s) => disbandGroup(s, { id: "g1" }, 70));

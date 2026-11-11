@@ -1,5 +1,6 @@
 export * from "./ArrayHelperFunctions";
 export * from "./constants";
+export * from "./coverUrl";
 export * from "./filterData";
 export * from "./filterEntries";
 export * from "./groups";
