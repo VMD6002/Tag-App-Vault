@@ -12,17 +12,30 @@ import CoverPanel, { confirmCover } from "../components/CoverPanel";
 import DocInfoSection from "../components/DocInfoSection";
 import ItemHeader from "../components/ItemHeader";
 import { useDoc } from "../contexts/Doc.Context";
-import { galleryDataAtom } from "./components/atom";
+import { galleryDataAtom, selectedContentAtom } from "./components/atom";
 import FloatingButtons from "./components/FloatingButton";
 import Gallery from "./components/Gallery";
 import GaleryContentModal from "./components/GalleryContentModal";
 import GalleryOptions from "./components/GalleryOptions";
+import { useGalleryFilter } from "./components/useGalleryFilter";
 
 export default function GalleryPage() {
   const { doc, encodedTitle, setCoverMutation, tags, orpc } = useDoc();
 
   const setGalleryData = useSetAtom(galleryDataAtom);
   const galleryData = useAtomValue(galleryDataAtom);
+  const filter = useGalleryFilter();
+  const setSelected = useSetAtom(selectedContentAtom);
+
+  // Never keep a selection the filter hides: delete would still act on it
+  useEffect(() => {
+    const visible = new Set(filter.filtered.map((e) => e.name));
+    setSelected((old) =>
+      old.every((n) => visible.has(n))
+        ? old
+        : old.filter((n) => visible.has(n)),
+    );
+  }, [filter.filtered, setSelected]);
 
   const getGalleryDataMutation = useMutation(
     orpc.gallery.getGalleryData.mutationOptions({
@@ -118,9 +131,9 @@ export default function GalleryPage() {
         />
       ) : (
         <>
-          {!!tags && <FloatingButtons />}
-          <GalleryOptions />
-          <Gallery />
+          {!!tags && <FloatingButtons filter={filter} />}
+          <GalleryOptions filter={filter} />
+          <Gallery filter={filter} />
           <div className="h-16" />
         </>
       )}

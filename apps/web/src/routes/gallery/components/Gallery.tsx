@@ -1,10 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
+import { SearchX } from "lucide-react";
 import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { EmptyState } from "@/components/craft/EmptyState";
+import { Button } from "@/components/ui/button";
 import { useDoc } from "../../contexts/Doc.Context";
 import {
   autoPlayFamily,
@@ -16,21 +17,20 @@ import {
 } from "./atom";
 import GalleryContentCard from "./GalleryContentCard";
 import TagContentModal from "./TagContentModal";
+import type { GalleryFilter } from "./useGalleryFilter";
 
-export default function Gallery() {
+export default function Gallery({ filter }: { filter: GalleryFilter }) {
   const { setCoverMutation, doc, setDoc, orpc } = useDoc();
 
   const galleryViewMode = useAtomValue(galleryViewModeFamily(doc.id));
   const sortMode = useAtomValue(sortModeFamily(doc.id));
-  const [galleryListWidth, setGalleryListWidth] = useAtom(
-    galleryListWidthFamily(doc.id),
-  );
-  const [galleryData, setGalleryData] = useAtom(galleryDataAtom);
+  const galleryListWidth = useAtomValue(galleryListWidthFamily(doc.id));
+  const setGalleryData = useSetAtom(galleryDataAtom);
   const setCurrentMode = useSetAtom(currentModeAtom);
   const setAutoPlay = useSetAtom(autoPlayFamily(doc.id));
 
   const sortedGalleryData = useMemo(() => {
-    return [...galleryData].sort((a, b) => {
+    return [...filter.filtered].sort((a, b) => {
       switch (sortMode) {
         case "created-date-asc":
           return a.createdAt - b.createdAt;
@@ -48,7 +48,7 @@ export default function Gallery() {
           return 0;
       }
     });
-  }, [galleryData, sortMode]);
+  }, [filter.filtered, sortMode]);
 
   const updateCover = useCallback(
     (coverPath: string) => {
@@ -110,23 +110,16 @@ export default function Gallery() {
 
   return (
     <>
-      {isList && (
-        <div className="sticky top-[6.75rem] z-10 mb-4 flex items-center gap-3 border-b bg-background/95 py-2">
-          <Label
-            id="gallery-width-label"
-            className="shrink-0 text-xs text-muted-foreground"
-          >
-            Column width
-          </Label>
-          <Slider
-            aria-labelledby="gallery-width-label"
-            className="flex-1"
-            value={[Number(galleryListWidth)]}
-            onValueChange={(o) => setGalleryListWidth([o].flat()[0])}
-            max={100}
-            step={1}
-          />
-        </div>
+      {sortedGalleryData.length === 0 && (
+        <EmptyState
+          icon={SearchX}
+          title="No files match these filters"
+          description="Try removing a tag or type, or shortening the search."
+        >
+          <Button variant="outline" size="sm" onClick={filter.clear}>
+            Clear filters and show everything
+          </Button>
+        </EmptyState>
       )}
       <div
         className={layoutClasses[galleryViewMode]}

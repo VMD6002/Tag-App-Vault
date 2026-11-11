@@ -1,15 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
 import FloatingToolbar from "@/components/craft/FloatingToolbar";
 import { useDoc } from "../../contexts/Doc.Context";
 import { currentModeAtom, galleryDataAtom, selectedContentAtom } from "./atom";
+import type { GalleryFilter } from "./useGalleryFilter";
 
-export default function FloatingButtons() {
+export default function FloatingButtons({ filter }: { filter: GalleryFilter }) {
   const { orpc, doc } = useDoc();
 
-  const [galleryData, setGalleryData] = useAtom(galleryDataAtom);
+  const setGalleryData = useSetAtom(galleryDataAtom);
+  const visible = filter.filtered;
   const [selected, setSelected] = useAtom(selectedContentAtom);
   const [mode, setMode] = useAtom(currentModeAtom);
 
@@ -48,7 +50,7 @@ export default function FloatingButtons() {
       mode={mode}
       noun="files"
       selectedCount={selected.length}
-      total={galleryData.length}
+      total={visible.length}
       onToggleCover={() =>
         setMode((old) => (old === "cover" ? "view" : "cover"))
       }
@@ -57,16 +59,16 @@ export default function FloatingButtons() {
         setMode((old) => (old === "delete" ? "view" : "delete"));
       }}
       onSelectAll={() => {
-        if (galleryData.length === selected.length) {
+        if (visible.length === selected.length) {
           setSelected([]);
           return;
         }
         confirm({
           title: "Select all files?",
-          description: `Selects all ${galleryData.length} files so you can delete them together.`,
+          description: `Selects all ${visible.length} files so you can delete them together.`,
           confirmText: "Select all",
         }).then((ok) => {
-          if (ok) setSelected(galleryData.map((e) => e.name));
+          if (ok) setSelected(visible.map((e) => e.name));
         });
       }}
       onDelete={removeGalleryContents}
