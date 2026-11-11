@@ -1,6 +1,8 @@
-import { contentTypes } from "@tagapp/utils";
+import { contentTypes, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
+  Eye,
+  EyeOff,
   FolderMinus,
   FolderPlus,
   ImageIcon,
@@ -63,7 +65,8 @@ export default function Filters({
   onRemoveFromGroup?: (ids: string[]) => void;
 } = {}) {
   const inGroup = !!onRemoveFromGroup;
-  const { setFiltered, removeContents, filterData } = useServerActions();
+  const { setFiltered, removeContents, filterData, setLibraryTag } =
+    useServerActions();
 
   const tags = useAtomValue(tagsAtom);
 
@@ -336,6 +339,36 @@ export default function Filters({
                     Remove from group
                   </Button>
                 )}
+                {inGroup &&
+                  (
+                    [
+                      [true, "Show in library", Eye, "added to"],
+                      [false, "Hide from library", EyeOff, "removed from"],
+                    ] as const
+                  ).map(([on, label, Icon, done]) => (
+                    <Button
+                      key={label}
+                      size="sm"
+                      variant="outline"
+                      disabled={noneSelected}
+                      onClick={() =>
+                        setLibraryTag(
+                          selectedEntries,
+                          VIEW_IN_LIBRARY_TAG,
+                          on,
+                          `${VIEW_IN_LIBRARY_TAG} ${done} ${selectedEntries.length} ${selectedEntries.length === 1 ? "item" : "items"}`,
+                        )
+                      }
+                      title={
+                        noneSelected
+                          ? "Select items first"
+                          : `${on ? "Add" : "Remove"} ${VIEW_IN_LIBRARY_TAG} on the selected items`
+                      }
+                    >
+                      <Icon />
+                      {label}
+                    </Button>
+                  ))}
                 <Button
                   size="sm"
                   variant="outline"

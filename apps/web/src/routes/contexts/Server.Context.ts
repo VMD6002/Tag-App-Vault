@@ -65,7 +65,11 @@ const useServer = ({ groupId }: { groupId?: string } = {}) => {
       const children = all.filter((c) => c.groups?.includes(groupId));
       setFiltered(
         filterLibrary(
-          { ...store.get(FilterQueryAtom), itemsOnly: true },
+          {
+            ...store.get(FilterQueryAtom),
+            itemsOnly: true,
+            ignoreHidden: true,
+          },
           Object.fromEntries(children.map((c) => [c.id, c])),
         ),
       );
@@ -276,6 +280,16 @@ const useServer = ({ groupId }: { groupId?: string } = {}) => {
     bulkUpdateMutation.mutate,
   ]);
 
+  // One bulk tag request for the selection (used by "Show/Hide in library"); the mutation patches the lists.
+  const setLibraryTag = useCallback(
+    (ids: string[], tag: string, on: boolean, done: string) =>
+      bulkUpdateMutation.mutate(
+        { ids, added: on ? [tag] : [], removed: on ? [] : [tag] },
+        { onSuccess: () => toast.success(done) },
+      ),
+    [bulkUpdateMutation.mutate],
+  );
+
   const removeContentsMutation = useMutation(
     orpc.main.removeContents.mutationOptions({
       onSuccess: (res) => {
@@ -319,6 +333,7 @@ const useServer = ({ groupId }: { groupId?: string } = {}) => {
     setFiltered,
     updateContentFunc,
     bulkUpdateContentFunc,
+    setLibraryTag,
     filterData,
     loadAllContent,
     serverSyncFunc,

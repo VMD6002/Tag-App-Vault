@@ -1,4 +1,4 @@
-import { VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
+import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
 import type { GroupsDB } from "@tagapp/utils/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { X } from "lucide-react";
@@ -18,7 +18,7 @@ import { allContentAtom, allGroupsAtom } from "../atom";
 
 /**
  * Item edit: the groups the item is in (link to the group, remove from it at once), a picker to add
- * it to more, and the `view:in-library` toggle, which only edits the tags box, saved with the item.
+ * it to more, and the `view:in-library` (once grouped) and `view:hide-in-library` (always) toggles, which only edits the tags box, saved with the item.
  * Group changes apply immediately; `onChanged` reloads the page's item and groups.
  */
 export function ItemGroupsFieldView({
@@ -37,7 +37,6 @@ export function ItemGroupsFieldView({
 
   if (!item) return null;
   const ids = item.groups ?? [];
-  const inLibrary = tags.some((t) => t.value === VIEW_IN_LIBRARY_TAG);
 
   return (
     <div className="grid gap-3">
@@ -81,29 +80,41 @@ export function ItemGroupsFieldView({
         exclude={ids}
         onSubmit={(groupIds) => addToGroups([item.id], groupIds)}
       />
-      {ids.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Switch
-            id="update-view-in-library"
-            checked={inLibrary}
-            onCheckedChange={(on) =>
-              setTags((old) =>
-                on
-                  ? [
-                      ...old,
-                      {
-                        label: VIEW_IN_LIBRARY_TAG,
-                        value: VIEW_IN_LIBRARY_TAG,
-                      },
-                    ]
-                  : old.filter((t) => t.value !== VIEW_IN_LIBRARY_TAG),
-              )
-            }
-          />
-          <Label htmlFor="update-view-in-library" className="text-sm">
-            Also show in the main library (tag {VIEW_IN_LIBRARY_TAG})
-          </Label>
-        </div>
+      {(
+        [
+          [
+            VIEW_IN_LIBRARY_TAG,
+            "update-view-in-library",
+            `Also show in the main library (tag ${VIEW_IN_LIBRARY_TAG})`,
+            ids.length > 0,
+          ],
+          [
+            VIEW_HIDE_IN_LIBRARY_TAG,
+            "update-view-hide-in-library",
+            `Hide from the main library (tag ${VIEW_HIDE_IN_LIBRARY_TAG})`,
+            true,
+          ],
+        ] as const
+      ).map(
+        ([tag, id, text, shown]) =>
+          shown && (
+            <div key={tag} className="flex items-center gap-2">
+              <Switch
+                id={id}
+                checked={tags.some((t) => t.value === tag)}
+                onCheckedChange={(on) =>
+                  setTags((old) =>
+                    on
+                      ? [...old, { label: tag, value: tag }]
+                      : old.filter((t) => t.value !== tag),
+                  )
+                }
+              />
+              <Label htmlFor={id} className="text-sm">
+                {text}
+              </Label>
+            </div>
+          ),
       )}
     </div>
   );

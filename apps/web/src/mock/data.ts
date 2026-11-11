@@ -1,6 +1,6 @@
 // Invented placeholder data for the dev-only #/mock pages. Nothing here is real; covers are
 // generated as gradient data URIs by stubs.ts, so no image is ever requested from the network.
-import { VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
+import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
 import type { ContentServerType, CType, GroupsDB } from "@tagapp/utils/types";
 
 export type Scenario =
@@ -486,6 +486,8 @@ function addGroups(db: MockDb, scenario: Scenario) {
   });
   const optIn = db.contents.gen_imgBridge01;
   if (optIn) optIn.tags = [...optIn.tags, VIEW_IN_LIBRARY_TAG];
+  const hidden = db.contents.gen_galMarket01; // hidden from the library, still on its group pages
+  if (hidden) hidden.tags = [...hidden.tags, VIEW_HIDE_IN_LIBRARY_TAG];
   const ghost = db.contents.gen_imgNoTags01;
   if (ghost) ghost.groups = ["grp_mockGhost01"];
 }
