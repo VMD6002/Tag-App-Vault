@@ -194,7 +194,12 @@ export default function Filters({
         onRealtimeChange={setRealtime}
         onClear={reset}
         activeCount={activeCount}
-        extra={<AdvancedSearch descriptionOnly={inGroup} />}
+        extra={
+          <AdvancedSearch
+            descriptionOnly={inGroup}
+            onShowGroupedChange={() => filterData()}
+          />
+        }
       >
         <FilterField label="Type" hint="any of these">
           <MultiSelect

@@ -10,9 +10,12 @@ import { Switch } from "@/components/ui/switch";
  */
 export default function AdvancedSearch({
   descriptionOnly = false,
+  onShowGroupedChange,
 }: {
   /** `/group/:id`: only the description switch makes sense there. */
   descriptionOnly?: boolean;
+  /** Runs after "Show grouped items" changes: the caller re-filters right away. */
+  onShowGroupedChange?: () => void;
 }) {
   const [showGrouped, setShowGrouped] = useAtom(showGroupedAtom);
   const [itemsOnly, setItemsOnly] = useAtom(itemsOnlyAtom);
@@ -28,7 +31,10 @@ export default function AdvancedSearch({
               id="show-grouped-switch"
               checked={showGrouped || itemsOnly}
               disabled={itemsOnly}
-              onCheckedChange={setShowGrouped}
+              onCheckedChange={(on) => {
+                setShowGrouped(on);
+                onShowGroupedChange?.(); // applies at once, unlike the other filters
+              }}
             />
             <Label
               htmlFor="show-grouped-switch"
