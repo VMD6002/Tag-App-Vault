@@ -7,7 +7,7 @@ import { confirm } from "@/components/craft/confirm-dialog";
 import GroupCard from "@/components/craft/library/GroupCard";
 import { Button } from "@/components/ui/button";
 
-/** Group card of the library: opens the group; Edit and Disband (hidden without the extension). Tags: its own plus its children's. */
+/** Group card of the library: opens the group; Edit and Disband icon buttons (hidden without the extension). Tags: its own plus its children's. */
 const ExtendedGroupCard = memo(
   ({
     group,
@@ -41,18 +41,18 @@ const ExtendedGroupCard = memo(
             <>
               <Button
                 variant="ghost"
-                size="xs"
-                title="Edit the group's title, tags, cover, description and id"
+                size="icon-xs"
+                title="Edit the title, tags, cover, description and id"
                 aria-label={`Edit ${name}`}
                 onClick={() => onEdit(group.id)}
               >
                 <Pencil />
-                Edit
               </Button>
               <Button
                 variant="ghost"
-                size="xs"
+                size="icon-xs"
                 title="Remove the group and keep its items"
+                aria-label={`Disband ${name}`}
                 onClick={() =>
                   void confirm
                     .destructive({
@@ -67,7 +67,6 @@ const ExtendedGroupCard = memo(
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               >
                 <Unlink />
-                Disband
               </Button>
             </>
           ) : undefined
