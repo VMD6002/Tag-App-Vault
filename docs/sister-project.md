@@ -52,6 +52,7 @@ Copies drift, so a change to a shared piece goes into both repos. Paths relative
 - The Vault's web app edits; 6.0's own `apps/web` is read-only and has no `/group` list.
 - Covers: the Vault stores plain URLs (`/media/...`); 6.0 stores `$Key` constants and expands them (`useGroupCover`). Fix Data differs accordingly ([groups](./groups.md#cover)). The Vault has no backup/restore.
 - `ModalShell`: stock `Dialog` here; hand-rolled in 6.0 (it must work in the content script's shadow root). Delete texts say "from the server" only here. `TagApp6.0/docs/groups.md` ("UI parity with the Vault") lists the rest.
+- "Grouped items in the library" (Settings): here localStorage `grouped_in_library` and a Select, a field of `FilterQueryAtom`. 6.0 stores it globally in WXT storage (`local:groupedInLibrary`, readable by the clip overlay), shows the same labels and help text as a button group (like its group position), and adds it to the query when the filter runs. 6.0's read-only `apps/web` has no settings page and keeps `hide`.
 - Commands: here `bun type:check` works and `bun test packages/api|utils|cli` exist; in 6.0 root `type:check` is broken (`bunx tsc --noEmit` in `apps/extension`, `bunx tsc -b` in `apps/web`) and `bun test` covers `packages/utils` only. Both: `bun check`.
 
 ## Porting a feature between the projects
