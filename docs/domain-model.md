@@ -53,4 +53,5 @@ To add one: handle it where it acts (CLI `createFlags.ts`, sync, or web) and add
 - `any`: item has at least one of these tags. `all`: item has every one. `none`: item has none of them (`ArrayHasAnyModified`, `ArrayHasAll` in `ArrayHelperFunctions.ts`).
 - `any` and `none` accept wildcards: `*` matches any item with at least one tag, `Parent:*` matches any tag starting with `Parent:`. `all` is exact.
 - `types`: empty means all types. `search`: Fuse.js fuzzy match on `title` (threshold 0.5), applied after the tag and type filters.
+- `filterEntries` (`filterEntries.ts`) applies the same tag, type and search rules to any `{ name, type, tags? }` list (a gallery's files), without sorting.
 - Result is always sorted by `added`: newest first when `orderByLatest`, else oldest first.
