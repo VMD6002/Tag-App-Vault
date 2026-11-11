@@ -317,7 +317,9 @@ function galleryEntries(count: number, longNames: boolean): GalleryEntry[] {
           ? ["Place:Harbour", "Mood:Calm", "favourite"]
           : i % 10 === 1
             ? manyTags(18)
-            : [],
+            : i % 3 === 1
+              ? ["Place:Market", "Mood:Busy"]
+              : [],
     };
   });
 }
