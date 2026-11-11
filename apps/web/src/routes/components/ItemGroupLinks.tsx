@@ -6,18 +6,15 @@ import { cn } from "@/lib/utils";
 
 /**
  * One group of an item: a link to `/group/:id` titled with the group's title. An id without a record
- * (yet) has no page, so it is plain text with the id. `onNavigate` runs on click (the edit modal
- * closes itself, its open state outlives the page).
+ * (yet) has no page, so it is plain text with the id.
  */
 export function GroupLink({
   id,
   groups,
-  onNavigate,
   className,
 }: {
   id: string;
   groups: GroupsDB;
-  onNavigate?: () => void;
   className?: string;
 }) {
   const clearFilter = useSetAtom(clearFilterForNavigationAtom);
@@ -32,10 +29,7 @@ export function GroupLink({
   return (
     <Link
       href={`/group/${encodeURIComponent(id)}`}
-      onClick={() => {
-        onNavigate?.();
-        clearFilter();
-      }}
+      onClick={clearFilter}
       className={cn(classes, "hover:underline")}
     >
       {group.title || id}

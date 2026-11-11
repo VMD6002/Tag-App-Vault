@@ -1,81 +1,56 @@
 import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
 import type { GroupsDB } from "@tagapp/utils/types";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { X } from "lucide-react";
-import GroupPicker from "@/components/craft/GroupPicker";
+import { useAtom, useAtomValue } from "jotai";
+import { useMemo } from "react";
+import MultiSelect from "@/components/craft/MultiSelect";
 import {
   updateGroupsAtom,
-  updateModalOpenAtom,
   updateTagsAtom,
 } from "@/components/craft/UpdateModal/atom";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { allGroupsAtom } from "../atom";
-import { GroupLink } from "./ItemGroupLinks";
 
 /**
- * Item edit: the item's pending groups (`updateGroupsAtom`: link to the group, remove), a picker to
- * add more, and the `view:in-library` (once grouped) and `view:hide-in-library` (always) toggles.
- * Everything here only edits atoms; Save sends groups and tags together, Cancel drops them.
+ * Item edit: the item's groups (existing ones only; groups are created on `/group`) as one
+ * `MultiSelect` on `updateGroupsAtom`, and the `view:in-library` (once grouped) and
+ * `view:hide-in-library` (always) toggles. Same as the extension's `GroupsField`. Everything here
+ * only edits atoms; Save sends groups and tags together, Cancel drops them.
  */
 export function ItemGroupsFieldView({ groups }: { groups: GroupsDB }) {
   const [tags, setTags] = useAtom(updateTagsAtom);
   const [ids, setIds] = useAtom(updateGroupsAtom);
-  const setModalOpen = useSetAtom(updateModalOpenAtom);
+
+  const options = useMemo(
+    () =>
+      Object.values(groups)
+        .map((g) => ({ label: g.title || g.id, value: g.id }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [groups],
+  );
 
   return (
-    <div className="grid gap-3">
-      <div className="grid gap-2">
-        <Label>Groups</Label>
-        {ids.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Not in any group.</p>
-        ) : (
-          <ul className="grid gap-1">
-            {ids.map((gid) => (
-              <li
-                key={gid}
-                className="flex items-center justify-between gap-2 border bg-muted/30 px-2 py-1 text-sm"
-              >
-                <GroupLink
-                  id={gid}
-                  groups={groups}
-                  onNavigate={() => setModalOpen(false)}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  title="Remove this item from the group (on Save)"
-                  aria-label={`Remove from ${groups[gid]?.title || gid}`}
-                  onClick={() => setIds((old) => old.filter((g) => g !== gid))}
-                >
-                  <X />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <GroupPicker
-        groups={groups}
-        exclude={ids}
-        onSubmit={async (groupIds) => {
-          setIds((old) => [...new Set([...old, ...groupIds])]);
-          return true;
-        }}
+    <div className="grid gap-2">
+      <Label>Groups</Label>
+      <MultiSelect
+        options={options}
+        placeholder="Add to a group"
+        label="Groups"
+        value={ids.map((id) => ({ label: groups[id]?.title || id, value: id }))}
+        onChange={(opts) => setIds(opts.map((o) => o.value))}
       />
       {(
         [
           [
             VIEW_IN_LIBRARY_TAG,
             "update-view-in-library",
-            `Also show in the main library (tag ${VIEW_IN_LIBRARY_TAG})`,
+            "Also show in the main library",
             ids.length > 0,
           ],
           [
             VIEW_HIDE_IN_LIBRARY_TAG,
             "update-view-hide-in-library",
-            `Hide from the main library (tag ${VIEW_HIDE_IN_LIBRARY_TAG})`,
+            "Hide from the main library",
             true,
           ],
         ] as const

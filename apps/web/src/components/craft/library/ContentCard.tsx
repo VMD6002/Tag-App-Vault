@@ -1,6 +1,5 @@
 import type { ContentServerType, CType } from "@tagapp/utils/types";
 import {
-  FolderPlus,
   GalleryVerticalEnd,
   Headphones,
   Image,
@@ -41,8 +40,6 @@ type Props = {
   /** Edit and remove only render when handlers are given (they need the browser extension). */
   onEdit?: () => void;
   onRemove?: () => void;
-  /** "Add to group…"; needs the browser extension like edit and remove. */
-  onAddToGroup?: () => void;
   /** Extra read-only rows under the tags (`/sync` shows the item's groups). */
   extra?: ReactNode;
 };
@@ -58,7 +55,6 @@ const ContentCard = memo(
     onPickCover,
     onEdit,
     onRemove,
-    onAddToGroup,
     extra,
   }: Props) => {
     const selectionOn = !!selection?.on;
@@ -168,7 +164,7 @@ const ContentCard = memo(
           >
             {formatDate(content.added)}
           </time>
-          {(onEdit || onRemove || onAddToGroup) && (
+          {(onEdit || onRemove) && (
             <div className="flex items-center gap-0.5">
               {onEdit && (
                 <Button
@@ -184,21 +180,6 @@ const ContentCard = memo(
                 >
                   <Pencil />
                   Edit
-                </Button>
-              )}
-              {onAddToGroup && (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={clickable}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddToGroup();
-                  }}
-                  title="Add to a group"
-                  aria-label={`Add ${content.title} to a group`}
-                >
-                  <FolderPlus />
                 </Button>
               )}
               {onRemove && (
