@@ -359,6 +359,37 @@ const handlers: Record<string, Handler> = {
     for (const e of list) if (e.name === i.content) e.tags = i.tags;
     return list;
   },
+  "gallery/bulkUpdateContentTags": (i: {
+    id: string;
+    contents: string[];
+    add: string[];
+    remove: string[];
+  }) => {
+    const list = state.db.galleries[i.id] ?? [];
+    const missing = i.contents.find((c) => !list.some((e) => e.name === c));
+    if (missing)
+      throw new MockError(
+        "NOT_FOUND",
+        404,
+        `File ${missing} doesn't exist in this gallery`,
+      );
+    // New objects, like the server: an identical reference would not re-render
+    const next = list.map((e) =>
+      i.contents.includes(e.name)
+        ? {
+            ...e,
+            tags: [
+              ...new Set([
+                ...(e.tags ?? []).filter((t) => !i.remove.includes(t)),
+                ...i.add,
+              ]),
+            ],
+          }
+        : e,
+    );
+    state.db.galleries[i.id] = next;
+    return next;
+  },
   "gallery/renameGalleryContent": (i: {
     id: string;
     oldContentName: string;
