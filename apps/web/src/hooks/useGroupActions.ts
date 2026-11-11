@@ -61,6 +61,19 @@ export function useGroupActions(onChanged: () => void) {
           orpc.groups.removeItems.call({ id, itemIds }),
           "Removed from the group",
         ),
+      /** Fix Data: one group, or every group without `id`. Toasts what it changed. */
+      async fix(id?: string) {
+        const res = await run(orpc.groups.fix.call({ id }));
+        if (!res) return false;
+        const { created, cleared } = res;
+        toast.success(
+          created.length + cleared.length === 0
+            ? "Nothing to fix"
+            : `Fixed: ${created.length} missing ${created.length === 1 ? "record" : "records"} created, ${cleared.length} empty ${cleared.length === 1 ? "cover" : "covers"} cleared`,
+        );
+        changed();
+        return true;
+      },
       disband: (id: string) =>
         act(orpc.groups.disband.call({ id }), "Group disbanded"),
     };

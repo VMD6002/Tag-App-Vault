@@ -7,7 +7,7 @@ import type { ContentServerType } from "@tagapp/utils/types";
 import { useMutation } from "@tanstack/react-query";
 import constate from "constate";
 import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useLayoutEffect } from "react";
 import { toast } from "sonner";
 import {
   FilterQueryAtom,
@@ -35,7 +35,8 @@ import {
   selectionTagsInitialAtom,
 } from "../atom.selection";
 
-const useServer = () => {
+/** `groupId` scopes the page to one group's children (`/group/:id`); without it this is the library. */
+const useServer = ({ groupId }: { groupId?: string } = {}) => {
   const setFiltered = useSetAtom(filteredAtom);
   const setAllContent = useSetAtom(allContentAtom);
   const setAllGroups = useSetAtom(allGroupsAtom);
@@ -59,6 +60,17 @@ const useServer = () => {
   // Filters the library held in memory (no server call)
   const runFilter = useCallback(() => {
     const all = store.get(allContentAtom);
+    if (groupId) {
+      // Only the group's children, as plain items: no cards, and nothing is hidden for being grouped
+      const children = all.filter((c) => c.groups?.includes(groupId));
+      setFiltered(
+        filterLibrary(
+          { ...store.get(FilterQueryAtom), itemsOnly: true },
+          Object.fromEntries(children.map((c) => [c.id, c])),
+        ),
+      );
+      return;
+    }
     setFiltered(
       filterLibrary(
         store.get(FilterQueryAtom),
@@ -66,7 +78,7 @@ const useServer = () => {
         store.get(allGroupsAtom),
       ),
     );
-  }, [store, setFiltered]);
+  }, [store, setFiltered, groupId]);
 
   // Edit, bulk edit and delete patch both lists so an edited item doesn't vanish from the view.
   // `fn` maps the whole library; the result is matched by id into the shown rows and cards (a card
@@ -88,6 +100,11 @@ const useServer = () => {
     },
     [store, setAllContent, setFiltered],
   );
+
+  // The group page must not flash the library's rows (or another group's) before its own load
+  useLayoutEffect(() => {
+    if (groupId) setFiltered([]);
+  }, [groupId, setFiltered]);
 
   // Items, groups and tags load together, so the filter never sees one without the other
   const getAllContentMutation = useMutation({

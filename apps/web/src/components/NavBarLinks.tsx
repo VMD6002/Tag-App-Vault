@@ -12,6 +12,7 @@ import { ModeToggle } from "./mode-toggle";
 
 const Links = [
   { Name: "Library", Path: "/" },
+  { Name: "Groups", Path: "/group" },
   { Name: "Sync", Path: "/sync" },
   { Name: "Downloads", Path: "/downloads" },
   { Name: "Tags", Path: "/tags" },

@@ -1,6 +1,12 @@
 import { contentTypes } from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { FolderPlus, ListChecks, Pencil, Trash2 } from "lucide-react";
+import {
+  FolderMinus,
+  FolderPlus,
+  ListChecks,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useMemo } from "react";
 import {
   allAtom,
@@ -43,7 +49,17 @@ import {
 } from "../atom.selection";
 import { useServerActions } from "../contexts/Server.Context";
 
-export default function Filters() {
+/**
+ * Filters and results bar. With `onRemoveFromGroup` (`/group/:id`) the selection bar gets
+ * "Remove from group", the advanced search shows only the description switch, and the
+ * delete button says "Delete".
+ */
+export default function Filters({
+  onRemoveFromGroup,
+}: {
+  onRemoveFromGroup?: (ids: string[]) => void;
+} = {}) {
+  const inGroup = !!onRemoveFromGroup;
   const { setFiltered, removeContents, filterData } = useServerActions();
 
   const tags = useAtomValue(tagsAtom);
@@ -85,15 +101,15 @@ export default function Filters() {
     () =>
       confirm
         .destructive({
-          title: `Remove ${selectedEntries.length} ${selectedEntries.length === 1 ? "item" : "items"}?`,
+          title: `${inGroup ? "Delete" : "Remove"} ${selectedEntries.length} ${selectedEntries.length === 1 ? "item" : "items"}?`,
           description:
             "The selected items and their files will be deleted from the server. This can't be undone.",
-          confirmText: "Remove",
+          confirmText: inGroup ? "Delete" : "Remove",
         })
         .then((ok) => {
           if (ok) removeContents(selectedEntries);
         }),
-    [selectedEntries, removeContents],
+    [selectedEntries, removeContents, inGroup],
   );
 
   const setSelectionTagsInitial = useSetAtom(selectionTagsInitialAtom);
@@ -154,8 +170,7 @@ export default function Filters() {
     all.length +
     types.length +
     (search.trim() ? 1 : 0) +
-    Number(showGrouped) +
-    Number(itemsOnly) +
+    (inGroup ? 0 : Number(showGrouped) + Number(itemsOnly)) +
     Number(searchDescription);
 
   const noneSelected = selectedEntries.length < 1;
@@ -170,7 +185,7 @@ export default function Filters() {
         onRealtimeChange={setRealtime}
         onClear={reset}
         activeCount={activeCount}
-        extra={<AdvancedSearch />}
+        extra={<AdvancedSearch descriptionOnly={inGroup} />}
       >
         <FilterField label="Type" hint="any of these">
           <MultiSelect
@@ -282,6 +297,22 @@ export default function Filters() {
                   <Pencil />
                   Edit tags
                 </Button>
+                {onRemoveFromGroup && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={noneSelected}
+                    onClick={() => onRemoveFromGroup(selectedEntries)}
+                    title={
+                      noneSelected
+                        ? "Select items first"
+                        : "Take the selected items out of this group; they are kept"
+                    }
+                  >
+                    <FolderMinus />
+                    Remove from group
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -309,7 +340,7 @@ export default function Filters() {
                   className="text-destructive hover:text-destructive"
                 >
                   <Trash2 />
-                  Remove
+                  {inGroup ? "Delete" : "Remove"}
                 </Button>
               </>
             )}
