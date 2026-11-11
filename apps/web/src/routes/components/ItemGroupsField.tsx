@@ -6,37 +6,25 @@ import { Link } from "wouter";
 import { clearFilterForNavigationAtom } from "@/atom";
 import GroupPicker from "@/components/craft/GroupPicker";
 import {
-  updateIdAtom,
+  updateGroupsAtom,
   updateModalOpenAtom,
   updateTagsAtom,
 } from "@/components/craft/UpdateModal/atom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useGroupActions } from "@/hooks/useGroupActions";
-import { allContentAtom, allGroupsAtom } from "../atom";
+import { allGroupsAtom } from "../atom";
 
 /**
- * Item edit: the groups the item is in (link to the group, remove from it at once), a picker to add
- * it to more, and the `view:in-library` (once grouped) and `view:hide-in-library` (always) toggles, which only edits the tags box, saved with the item.
- * Group changes apply immediately; `onChanged` reloads the page's item and groups.
+ * Item edit: the item's pending groups (`updateGroupsAtom`: link to the group, remove), a picker to
+ * add more, and the `view:in-library` (once grouped) and `view:hide-in-library` (always) toggles.
+ * Everything here only edits atoms; Save sends groups and tags together, Cancel drops them.
  */
-export function ItemGroupsFieldView({
-  item,
-  groups,
-  onChanged,
-}: {
-  item?: { id: string; groups?: string[] };
-  groups: GroupsDB;
-  onChanged: () => void;
-}) {
+export function ItemGroupsFieldView({ groups }: { groups: GroupsDB }) {
   const [tags, setTags] = useAtom(updateTagsAtom);
+  const [ids, setIds] = useAtom(updateGroupsAtom);
   const setModalOpen = useSetAtom(updateModalOpenAtom);
   const clearFilter = useSetAtom(clearFilterForNavigationAtom);
-  const { addToGroups, removeItems } = useGroupActions(onChanged);
-
-  if (!item) return null;
-  const ids = item.groups ?? [];
 
   return (
     <div className="grid gap-3">
@@ -64,9 +52,9 @@ export function ItemGroupsFieldView({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  title="Remove this item from the group"
+                  title="Remove this item from the group (on Save)"
                   aria-label={`Remove from ${groups[gid]?.title || gid}`}
-                  onClick={() => void removeItems(gid, [item.id])}
+                  onClick={() => setIds((old) => old.filter((g) => g !== gid))}
                 >
                   <X />
                 </Button>
@@ -78,7 +66,10 @@ export function ItemGroupsFieldView({
       <GroupPicker
         groups={groups}
         exclude={ids}
-        onSubmit={(groupIds) => addToGroups([item.id], groupIds)}
+        onSubmit={async (groupIds) => {
+          setIds((old) => [...new Set([...old, ...groupIds])]);
+          return true;
+        }}
       />
       {(
         [
@@ -120,16 +111,7 @@ export function ItemGroupsFieldView({
   );
 }
 
-/** Library and group pages: the item and groups come from the library atoms. */
-export default function ItemGroupsField({
-  onChanged,
-}: {
-  onChanged: () => void;
-}) {
-  const id = useAtomValue(updateIdAtom);
-  const item = useAtomValue(allContentAtom).find((c) => c.id === id);
-  const groups = useAtomValue(allGroupsAtom);
-  return (
-    <ItemGroupsFieldView item={item} groups={groups} onChanged={onChanged} />
-  );
+/** Library and group pages: the groups come from the library atoms. */
+export default function ItemGroupsField() {
+  return <ItemGroupsFieldView groups={useAtomValue(allGroupsAtom)} />;
 }

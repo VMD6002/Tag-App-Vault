@@ -82,7 +82,7 @@ function Child() {
         <>
           <UpdateModal
             updateContentFunc={updateContentFunc}
-            extra={<ItemGroupsField onChanged={loadAllContent} />}
+            extra={<ItemGroupsField />}
           />
           <AddToGroupModal
             groups={groups}

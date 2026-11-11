@@ -13,6 +13,8 @@ export const updateTitleAtom = atom("");
 export const updateCoverAtom = atom<string | undefined>(undefined);
 export const updateTagsAtom = atom<MultiSelectOption[]>([]);
 export const updateExtraDataAtom = atom("");
+/** Pending group ids of the item: set when the modal opens, sent with Save (`[]` clears them), dropped on Cancel. */
+export const updateGroupsAtom = atom<string[]>([]);
 
 // Optionaly Rendered
 export const updateContentUrlAtom = atom<string | undefined>(undefined);
@@ -24,6 +26,7 @@ export const updateDataAtom = atom((get) => ({
   cover: get(updateCoverAtom),
   contentUrl: get(updateContentUrlAtom),
   extraData: get(updateExtraDataAtom),
+  groups: get(updateGroupsAtom),
 }));
 
 export const updateExistsAtom = atom(true);

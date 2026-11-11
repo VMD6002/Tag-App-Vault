@@ -274,11 +274,28 @@ const handlers: Record<string, Handler> = {
   "main/getServerTags": () => state.tags,
   "main/getAllContent": () => state.db.contents,
   "main/getContent": (i: { id: string }) => doc(i.id),
-  "main/setContent": (
-    i: Pick<ContentServerType, "id" | "title" | "tags" | "extraData">,
-  ) => {
+  "main/setContent": ({
+    groups,
+    ...i
+  }: Pick<
+    ContentServerType,
+    "id" | "title" | "tags" | "extraData" | "groups"
+  >) => {
     const c = doc(i.id);
+    // same order as the server: unknown group ids fail before anything changes
+    const want = groups && [...new Set(groups)];
+    const bad = want?.find((g) => !state.db.groups[g]);
+    if (bad)
+      throw new MockError("BAD_REQUEST", 400, `Group ${bad} doesn't exist`);
     Object.assign(c, i, { lastUpdated: Math.floor(Date.now() / 1000) });
+    const had = c.groups ?? [];
+    for (const id of want ?? []) {
+      if (!had.includes(id))
+        groupOp((s, now) => addGroupItems(s, { id, itemIds: [i.id] }, now));
+    }
+    for (const id of had)
+      if (want && !want.includes(id))
+        groupOp((s, now) => removeGroupItems(s, { id, itemIds: [i.id] }, now));
     recount();
     return c;
   },

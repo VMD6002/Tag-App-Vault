@@ -17,6 +17,7 @@ import UpdateModal from "@/components/craft/UpdateModal";
 import {
   updateDataAtom,
   updateExtraDataAtom,
+  updateGroupsAtom,
   updateIdAtom,
   updateInputDisabledAtom,
   updateModalOpenAtom,
@@ -49,6 +50,7 @@ function useDocContext() {
   const setTitle = useSetAtom(updateTitleAtom);
   const setExtraData = useSetAtom(updateExtraDataAtom);
   const setUpdateTags = useSetAtom(updateTagsAtom);
+  const setUpdateGroups = useSetAtom(updateGroupsAtom);
   const setId = useSetAtom(updateIdAtom);
 
   const getContentMutation = useMutation(
@@ -58,6 +60,7 @@ function useDocContext() {
         setTitle(res.title);
         setExtraData(res.extraData);
         setUpdateTags(res.tags.map((tag) => ({ label: tag, value: tag })));
+        setUpdateGroups(res.groups ?? []);
         setDoc(res);
       },
       onError: () => {
@@ -66,12 +69,15 @@ function useDocContext() {
     }),
   );
 
+  const groupsQ = useQuery(orpc.groups.list.queryOptions({ input: {} }));
   const setUpdateModalOpen = useSetAtom(updateModalOpenAtom);
   const updateContentModified = useMutation(
     orpc.main.setContent.mutationOptions({
       onSuccess: (res) => {
         setDoc(res);
         setTitle(res.title);
+        setUpdateGroups(res.groups ?? []);
+        void groupsQ.refetch(); // joining can set a group's cover
         setUpdateModalOpen(false);
         setInputDisabled(false);
       },
@@ -125,21 +131,10 @@ function useDocContext() {
     }),
   );
 
-  // Group edits in the modal: refresh groups and the doc, keeping what is typed in the modal
-  const groupsQ = useQuery(orpc.groups.list.queryOptions({ input: {} }));
-  const refreshGroups = useCallback(() => {
-    void groupsQ.refetch();
-    orpc.main.getContent
-      .call({ id })
-      .then(setDoc)
-      .catch(() => toast.error("Couldn't refresh the item"));
-  }, [id, groupsQ.refetch]);
-
   return {
     tags,
     doc,
     groups: groupsQ.data ?? {},
-    refreshGroups,
     orpc,
     encodedTitle,
     getContentMutation,
@@ -153,8 +148,7 @@ function useDocContext() {
 export const [Provider, useDoc] = constate(useDocContext);
 
 export function Child({ children }: { children: React.ReactNode }) {
-  const { doc, groups, refreshGroups, getContentMutation, updateContentFunc } =
-    useDoc();
+  const { doc, groups, getContentMutation, updateContentFunc } = useDoc();
   const { id } = useRoute("/:contentType/:id")[1] as { id: string };
 
   useEffect(() => {
@@ -201,13 +195,7 @@ export function Child({ children }: { children: React.ReactNode }) {
     <>
       <UpdateModal
         updateContentFunc={updateContentFunc}
-        extra={
-          <ItemGroupsFieldView
-            item={doc}
-            groups={groups}
-            onChanged={refreshGroups}
-          />
-        }
+        extra={<ItemGroupsFieldView groups={groups} />}
       />
       {children}
     </>

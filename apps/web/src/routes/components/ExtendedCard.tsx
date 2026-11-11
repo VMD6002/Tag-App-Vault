@@ -8,6 +8,7 @@ import { confirm } from "@/components/craft/confirm-dialog";
 import ContentCard from "@/components/craft/library/ContentCard";
 import {
   updateExtraDataAtom,
+  updateGroupsAtom,
   updateIdAtom,
   updateModalOpenAtom,
   updateTagsAtom,
@@ -37,6 +38,7 @@ const ExtendedCard = memo(
     const setTitle = useSetAtom(updateTitleAtom);
     const setExtraData = useSetAtom(updateExtraDataAtom);
     const setUpdateTags = useSetAtom(updateTagsAtom);
+    const setUpdateGroups = useSetAtom(updateGroupsAtom);
 
     const setAddToGroup = useSetAtom(addToGroupAtom);
     const selectionOn = useAtomValue(selectionOnAtom);
@@ -46,12 +48,14 @@ const ExtendedCard = memo(
       setTitle(Content.title);
       setUpdateTags(Content.tags.map((o: string) => ({ label: o, value: o })));
       setExtraData(Content.extraData);
+      setUpdateGroups(Content.groups ?? []);
       setUpdateId(Content.id);
       setUpdateModalOpen(true);
     }, [
       Content,
       setUpdateModalOpen,
       setUpdateTags,
+      setUpdateGroups,
       setUpdateId,
       setTitle,
       setExtraData,

@@ -6,12 +6,16 @@ import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { confirm } from "@/components/craft/confirm-dialog";
 import TagChips from "@/components/craft/library/TagChips";
-import { updateModalOpenAtom } from "@/components/craft/UpdateModal/atom";
+import {
+  updateGroupsAtom,
+  updateModalOpenAtom,
+} from "@/components/craft/UpdateModal/atom";
 import { Button } from "@/components/ui/button";
 import { useDoc } from "../contexts/Doc.Context";
 
 export default function DocInfoSection() {
   const setUpdateModalOpen = useSetAtom(updateModalOpenAtom);
+  const setUpdateGroups = useSetAtom(updateGroupsAtom);
   const { tags, removeContent, doc } = useDoc();
   const added = new Date(doc.added * 1000);
   return (
@@ -48,7 +52,10 @@ export default function DocInfoSection() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setUpdateModalOpen(true)}
+            onClick={() => {
+              setUpdateGroups(doc.groups ?? []); // Cancel drops pending group edits
+              setUpdateModalOpen(true);
+            }}
             title="Edit the title, tags and notes"
           >
             <Pencil />

@@ -154,7 +154,7 @@ function Child({ id }: { id: string }) {
         <>
           <UpdateModal
             updateContentFunc={updateContentFunc}
-            extra={<ItemGroupsField onChanged={loadAllContent} />}
+            extra={<ItemGroupsField />}
           />
           <AddToGroupModal
             groups={groups}

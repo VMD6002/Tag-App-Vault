@@ -177,11 +177,17 @@ const useServer = ({ groupId }: { groupId?: string } = {}) => {
   const updateContentMutaion = useMutation(
     orpc.main.setContent.mutationOptions({
       onSuccess: (res) => {
+        // joined/left groups move the item between rows and cards and can set a group cover: reload
+        const oldGroups = store
+          .get(allContentAtom)
+          .find((c) => c.id === res.id)?.groups;
+        const groupsChanged =
+          [...(oldGroups ?? [])].sort().join() !==
+          [...(res.groups ?? [])].sort().join();
         patchContent((old) =>
           old.map((val) => {
             if (val.id !== res.id) return val;
-            const content = { ...val };
-            const oldTags = content.tags;
+            const oldTags = val.tags;
             const addedTags = res.tags.filter((tag) => !oldTags.includes(tag));
             setServerTags((old) => {
               const unSyncedTags = addedTags.filter(
@@ -196,6 +202,7 @@ const useServer = ({ groupId }: { groupId?: string } = {}) => {
         setUpdateTitle(res.title);
         setUpdateModalOpen(false);
         setInputDisabled(false);
+        if (groupsChanged) loadAllContent();
       },
       onError: () => {
         toast.error("Couldn't update, check console for error");
