@@ -13,6 +13,7 @@ import {
 } from "@/atom";
 import AddToGroupModal from "@/components/craft/AddToGroupModal";
 import BulkUpdateModal from "@/components/craft/BulkUpdateModal";
+import CoverConfirmModal from "@/components/craft/CoverConfirmModal";
 import { confirm } from "@/components/craft/confirm-dialog";
 import {
   EmptyState,
@@ -34,7 +35,6 @@ import {
   selectionEntriesAtom,
   selectionOnAtom,
 } from "../atom.selection";
-import { confirmCover } from "../components/CoverPanel";
 import ExtendedCard from "../components/ExtendedCard";
 import Filters from "../components/Filters";
 import ItemGroupsField from "../components/ItemGroupsField";
@@ -92,22 +92,26 @@ function Child({ id }: { id: string }) {
     };
   }, [initializeFilterDataFromURL, loadAllContent, clearFilter, setCoverMode]);
 
-  // Cover mode: confirm the clicked item's cover, save it as the group's cover URL, leave the mode
-  const pickCover = useCallback(
-    async (item: ContentServerType) => {
-      const url = getCoverUrl(item);
-      if (!url) return void toast.warning("This item has no cover");
-      const cover = `/${url}`; // stored covers are plain URLs
-      if (!(await confirmCover(cover))) return;
-      if (
-        await run(orpc.groups.update.call({ id, cover }), "Group cover set")
-      ) {
-        setCoverMode(false);
-        changed();
-      }
-    },
-    [id, changed, setCoverMode],
-  );
+  // Cover mode: the clicked item's cover opens the confirm modal; saving sets the group's cover URL and leaves the mode
+  const [pendingCover, setPendingCover] = useState<string | null>(null);
+  const [savingCover, setSavingCover] = useState(false);
+  const pickCover = useCallback((item: ContentServerType) => {
+    const url = getCoverUrl(item);
+    if (!url) return void toast.warning("This item has no cover");
+    setPendingCover(`/${url}`); // stored covers are plain URLs
+  }, []);
+  const saveCover = async (cover: string) => {
+    setSavingCover(true);
+    const ok = await run(
+      orpc.groups.update.call({ id, cover }),
+      "Group cover set",
+    );
+    setSavingCover(false);
+    if (!ok) return;
+    setPendingCover(null);
+    setCoverMode(false);
+    changed();
+  };
 
   const clearSelection = () => {
     setSelection([]);
@@ -144,6 +148,12 @@ function Child({ id }: { id: string }) {
 
   return (
     <>
+      <CoverConfirmModal
+        value={pendingCover}
+        onClose={() => setPendingCover(null)}
+        onConfirm={(c) => void saveCover(c)}
+        busy={savingCover}
+      />
       <GroupStatsModal
         open={statsOpen}
         onClose={() => setStatsOpen(false)}
@@ -236,7 +246,7 @@ function Child({ id }: { id: string }) {
           <EmptyState
             icon={FolderOpen}
             title="This group is empty"
-            description="Use “Add to group…” on items in the library to put them here."
+            description="Select items in the library and use “Add to group…”, or add a group in an item’s edit dialog."
           >
             {BACK}
           </EmptyState>

@@ -135,7 +135,9 @@ export function ConfirmProvider() {
             {config.icon}
             <AlertDialogTitle>{state.title || config.title}</AlertDialogTitle>
           </div>
-          <AlertDialogDescription>{state.description}</AlertDialogDescription>
+          <AlertDialogDescription className="[overflow-wrap:anywhere]">
+            {state.description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => handleClose(false)}>

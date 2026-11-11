@@ -2,8 +2,9 @@ import { parseViewTags } from "@tagapp/utils";
 import { useMutation } from "@tanstack/react-query";
 import { useAtomValue, useSetAtom } from "jotai";
 import { SearchX } from "lucide-react";
-import { useCallback, useLayoutEffect, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import CoverConfirmModal from "@/components/craft/CoverConfirmModal";
 import { confirm } from "@/components/craft/confirm-dialog";
 import { EmptyState } from "@/components/craft/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import TagContentModal from "./TagContentModal";
 import type { GalleryFilter } from "./useGalleryFilter";
 
 export default function Gallery({ filter }: { filter: GalleryFilter }) {
-  const { setCoverMutation, doc, setDoc, orpc } = useDoc();
+  const { setCoverMutation, doc, setDoc, orpc, encodedTitle } = useDoc();
 
   const galleryViewMode = useAtomValue(galleryViewModeFamily(doc.id));
   const sortMode = useAtomValue(sortModeFamily(doc.id));
@@ -51,12 +52,19 @@ export default function Gallery({ filter }: { filter: GalleryFilter }) {
     });
   }, [filter.filtered, sortMode]);
 
+  // Cover mode: a card click opens the confirm modal; "Set cover" saves the (possibly edited) path
+  const [pendingCover, setPendingCover] = useState<string | null>(null);
   const updateCover = useCallback(
+    (coverPath: string) => setPendingCover(coverPath),
+    [],
+  );
+  const saveCover = useCallback(
     (coverPath: string) => {
       setCoverMutation
         .mutateAsync({ name: doc.title, id: doc.id, coverPath })
         .then((res) => {
           setDoc((old) => ({ ...old, cover: res.coverPath }));
+          setPendingCover(null);
           setCurrentMode("view");
         })
         .catch((err) => {
@@ -142,6 +150,16 @@ export default function Gallery({ filter }: { filter: GalleryFilter }) {
       </div>
 
       <TagContentModal />
+      <CoverConfirmModal
+        value={pendingCover}
+        onClose={() => setPendingCover(null)}
+        onConfirm={saveCover}
+        busy={setCoverMutation.isPending}
+        label="Cover path (inside the gallery folder)"
+        toSrc={(path) =>
+          `/media/Galleries/${encodedTitle}/${path.split("/").map(encodeURIComponent).join("/")}`
+        }
+      />
     </>
   );
 }
