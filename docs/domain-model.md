@@ -42,11 +42,10 @@ Touch each place that switches on type: `contentTypes` and `CTypeDir` (`constant
 | Tag                    | Effect                                                                                                                                                                                               |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `meta:caption`         | A `.vtt` caption exists. `getSyncData` re-derives it on every sync from the caption file; `setDoc` and `deleteData` use it to move or remove the caption. The video page shows captions only with it |
-| `meta:autoplay`        | Deprecated alias of `view:autoplay` ([View tags](#view-tags)); still honoured by the gallery page                                                                                                    |
 | `meta:yt-cookie`       | CLI passes `./cookies/<Site>.txt` to yt-dlp; needs a `Site:<name>` tag: [download CLI](./download-cli.md)                                                                                            |
 | `meta:different-cover` | CLI downloads `item.cover` itself instead of yt-dlp's thumbnail: [download CLI](./download-cli.md)                                                                                                   |
 
-To add one: handle it where it acts (CLI `createFlags.ts` or sync) and add a row here. Display options go under `view:` instead.
+To add one: add its constant to `reservedTags.ts` and to `RESERVED_TAGS`, handle it where it acts (CLI `createFlags.ts` or sync, using the constant), and add a row here and in the reference note ([Reserved tags](#reserved-tags)). Display options go under `view:` instead.
 
 ## View tags
 
@@ -62,12 +61,17 @@ To add one: handle it where it acts (CLI `createFlags.ts` or sync) and add a row
 | `view:grid-2` / `view:grid-3` / `view:grid-4`             | Fixed grid of 2 / 3 / 4 columns                                         |
 | `view:autoplay` / `view:no-autoplay`                      | Videos autoplay in the gallery / do not                                 |
 | `view:width-<10..100>`                                    | Single-column width in percent (list layout only), e.g. `view:width-60` |
-| `meta:autoplay` (deprecated)                              | Alias of `view:autoplay`; use `view:autoplay` in new items              |
 
 - Precedence per option: the user's own choice on that gallery (`localStorage`) beats the `view:` tag, which beats the Settings default. A tag never writes the user's choice, so removing it takes effect on the next load; "Reset" in the gallery options drops the own choices and returns to the tag values.
 - Conflicts: if an item has several tags for one option (say `view:list` and `view:grid-2`), the first in the item's tag order wins. Out-of-range widths (`view:width-5`, `view:width-101`) are ignored.
 
-To add one: add it to `VIEW_TAGS` in `viewTags.ts` (and a test in `viewTags.test.ts`), wire the new option into the gallery atoms ([web app](./web-app.md#state)), and add a row here.
+To add one: add it to `VIEW_TAGS` in `viewTags.ts` (and a test in `viewTags.test.ts`; it joins the reserved list automatically), wire the new option into the gallery atoms ([web app](./web-app.md#state)), and add a row here.
+
+## Reserved tags
+
+`RESERVED_TAGS` (`packages/utils/src/reservedTags.ts`) is the one fixed list of tags the system reads: the `meta:` constants (`CAPTION_TAG`, `YT_COOKIE_TAG`, `DIFFERENT_COVER_TAG`, which the sync and CLI code import) plus every key of `VIEW_TAGS` plus `view:width-10` … `view:width-100` in steps of 10 (the parser still accepts any 10..100). `withReservedTags(tags)` returns `tags` followed by the reserved tags it lacks, no duplicates. The web app applies it to the extension's tags so the pickers always offer them ([web app](./web-app.md#extension-handshake-and-read-only-mode)). `reservedTags.test.ts` asserts no duplicates and that every reserved `view:` tag parses. The user-facing description is the "Tag shortcuts" section of `Notes/TagApp Server Reference.md`, shown on `/reference`: update it with this list.
+
+To add a reserved tag: new `meta:` tag, add a constant and list it in `RESERVED_TAGS`; new `view:` tag, add it to `VIEW_TAGS` only.
 
 ## Filtering
 

@@ -257,18 +257,44 @@ Changing covers later:
 
 ---
 
-## Meta tags
+## Tag shortcuts (meta: and view: tags)
 
-Tags starting with `meta:` change behaviour rather than describing content.
+Two reserved tag families have a special meaning. Everything else is a plain label. Tags are exact, case-sensitive strings. **All reserved tags below always appear in the tag pickers**, even if no item uses them yet, so you can pick them instead of typing them.
 
-| Meta tag               | Used by       | Effect                                                                                                                                                                     |
-| ---------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `meta:caption`         | Sync          | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten.                                                            |
-| `meta:autoplay`        | Web (gallery) | Deprecated alias of `view:autoplay` (see below).                                                                                                                           |
-| `meta:yt-cookie`       | CLI           | Download with `./cookies/<Site>.txt` (relative to the CLI's cwd, so `Download/cookies/`). Requires a `Site:<name>` tag and that cookie file, otherwise the download fails. |
-| `meta:different-cover` | CLI           | Download the cover from the item's `cover` URL (direct fetch) instead of yt-dlp's thumbnail. Requires `cover` to be set.                                                   |
+### `meta:` tags: behaviour
 
-Display preferences use the separate `view:` prefix, read only by the web app: `view:sort-a-z`, `view:sort-z-a`, `view:sort-newest`, `view:sort-oldest`, `view:sort-modified-newest`, `view:sort-modified-oldest`, `view:list`, `view:grid-auto`, `view:grid-2`, `view:grid-3`, `view:grid-4`, `view:autoplay`, `view:no-autoplay`, `view:width-<10..100>`. They set a gallery's defaults; the viewer's own choice still wins. Details: `docs/domain-model.md` (View tags).
+`meta:` tags change how an item is downloaded or stored. Each is read by one part of the system.
+
+| Meta tag               | Read by | Effect                                                                                                                                                                     |
+| ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meta:caption`         | Sync    | A caption `.vtt` exists. **Managed automatically** on sync from file presence; any manual value is overwritten, so don't add or remove it by hand.                         |
+| `meta:yt-cookie`       | CLI     | Download with `./cookies/<Site>.txt` (relative to the CLI's cwd, so `Download/cookies/`). Requires a `Site:<name>` tag and that cookie file, otherwise the download fails. |
+| `meta:different-cover` | CLI     | Download the cover from the item's `cover` URL (direct fetch) instead of yt-dlp's thumbnail. Requires `cover` to be set.                                                   |
+
+### `view:` tags: gallery display defaults
+
+`view:` tags set how a gallery opens. Only the web app reads them; they never change files. They apply to the gallery page.
+
+| View tag                                                  | Effect                                                                                                                                           |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `view:sort-a-z` / `view:sort-z-a`                         | Sort by name ascending / descending                                                                                                              |
+| `view:sort-newest` / `view:sort-oldest`                   | Sort by created date, newest / oldest first                                                                                                      |
+| `view:sort-modified-newest` / `view:sort-modified-oldest` | Sort by modified date, newest / oldest first                                                                                                     |
+| `view:list`                                               | Single-column layout                                                                                                                             |
+| `view:grid-auto`                                          | Responsive grid (column count follows the screen)                                                                                                |
+| `view:grid-2` / `view:grid-3` / `view:grid-4`             | Fixed grid of 2 / 3 / 4 columns                                                                                                                  |
+| `view:autoplay` / `view:no-autoplay`                      | Videos autoplay in the gallery / do not                                                                                                          |
+| `view:width-10` … `view:width-100`                        | Single-column width in percent (list layout only), e.g. `view:width-60`. The picker offers steps of 10; any value from 10 to 100 works if typed. |
+
+**Which value wins** for each option (sort, layout, width, autoplay):
+
+1. Your own choice on that gallery (the options bar). It is kept in this browser.
+2. The gallery's `view:` tag.
+3. The default from the Settings page.
+
+"Reset" in the gallery options forgets your own choices and returns to the tag values (or the Settings defaults when there is no tag). A tag never overrides what you picked, and removing a tag takes effect the next time the gallery opens.
+
+**Conflicts:** if one item has several tags for the same option (say `view:list` and `view:grid-2`), the first one in the item's tag order wins. Unknown `view:` tags and widths outside 10 to 100 are ignored.
 
 ---
 
