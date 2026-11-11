@@ -1,19 +1,20 @@
+import { parseViewTags } from "@tagapp/utils";
 import { useMutation } from "@tanstack/react-query";
 import { useAtomValue, useSetAtom } from "jotai";
 import { SearchX } from "lucide-react";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/craft/confirm-dialog";
 import { EmptyState } from "@/components/craft/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useDoc } from "../../contexts/Doc.Context";
 import {
-  autoPlayFamily,
   currentModeAtom,
   galleryDataAtom,
   galleryListWidthFamily,
   galleryViewModeFamily,
   sortModeFamily,
+  viewTagsFamily,
 } from "./atom";
 import GalleryContentCard from "./GalleryContentCard";
 import TagContentModal from "./TagContentModal";
@@ -27,7 +28,7 @@ export default function Gallery({ filter }: { filter: GalleryFilter }) {
   const galleryListWidth = useAtomValue(galleryListWidthFamily(doc.id));
   const setGalleryData = useSetAtom(galleryDataAtom);
   const setCurrentMode = useSetAtom(currentModeAtom);
-  const setAutoPlay = useSetAtom(autoPlayFamily(doc.id));
+  const setViewTags = useSetAtom(viewTagsFamily(doc.id));
 
   const sortedGalleryData = useMemo(() => {
     return [...filter.filtered].sort((a, b) => {
@@ -108,9 +109,10 @@ export default function Gallery({ filter }: { filter: GalleryFilter }) {
       "grid grid-cols-4 gap-3 [--media-min:9rem] [--media-max:clamp(20rem,50vh,40rem)]",
   };
 
-  useEffect(() => {
-    if (doc.tags.includes("meta:autoplay")) setAutoPlay(true);
-  }, [doc.tags, setAutoPlay]);
+  // Layout effect so a tag-driven sort/layout is in place before the first paint.
+  useLayoutEffect(() => {
+    setViewTags(parseViewTags(doc.tags));
+  }, [doc.tags, setViewTags]);
 
   return (
     <>

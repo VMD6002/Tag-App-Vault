@@ -115,9 +115,9 @@ export default function GalleryOptions({ filter }: { filter: GalleryFilter }) {
         <Button
           variant="ghost"
           onClick={resetAll}
-          title="Forget this gallery's own choices and follow the defaults from Settings."
+          title="Forget this gallery's own choices and follow its view: tags, or the defaults from Settings."
         >
-          Reset to defaults
+          Reset
         </Button>
         <Button
           variant={filtersOpen ? "default" : "outline"}

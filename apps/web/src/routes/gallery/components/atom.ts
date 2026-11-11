@@ -1,6 +1,15 @@
+import {
+  type GalleryViewMode,
+  galleryViewModes,
+  type SortMode,
+  sortModes,
+  type ViewTagValues,
+} from "@tagapp/utils";
 import { type Atom, atom } from "jotai";
 import { atomWithStorage, type RESET } from "jotai/utils";
 import { atomFamily } from "jotai-family";
+
+export { type GalleryViewMode, galleryViewModes, type SortMode, sortModes };
 
 export type entry = {
   name: string;
@@ -31,18 +40,31 @@ export const defaultListWidthAtom = atomWithStorage<number>(
   100,
 );
 
-/** Per-gallery option: `null` in storage means "follow the default"; RESET clears the override. */
-const galleryOption = <T>(key: string, fallback: Atom<T>) =>
+/** `view:` tag values of a gallery, set by the gallery page from the item's tags. */
+export const viewTagsFamily = atomFamily((_id: string) =>
+  atom<ViewTagValues>({}),
+);
+
+/** Per-gallery option, read as own choice > `view:` tag > default. `null` in storage means no own choice; RESET clears it. */
+const galleryOption = <T>(
+  key: string,
+  tagKey: keyof ViewTagValues,
+  fallback: Atom<T>,
+) =>
   atomFamily((id: string) => {
     const own = atomWithStorage<T | null>(`${key}_${id}`, null);
     return atom(
-      (get) => get(own) ?? get(fallback),
+      (get) =>
+        get(own) ??
+        (get(viewTagsFamily(id))[tagKey] as T | undefined) ??
+        get(fallback),
       (_get, set, value: T | typeof RESET) => set(own, value),
     );
   });
 
 export const autoPlayFamily = galleryOption(
   "gallery_autoPlay",
+  "autoPlay",
   defaultAutoPlayAtom,
 );
 
@@ -50,35 +72,21 @@ export const currentModeAtom = atom<"view" | "cover" | "delete">("view");
 
 export const selectedContentAtom = atom<string[]>([]);
 
-export const sortModes = [
-  "created-date-asc",
-  "created-date-desc",
-  "updated-date-asc",
-  "updated-date-desc",
-  "name-asc",
-  "name-desc",
-] as const;
-export type SortMode = (typeof sortModes)[number];
 export const sortModeFamily = galleryOption(
   "gallery_sortMode",
+  "sortMode",
   defaultSortModeAtom,
 );
 
-export const galleryViewModes = [
-  "list",
-  "responsive",
-  "grid-2",
-  "grid-3",
-  "grid-4",
-] as const;
-export type GalleryViewMode = (typeof galleryViewModes)[number];
 export const galleryViewModeFamily = galleryOption(
   "gallery_viewMode",
+  "viewMode",
   defaultViewModeAtom,
 );
 
 export const galleryListWidthFamily = galleryOption(
   "gallery_listWidth",
+  "listWidth",
   defaultListWidthAtom,
 );
 
