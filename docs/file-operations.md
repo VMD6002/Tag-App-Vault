@@ -19,7 +19,7 @@ Scope: how the server renames, deletes and edits library files and keeps the DB 
 
 - 404 if the id is unknown. If the title changed: img/video rename media, `.covers` cover (when present) and `.captions` caption (video with `meta:caption`) one by one with rollback, throwing `INTERNAL_SERVER_ERROR` on failure; gallery/audio/txt rename the folder (no rollback needed, single rename).
 - Tag diff goes through `DecrementTagCount` / `IncrementTagCount`. Then merges the input over the stored item, writes both DBs.
-- Input is only `id`, `title`, `tags`, `extraData`; `lastUpdated` is not touched.
+- Input is `id`, `title`, `tags`, `extraData` and optional `groups` (the item's full group list; `[]` clears it, absent keeps it). Unknown group ids are rejected with `BAD_REQUEST` before any file moves. Joined and left groups go through `addGroupItems` / `removeGroupItems` from `@tagapp/utils` (group `lastUpdated`, set-once cover rule, empty `groups` key dropped) after the tag diff, and `DB/groups.json` is written (after the item and tag DBs) only when membership changed. `lastUpdated` of the item changes only when its groups do. The router runs the call under `withSyncLock`, so it queues behind a running scan or sync.
 
 ## deleteData (`main.removeContents`)
 
