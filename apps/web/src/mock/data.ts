@@ -439,7 +439,8 @@ type GroupSeed = {
 
 /**
  * Groups over the items above (invented). `gen_galMarket01` sits in two groups, one child opts in
- * to the main library with `view:in-library`, `grp_mockEmpty01` has no children (so no library card)
+ * to the main library with `view:in-library`, `grp_mockHidden01` carries `view:hide-in-library` (no
+ * library card), `grp_mockEmpty01` has no children (so no library card)
  * and `gen_imgNoTags01` points at a group id without a record (it stays visible).
  */
 function addGroups(db: MockDb, scenario: Scenario) {
@@ -462,6 +463,13 @@ function addGroups(db: MockDb, scenario: Scenario) {
       tags: ["Topic:Cooking", "Series:Weeknight_Dinners"],
       cover: "/media/Images/.covers/cover.kitchen-and-garden",
       children: ["gen_vidPasta01", "gen_imgGarden01", "gen_galMarket01"],
+    },
+    {
+      // its card is left out of the library (`view:hide-in-library` on the group); the children are grouped, so hidden there too
+      id: "grp_mockHidden01",
+      title: "Hidden group",
+      tags: [VIEW_HIDE_IN_LIBRARY_TAG],
+      children: ["gen_vidBirds001", "gen_audRain0001"],
     },
     { id: GROUP_ID.empty, title: "Empty group", tags: [], children: [] },
   ];
