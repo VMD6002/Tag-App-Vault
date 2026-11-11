@@ -2,9 +2,14 @@ import { ArrayHasAll, ArrayHasAnyModified } from "@tagapp/utils";
 import type {
   ContentServerDataType,
   ContentServerType,
+  GroupsDB,
+  GroupType,
 } from "@tagapp/utils/types";
+import { GroupSortSchema } from "@tagapp/utils/types";
 import Fuse from "fuse.js";
 import z from "zod";
+import { childrenByGroup, groupSortKey } from "./groups";
+import { VIEW_IN_LIBRARY_TAG } from "./viewTags";
 
 export const FilterQuerySchema = z.object({
   any: z.string().array(), // 1st array - content with at least one of these tags
@@ -13,13 +18,22 @@ export const FilterQuerySchema = z.object({
   search: z.string(), // string for title search
   types: z.string().array(), // array of types to include (e.g., ["img", "video"])
   orderByLatest: z.boolean(),
+  // Groups (used by `filterLibrary` only). Optional, so other callers keep today's behaviour.
+  showGrouped: z.boolean().optional(), // list every grouped item, not only `view:in-library` ones
+  itemsOnly: z.boolean().optional(), // advanced search mode 2: items only, no group cards
+  searchDescription: z.boolean().optional(), // search `extraData` too
+  groupSort: GroupSortSchema.optional(), // default "newestChild"
 });
 
 export type FilterQueryType = z.infer<typeof FilterQuerySchema>;
 
-function GetSearchIds(ids: ContentServerType[], search: string) {
+function GetSearchIds<T extends { title: string; extraData: string }>(
+  ids: T[],
+  search: string,
+  description = false,
+) {
   const fuse = new Fuse(ids, {
-    keys: ["title"],
+    keys: description ? ["title", "extraData"] : ["title"],
     threshold: 0.5,
     shouldSort: false,
   });
@@ -63,4 +77,101 @@ export function filterData(
     : preFinalResult.sort((a, b) => a.added - b.added);
 
   return finalResult;
+}
+
+/** One row of the library list: an item, or a group card with all its children. */
+export type LibraryEntry =
+  | { kind: "item"; item: ContentServerType }
+  | { kind: "group"; group: GroupType; children: ContentServerType[] };
+
+/**
+ * Library rows for a query: items and group cards, sorted together (`docs/groups.md`).
+ *
+ * - A grouped item (a group id that has a record in `groups`) is hidden unless it has
+ *   `view:in-library` or `showGrouped`/`itemsOnly` is on.
+ * - Mode 1 (default): items and group cards, searched by title. Mode 2 (`itemsOnly`): every item,
+ *   grouped or not, searched directly, no cards. `searchDescription` adds `extraData` to the
+ *   searched fields in either mode.
+ * - A card passes `none` on its own tags only; `any`/`all` on its own tags or on any single child's
+ *   tags; `types` when some child has one of the types. Groups without children never appear.
+ * - Cards sort by `groupSort`, items by `added`; ties keep items before cards.
+ */
+export function filterLibrary(
+  query: FilterQueryType,
+  contentData: ContentServerDataType,
+  groups: GroupsDB = {},
+) {
+  const {
+    any,
+    all,
+    none,
+    search,
+    types,
+    orderByLatest,
+    showGrouped,
+    itemsOnly,
+    searchDescription,
+    groupSort,
+  } = query;
+  const hasAny = !!any?.length;
+  const hasAll = !!all?.length;
+  const hasNone = !!none?.length;
+  const allTypes = !types.length;
+  const positive = (tags: string[]) =>
+    (!hasAny || ArrayHasAnyModified(tags, any)) &&
+    (!hasAll || ArrayHasAll(tags, all));
+  const notExcluded = (tags: string[]) =>
+    !hasNone || !ArrayHasAnyModified(tags, none);
+  const itemShown = (c: ContentServerType) =>
+    itemsOnly ||
+    showGrouped ||
+    !c.groups?.some((id) => groups[id]) ||
+    c.tags.includes(VIEW_IN_LIBRARY_TAG);
+
+  let items = Object.values(contentData).filter(
+    (c) =>
+      (allTypes || types.includes(c.type)) &&
+      itemShown(c) &&
+      notExcluded(c.tags) &&
+      positive(c.tags),
+  );
+
+  // shortcut: children are recomputed from the full content record per call; revisit at ~20k items.
+  const children = childrenByGroup(contentData);
+  let cards = itemsOnly
+    ? []
+    : Object.values(groups).filter((g) => {
+        const kids = children[g.id];
+        if (!kids?.length || !notExcluded(g.tags)) return false;
+        if (!allTypes && !kids.some((c) => types.includes(c.type)))
+          return false;
+        return (
+          (!hasAny && !hasAll) ||
+          positive(g.tags) ||
+          kids.some((c) => positive(c.tags))
+        );
+      });
+
+  // run search last (expensive)
+  if (search.trim()) {
+    items = GetSearchIds(items, search, searchDescription);
+    cards = GetSearchIds(cards, search, searchDescription);
+  }
+
+  const entries: LibraryEntry[] = [
+    ...items.map((item) => ({ kind: "item" as const, item })),
+    ...cards.map((group) => ({
+      kind: "group" as const,
+      group,
+      children: children[group.id] ?? [],
+    })),
+  ];
+  const key = (e: LibraryEntry) =>
+    e.kind === "item"
+      ? e.item.added
+      : groupSortKey(e.group, e.children, groupSort);
+  // Array.sort is stable: equal keys keep items before cards.
+  return entries.sort((a, b) =>
+    orderByLatest ? key(b) - key(a) : key(a) - key(b),
+  );
 }
