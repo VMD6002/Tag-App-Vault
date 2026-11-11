@@ -1,4 +1,4 @@
-import type { GroupSortType } from "@tagapp/utils/types";
+import type { GroupedInLibraryType, GroupSortType } from "@tagapp/utils/types";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
@@ -35,6 +35,12 @@ export const groupSortAtom = atomWithStorage<GroupSortType>(
   "newestChild",
 );
 
+/** Device-local (Settings page): grouped items hidden from the library unless `view:in-library` ("hide", default), or shown like any item ("show"). */
+export const groupedInLibraryAtom = atomWithStorage<GroupedInLibraryType>(
+  "grouped_in_library",
+  "hide",
+);
+
 /** Live re-filtering on every change instead of the Filter button. */
 export const realtimeFilterAtom = atomWithStorage("realtime-filter", false);
 
@@ -49,6 +55,7 @@ export const FilterQueryAtom = atom((get) => ({
   itemsOnly: get(itemsOnlyAtom),
   searchDescription: get(searchDescriptionAtom),
   groupSort: get(groupSortAtom),
+  groupedInLibrary: get(groupedInLibraryAtom),
 }));
 
 /** True when a search, type or tag filter is set (tells "empty library" from "no results"). */

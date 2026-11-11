@@ -1,3 +1,4 @@
+import { VIEW_HIDE_IN_LIBRARY_TAG } from "@tagapp/utils";
 import type { GroupType } from "@tagapp/utils/types";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtomValue } from "jotai";
@@ -10,6 +11,8 @@ import SeeMore from "@/components/craft/UpdateModal/SeeMore";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { run } from "@/hooks/useGroupActions";
 import { orpc } from "@/lib/orpc";
 
@@ -116,6 +119,28 @@ export default function GroupEditModal({
           onChange={setPicked}
         />
       </Field>
+      <div className="flex items-center gap-2">
+        <Switch
+          id="group-hide-in-library"
+          checked={picked.some((t) => t.value === VIEW_HIDE_IN_LIBRARY_TAG)}
+          onCheckedChange={(on) =>
+            setPicked((old) =>
+              on
+                ? [
+                    ...old,
+                    {
+                      label: VIEW_HIDE_IN_LIBRARY_TAG,
+                      value: VIEW_HIDE_IN_LIBRARY_TAG,
+                    },
+                  ]
+                : old.filter((t) => t.value !== VIEW_HIDE_IN_LIBRARY_TAG),
+            )
+          }
+        />
+        <Label htmlFor="group-hide-in-library" className="text-sm">
+          Hide from the main library
+        </Label>
+      </div>
       <SeeMore>
         <Field label="Cover URL" htmlFor="group-cover">
           <Input

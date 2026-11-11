@@ -2,6 +2,7 @@ import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
 import type { GroupsDB } from "@tagapp/utils/types";
 import { useAtom, useAtomValue } from "jotai";
 import { useMemo } from "react";
+import { groupedInLibraryAtom } from "@/atom";
 import MultiSelect from "@/components/craft/MultiSelect";
 import {
   updateGroupsAtom,
@@ -13,13 +14,14 @@ import { allGroupsAtom } from "../atom";
 
 /**
  * Item edit: the item's groups (existing ones only; groups are created on `/group`) as one
- * `MultiSelect` on `updateGroupsAtom`, and the `view:in-library` (once grouped) and
+ * `MultiSelect` on `updateGroupsAtom`, and the `view:in-library` (once grouped, and only while Settings hides grouped items) and
  * `view:hide-in-library` (always) toggles. Same as the extension's `GroupsField`. Everything here
  * only edits atoms; Save sends groups and tags together, Cancel drops them.
  */
 export function ItemGroupsFieldView({ groups }: { groups: GroupsDB }) {
   const [tags, setTags] = useAtom(updateTagsAtom);
   const [ids, setIds] = useAtom(updateGroupsAtom);
+  const groupedShown = useAtomValue(groupedInLibraryAtom) === "show";
 
   const options = useMemo(
     () =>
@@ -45,7 +47,7 @@ export function ItemGroupsFieldView({ groups }: { groups: GroupsDB }) {
             VIEW_IN_LIBRARY_TAG,
             "update-view-in-library",
             "Also show in the main library",
-            ids.length > 0,
+            ids.length > 0 && !groupedShown, // pointless when Settings shows grouped items
           ],
           [
             VIEW_HIDE_IN_LIBRARY_TAG,

@@ -1,4 +1,8 @@
-import { contentTypes, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
+import {
+  contentTypes,
+  VIEW_HIDE_IN_LIBRARY_TAG,
+  VIEW_IN_LIBRARY_TAG,
+} from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   CheckSquare,
@@ -15,6 +19,7 @@ import { useCallback, useMemo } from "react";
 import {
   allAtom,
   anyAtom,
+  groupedInLibraryAtom,
   itemsOnlyAtom,
   noneAtom,
   orderByLatestAtom,
@@ -86,6 +91,7 @@ export default function Filters({
   const [orderByLatest, setOrderByLatest] = useAtom(orderByLatestAtom);
   const [realtime, setRealtime] = useAtom(realtimeFilterAtom);
   const showGrouped = useAtomValue(showGroupedAtom);
+  const groupedShown = useAtomValue(groupedInLibraryAtom) === "show";
   const itemsOnly = useAtomValue(itemsOnlyAtom);
   const searchDescription = useAtomValue(searchDescriptionAtom);
   const reset = useSetAtom(resetFilterAtom);
@@ -179,7 +185,7 @@ export default function Filters({
     all.length +
     types.length +
     (search.trim() ? 1 : 0) +
-    (inGroup ? 0 : Number(showGrouped) + Number(itemsOnly)) +
+    (inGroup ? 0 : Number(showGrouped && !groupedShown) + Number(itemsOnly)) +
     Number(searchDescription);
 
   const noneSelected = selectedEntries.length < 1;
@@ -355,33 +361,40 @@ export default function Filters({
                 {inGroup &&
                   (
                     [
-                      [true, "Show in library", Eye, "added to"],
-                      [false, "Hide from library", EyeOff, "removed from"],
+                      [true, "Show in library", Eye],
+                      [false, "Hide from library", EyeOff],
                     ] as const
-                  ).map(([on, label, Icon, done]) => (
-                    <Button
-                      key={label}
-                      size="sm"
-                      variant="outline"
-                      disabled={noneSelected}
-                      onClick={() =>
-                        setLibraryTag(
-                          selectedEntries,
-                          VIEW_IN_LIBRARY_TAG,
-                          on,
-                          `${VIEW_IN_LIBRARY_TAG} ${done} ${selectedEntries.length} ${selectedEntries.length === 1 ? "item" : "items"}`,
-                        )
-                      }
-                      title={
-                        noneSelected
-                          ? "Select items first"
-                          : `${on ? "Add" : "Remove"} ${VIEW_IN_LIBRARY_TAG} on the selected items`
-                      }
-                    >
-                      <Icon />
-                      {label}
-                    </Button>
-                  ))}
+                  ).map(([show, label, Icon]) => {
+                    // Settings "shown" mode: showing means removing view:hide-in-library
+                    const tag = groupedShown
+                      ? VIEW_HIDE_IN_LIBRARY_TAG
+                      : VIEW_IN_LIBRARY_TAG;
+                    const on = groupedShown ? !show : show;
+                    return (
+                      <Button
+                        key={label}
+                        size="sm"
+                        variant="outline"
+                        disabled={noneSelected}
+                        onClick={() =>
+                          setLibraryTag(
+                            selectedEntries,
+                            tag,
+                            on,
+                            `${tag} ${on ? "added to" : "removed from"} ${selectedEntries.length} ${selectedEntries.length === 1 ? "item" : "items"}`,
+                          )
+                        }
+                        title={
+                          noneSelected
+                            ? "Select items first"
+                            : `${on ? "Add" : "Remove"} ${tag} on the selected items`
+                        }
+                      >
+                        <Icon />
+                        {label}
+                      </Button>
+                    );
+                  })}
                 <Button
                   size="sm"
                   variant="outline"

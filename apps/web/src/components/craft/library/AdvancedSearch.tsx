@@ -1,11 +1,17 @@
-import { useAtom } from "jotai";
-import { itemsOnlyAtom, searchDescriptionAtom, showGroupedAtom } from "@/atom";
+import { useAtom, useAtomValue } from "jotai";
+import {
+  groupedInLibraryAtom,
+  itemsOnlyAtom,
+  searchDescriptionAtom,
+  showGroupedAtom,
+} from "@/atom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 /**
- * Library row under the filters: "Show grouped items", the two search modes (they exclude each
+ * Library row under the filters: "Show grouped items" (hidden when Settings shows grouped items
+ * anyway), the two search modes (they exclude each
  * other: groups and items by title, or items only) and the independent "Search descriptions too".
  */
 export default function AdvancedSearch({
@@ -18,6 +24,7 @@ export default function AdvancedSearch({
   onShowGroupedChange?: () => void;
 }) {
   const [showGrouped, setShowGrouped] = useAtom(showGroupedAtom);
+  const groupedShown = useAtomValue(groupedInLibraryAtom) === "show";
   const [itemsOnly, setItemsOnly] = useAtom(itemsOnlyAtom);
   const [searchDescription, setSearchDescription] = useAtom(
     searchDescriptionAtom,
@@ -26,28 +33,30 @@ export default function AdvancedSearch({
     <div className="order-2 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-2 sm:order-none sm:col-span-2 sm:row-start-3">
       {!descriptionOnly && (
         <>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-grouped-switch"
-              checked={showGrouped || itemsOnly}
-              disabled={itemsOnly}
-              onCheckedChange={(on) => {
-                setShowGrouped(on);
-                onShowGroupedChange?.(); // applies at once, unlike the other filters
-              }}
-            />
-            <Label
-              htmlFor="show-grouped-switch"
-              className="text-sm"
-              title={
-                itemsOnly
-                  ? "Items only search already shows every item"
-                  : "List every grouped item, not only those tagged view:in-library"
-              }
-            >
-              Show grouped items
-            </Label>
-          </div>
+          {!groupedShown && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-grouped-switch"
+                checked={showGrouped || itemsOnly}
+                disabled={itemsOnly}
+                onCheckedChange={(on) => {
+                  setShowGrouped(on);
+                  onShowGroupedChange?.(); // applies at once, unlike the other filters
+                }}
+              />
+              <Label
+                htmlFor="show-grouped-switch"
+                className="text-sm"
+                title={
+                  itemsOnly
+                    ? "Items only search already shows every item"
+                    : "List every grouped item, not only those tagged view:in-library"
+                }
+              >
+                Show grouped items
+              </Label>
+            </div>
+          )}
           <fieldset className="flex items-center gap-2">
             <legend className="sr-only">Search mode</legend>
             <span className="text-xs text-muted-foreground" aria-hidden>

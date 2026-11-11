@@ -1,7 +1,7 @@
-import type { GroupSortType } from "@tagapp/utils/types";
+import type { GroupedInLibraryType, GroupSortType } from "@tagapp/utils/types";
 import { useAtom } from "jotai";
 import { Link } from "wouter";
-import { groupSortAtom } from "@/atom";
+import { groupedInLibraryAtom, groupSortAtom } from "@/atom";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { Label } from "@/components/ui/label";
 import {
@@ -32,7 +32,13 @@ const groupSortLabels: Record<GroupSortType, string> = {
   updated: "Group last updated",
 };
 
+const groupedInLibraryLabels: Record<GroupedInLibraryType, string> = {
+  hide: "Hidden unless tagged view:in-library",
+  show: "Shown unless tagged view:hide-in-library",
+};
+
 export default function SettingsPage() {
+  const [groupedInLibrary, setGroupedInLibrary] = useAtom(groupedInLibraryAtom);
   const [groupSort, setGroupSort] = useAtom(groupSortAtom);
   const [sortMode, setSortMode] = useAtom(defaultSortModeAtom);
   const [viewMode, setViewMode] = useAtom(defaultViewModeAtom);
@@ -153,6 +159,43 @@ export default function SettingsPage() {
           <p className="text-xs text-muted-foreground">
             Where group cards sit among the items. Applies the next time the
             library is filtered.
+          </p>
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Grouped items in the library</Label>
+          <Select
+            value={groupedInLibrary}
+            items={groupedInLibraryLabels}
+            onValueChange={(v) =>
+              v && setGroupedInLibrary(v as GroupedInLibraryType)
+            }
+          >
+            <SelectTrigger
+              className="w-72"
+              aria-label="Grouped items in the library"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent
+              alignItemWithTrigger={false}
+              className="w-auto min-w-(--anchor-width)"
+            >
+              <SelectGroup>
+                {(
+                  Object.keys(groupedInLibraryLabels) as GroupedInLibraryType[]
+                ).map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {groupedInLibraryLabels[m]}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Whether items that belong to a group also appear in the main
+            library. "Show grouped items" in the advanced search and the "Also
+            show in the main library" switch only matter when they are hidden.
+            Applies the next time the library is filtered.
           </p>
         </div>
       </section>
