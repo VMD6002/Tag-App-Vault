@@ -2,6 +2,8 @@ import { atom } from "jotai";
 import type { MultiSelectOption } from "@/atom";
 
 export const selectionOnAtom = atom(false);
+/** `/group/:id` "Choose cover" mode: clicking an item card picks its cover for the group. Exclusive with selection. */
+export const coverModeAtom = atom(false);
 export const selectionEntriesAtom = atom<string[]>([]);
 export const selectionTagsAtom = atom<MultiSelectOption[]>([]);
 export const selectionTagsInitialAtom = atom<string[]>([]);
@@ -22,6 +24,13 @@ export const toggleSelectionModeAtom = atom(null, (get, set) => {
   const on = get(selectionOnAtom);
   if (on) set(selectionEntriesAtom, []);
   set(selectionOnAtom, !on);
+  set(coverModeAtom, false);
+});
+
+export const toggleCoverModeAtom = atom(null, (get, set) => {
+  set(selectionEntriesAtom, []);
+  set(selectionOnAtom, false);
+  set(coverModeAtom, !get(coverModeAtom));
 });
 
 export const selectAllAtom = atom(null, (_get, set, filtered: string[]) => {

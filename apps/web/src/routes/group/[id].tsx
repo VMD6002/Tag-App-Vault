@@ -1,6 +1,8 @@
-import { useAtomValue, useSetAtom } from "jotai";
+import type { ContentServerType } from "@tagapp/utils/types";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { FolderOpen, SearchX } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Link, useLocation, useRoute } from "wouter";
 import {
   clearFilterForNavigationAtom,
@@ -22,11 +24,18 @@ import GroupHeader from "@/components/craft/group/GroupHeader";
 import GroupStatsModal from "@/components/craft/group/GroupStatsModal";
 import UpdateModal from "@/components/craft/UpdateModal";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { useGroupActions } from "@/hooks/useGroupActions";
+import { run, useGroupActions } from "@/hooks/useGroupActions";
 import { useGroupCover } from "@/hooks/useGroupCover";
+import { getCoverUrl } from "@/lib/coverUrl";
+import { orpc } from "@/lib/orpc";
 import TIMEOUTS from "@/lib/TIMEOUTS";
 import { allContentAtom, allGroupsAtom, filteredAtom } from "../atom";
-import { selectionEntriesAtom, selectionOnAtom } from "../atom.selection";
+import {
+  coverModeAtom,
+  selectionEntriesAtom,
+  selectionOnAtom,
+} from "../atom.selection";
+import { confirmCover } from "../components/CoverPanel";
 import ExtendedCard from "../components/ExtendedCard";
 import Filters from "../components/Filters";
 import ItemGroupsField from "../components/ItemGroupsField";
@@ -64,6 +73,7 @@ function Child({ id }: { id: string }) {
     useGroupActions(loadAllContent);
   const setSelection = useSetAtom(selectionEntriesAtom);
   const setSelectionOn = useSetAtom(selectionOnAtom);
+  const [coverMode, setCoverMode] = useAtom(coverModeAtom);
   const initializeFilterDataFromURL = useSetAtom(
     initializeFilterDataFromURLAtom,
   );
@@ -78,8 +88,28 @@ function Child({ id }: { id: string }) {
     TIMEOUTS.clearAllTimeouts();
     TIMEOUTS.setTimeout(() => loadAllContent(), 100);
     // The filters live in the URL query and in module atoms: don't let them leak into the library
-    return clearFilter;
-  }, [initializeFilterDataFromURL, loadAllContent, clearFilter]);
+    return () => {
+      clearFilter();
+      setCoverMode(false);
+    };
+  }, [initializeFilterDataFromURL, loadAllContent, clearFilter, setCoverMode]);
+
+  // Cover mode: confirm the clicked item's cover, save it as the group's cover URL, leave the mode
+  const pickCover = useCallback(
+    async (item: ContentServerType) => {
+      const url = getCoverUrl(item);
+      if (!url) return void toast.warning("This item has no cover");
+      const cover = `/${url}`; // stored covers are plain URLs
+      if (!(await confirmCover(cover))) return;
+      if (
+        await run(orpc.groups.update.call({ id, cover }), "Group cover set")
+      ) {
+        setCoverMode(false);
+        changed();
+      }
+    },
+    [id, changed, setCoverMode],
+  );
 
   const clearSelection = () => {
     setSelection([]);
@@ -130,8 +160,8 @@ function Child({ id }: { id: string }) {
           />
           <AddToGroupModal
             groups={groups}
-            addToGroups={async (itemIds, groupIds, newTitle) => {
-              const ok = await addToGroups(itemIds, groupIds, newTitle);
+            addToGroups={async (itemIds, groupIds) => {
+              const ok = await addToGroups(itemIds, groupIds);
               if (ok) clearSelection();
               return ok;
             }}
@@ -139,7 +169,6 @@ function Child({ id }: { id: string }) {
           <BulkUpdateModal bulkUpdateContentFunc={bulkUpdateContentFunc} />
           <GroupEditModal
             group={editOpen ? group : null}
-            items={children}
             onClose={() => setEditOpen(false)}
             onSaved={(newId) => {
               if (newId !== id)
@@ -217,7 +246,11 @@ function Child({ id }: { id: string }) {
       ) : (
         <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4">
           {items.map((item) => (
-            <ExtendedCard key={item.id} Content={item} />
+            <ExtendedCard
+              key={item.id}
+              Content={item}
+              onPickCover={coverMode ? pickCover : undefined}
+            />
           ))}
         </div>
       )}

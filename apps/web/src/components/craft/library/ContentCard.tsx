@@ -36,6 +36,8 @@ type Props = {
   /** Plays the video in the card instead of showing the cover (used as poster). */
   video?: { src: string; caption?: string };
   selection?: { on: boolean; selected: boolean; onToggle: () => void };
+  /** Cover-choosing mode (`/group/:id`): a click picks this card; links and buttons are inert. */
+  onPickCover?: () => void;
   /** Edit and remove only render when handlers are given (they need the browser extension). */
   onEdit?: () => void;
   onRemove?: () => void;
@@ -51,24 +53,29 @@ const ContentCard = memo(
     onCoverError,
     video,
     selection,
+    onPickCover,
     onEdit,
     onRemove,
     onAddToGroup,
   }: Props) => {
     const selectionOn = !!selection?.on;
     const selected = !!selection?.selected;
+    const picking = !!onPickCover;
+    const clickable = selectionOn || picking;
     const added = new Date(content.added * 1000);
     const { label, Icon } = typeInfo[content.type];
 
     return (
       <article
-        onClick={() => selectionOn && selection?.onToggle()}
+        onClick={() =>
+          picking ? onPickCover() : selectionOn && selection?.onToggle()
+        }
         className={cn(
           "group/card relative flex h-fit flex-col border bg-card/40 transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_26rem]",
           selected
             ? "border-foreground ring-1 ring-foreground"
             : "hover:border-foreground/30",
-          selectionOn && "cursor-pointer",
+          clickable && "cursor-pointer",
         )}
       >
         <div className="relative flex min-h-32 items-center justify-center overflow-hidden border-b bg-muted/40">
@@ -125,10 +132,11 @@ const ContentCard = memo(
           <div className="min-w-0">
             {url ? (
               <a
-                href={url}
+                // while picking: no href (inert) and the click reaches the card
+                href={picking ? undefined : url}
                 target="_blank"
                 rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => picking || e.stopPropagation()}
                 title={`Open ${content.title} in a new tab`}
                 className="block text-sm leading-snug font-semibold [overflow-wrap:anywhere] hover:underline focus-visible:underline"
               >
@@ -162,7 +170,7 @@ const ContentCard = memo(
                 <Button
                   variant="ghost"
                   size="xs"
-                  disabled={selectionOn}
+                  disabled={clickable}
                   onClick={(e) => {
                     e.stopPropagation(); // Avoid triggering selection click handler
                     onEdit();
@@ -178,7 +186,7 @@ const ContentCard = memo(
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  disabled={selectionOn}
+                  disabled={clickable}
                   onClick={(e) => {
                     e.stopPropagation();
                     onAddToGroup();
@@ -193,7 +201,7 @@ const ContentCard = memo(
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  disabled={selectionOn}
+                  disabled={clickable}
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemove();

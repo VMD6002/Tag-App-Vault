@@ -3,6 +3,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   FolderMinus,
   FolderPlus,
+  ImageIcon,
   ListChecks,
   Pencil,
   Trash2,
@@ -39,11 +40,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { entryItems, filteredAtom, serverTagsAtom } from "../atom";
 import {
+  coverModeAtom,
   selectAllAtom,
   selectionEntriesAtom,
   selectionOnAtom,
   selectionTagsAtom,
   selectionTagsInitialAtom,
+  toggleCoverModeAtom,
   toggleSelectionModeAtom,
   unSelectAllAtom,
 } from "../atom.selection";
@@ -51,8 +54,8 @@ import { useServerActions } from "../contexts/Server.Context";
 
 /**
  * Filters and results bar. With `onRemoveFromGroup` (`/group/:id`) the selection bar gets
- * "Remove from group", the advanced search shows only the description switch, and the
- * delete button says "Delete".
+ * "Remove from group", the advanced search shows only the description switch, the
+ * delete button says "Delete", and a "Choose cover" toggle sits beside "Select items".
  */
 export default function Filters({
   onRemoveFromGroup,
@@ -87,6 +90,8 @@ export default function Filters({
   const selectedEntries = useAtomValue(selectionEntriesAtom);
   const selectionOn = useAtomValue(selectionOnAtom);
   const toggleSelectionMode = useSetAtom(toggleSelectionModeAtom);
+  const coverMode = useAtomValue(coverModeAtom);
+  const toggleCoverMode = useSetAtom(toggleCoverModeAtom);
   const selectAll = useSetAtom(selectAllAtom);
   const unSelectAll = useSetAtom(unSelectAllAtom);
 
@@ -244,8 +249,26 @@ export default function Filters({
                 {selectionOn ? "Done selecting" : "Select items"}
               </Button>
             )}
+            {!!tags && inGroup && (
+              <Button
+                size="sm"
+                variant={coverMode ? "default" : "outline"}
+                aria-pressed={coverMode}
+                onClick={toggleCoverMode}
+                title={
+                  coverMode
+                    ? "Stop choosing a cover"
+                    : "Click an item to use its cover as the group's cover"
+                }
+              >
+                <ImageIcon />
+                {coverMode ? "Cancel choosing" : "Choose cover"}
+              </Button>
+            )}
             <p aria-live="polite" className="text-sm text-muted-foreground">
-              {selectionOn ? (
+              {coverMode ? (
+                "Click an item to use its cover as the group's cover"
+              ) : selectionOn ? (
                 <>
                   <span className="font-semibold text-foreground tabular-nums">
                     {selectedEntries.length}
