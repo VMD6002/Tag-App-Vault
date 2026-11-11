@@ -15,8 +15,9 @@ How content is named, laid out on disk, synced, and served. Written from the cod
 9. [Meta tags](#meta-tags)
 10. [Generated files inside media](#generated-files-inside-media)
 11. [Rename and delete behaviour](#rename-and-delete-behaviour)
-12. [Serving files (Caddy)](#serving-files-caddy)
-13. [Known issues](#known-issues)
+12. [Groups](#groups)
+13. [Serving files (Caddy)](#serving-files-caddy)
+14. [Known issues](#known-issues)
 
 ---
 
@@ -321,6 +322,20 @@ Rebuild with the `refreshGalleryData` / `refreshTxtData` procedures.
 | **Change title** (`main.setContent`) | Files renamed `<oldTitle>.<id>` → `<newTitle>.<id>` (cover, media, caption, or the folder). Rolled back on error. Tag diffs update `DB/tags.json`. |
 | **Delete** (`main.removeContents`)   | Two phases: files are renamed to `*.del`, then removed. Rolled back if a step fails. Tag counts are decremented; the DB entry is deleted.          |
 | **Tag count repair**                 | `fix.hardResetTagCount` / `fix.softResetTagCount` recompute `DB/tags.json` (the hard reset counts group tags too).                                 |
+
+---
+
+## Groups
+
+A group collects related items (same topic or author). Items stay where they are on disk; a group is only a record in `DB/groups.json` plus a `groups` list of ids on each item in `DB/contentData.json`, so grouping, renaming and deleting never move files.
+
+- Grouped items are hidden from the main Library and appear as one group card; give an item the tag `view:in-library` to keep it visible there too, or switch on "Show grouped items".
+- **Library search** has two modes: groups and items by title (default), or items only (grouped items included). "Search descriptions too" also searches group descriptions.
+- **`/group`** lists every group, including empty ones: Fix Data, merge several groups into one, disband (remove the group, keep its items) and delete. **`/group/:id`** is the library scoped to one group, with Stats, edit (title, description, tags, cover, id), Fix Data, disband and delete group.
+- **Delete group** deletes the group and the items only in it. Items that are also in other groups are listed; they only lose this group unless you tick them to be deleted too (same two-phase delete as any item).
+- **Fix Data** recreates missing group records for ids found on items (title = id) and clears an empty cover; nothing else. Sync does the first part automatically.
+- **Cover** is a URL (one of the items' covers or any other). Empty = the card shows a child's cover, picked by the cover setting on the Settings page (newest, oldest, first with a cover).
+- Editing controls need the extension, like the rest of the web app. Details: `docs/groups.md`.
 
 ---
 

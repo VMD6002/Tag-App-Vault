@@ -21,6 +21,7 @@ Layout: `apps/server`, `apps/web`, `apps/cli`, `apps/Caddyfile`, `packages/api` 
 | Doc                                                                      | Read it when you are...                                        |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | [docs/domain-model.md](docs/domain-model.md)                             | changing content types, schemas, tags, meta tags, filtering    |
+| [docs/groups.md](docs/groups.md)                                         | working on groups: data, cover, library filter, `/group` pages |
 | [docs/disk-layout.md](docs/disk-layout.md)                               | touching the runtime tree, extensions, covers, generated files |
 | [docs/sync-pipeline.md](docs/sync-pipeline.md)                           | working on the queue-to-library flow or sync tests             |
 | [docs/file-operations.md](docs/file-operations.md)                       | changing rename, delete or per-type edit routers               |
@@ -40,6 +41,7 @@ Layout: `apps/server`, `apps/web`, `apps/cli`, `apps/Caddyfile`, `packages/api` 
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | New content type           | [domain model](docs/domain-model.md), [disk layout](docs/disk-layout.md), [sync pipeline](docs/sync-pipeline.md), [file operations](docs/file-operations.md) |
 | New meta tag               | [domain model](docs/domain-model.md), [download CLI](docs/download-cli.md)                                                                                   |
+| Groups                     | [groups](docs/groups.md), [domain model](docs/domain-model.md), [server API](docs/server-api.md), [web app](docs/web-app.md)                                 |
 | Sync behaviour             | [sync pipeline](docs/sync-pipeline.md)                                                                                                                       |
 | Delete or rename behaviour | [file operations](docs/file-operations.md)                                                                                                                   |
 | Filtering or search        | [domain model](docs/domain-model.md)                                                                                                                         |
