@@ -1,4 +1,4 @@
-import { VIEW_TAGS } from "./viewTags";
+import { VIEW_IN_LIBRARY_TAG, VIEW_TAGS } from "./viewTags";
 
 export const CAPTION_TAG = "meta:caption";
 export const YT_COOKIE_TAG = "meta:yt-cookie";
@@ -10,6 +10,7 @@ export const RESERVED_TAGS: readonly string[] = [
   YT_COOKIE_TAG,
   DIFFERENT_COVER_TAG,
   ...Object.keys(VIEW_TAGS),
+  VIEW_IN_LIBRARY_TAG,
   // The parser accepts any 10..100; the list offers steps of 10.
   ...Array.from({ length: 10 }, (_, i) => `view:width-${(i + 1) * 10}`),
 ];

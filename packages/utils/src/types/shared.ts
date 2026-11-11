@@ -7,6 +7,8 @@ export const ContentJsonSchema = z.object({
   tags: z.array(z.string()),
   extraData: z.string(),
   cover: z.string().optional(),
+  /** Group ids (`grp_<nanoid10>`); optional, no migration needed. */
+  groups: z.array(z.string()).optional(),
   // Unix Timestamps
   added: z.number(),
   lastUpdated: z.number(),
