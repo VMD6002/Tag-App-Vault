@@ -1,6 +1,7 @@
 // Invented placeholder data for the dev-only #/mock pages. Nothing here is real; covers are
 // generated as gradient data URIs by stubs.ts, so no image is ever requested from the network.
-import type { ContentServerType, CType } from "@tagapp/utils/types";
+import { VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
+import type { ContentServerType, CType, GroupsDB } from "@tagapp/utils/types";
 
 export type Scenario =
   | "normal"
@@ -26,6 +27,7 @@ export type TxtData = {
 
 export type MockDb = {
   contents: Record<string, ContentServerType>;
+  groups: GroupsDB;
   galleries: Record<string, GalleryEntry[]>;
   audios: Record<string, AudioEntry[]>;
   texts: Record<string, TxtData>;
@@ -372,6 +374,7 @@ ${para.repeat(long ? 14 : 4)}
 export function buildDb(scenario: Scenario): MockDb {
   const db: MockDb = {
     contents: {},
+    groups: {},
     galleries: {},
     audios: {},
     texts: {},
@@ -408,14 +411,86 @@ export function buildDb(scenario: Scenario): MockDb {
       );
     }
   });
+  addGroups(db, scenario);
   return db;
 }
 
-/** Tag -> number of items using it, like DB/tags.json. */
+type GroupSeed = {
+  id: string;
+  title: string;
+  tags: string[];
+  cover?: string;
+  extraData?: string;
+  children: string[];
+};
+
+/**
+ * Groups over the items above (invented). `gen_galMarket01` sits in two groups, one child opts in
+ * to the main library with `view:in-library`, `grp_mockEmpty01` has no children (so no library card)
+ * and `gen_imgNoTags01` points at a group id without a record (it stays visible).
+ */
+function addGroups(db: MockDb, scenario: Scenario) {
+  const seeds: GroupSeed[] = [
+    {
+      id: "grp_mockTravel1",
+      title: "Travel and outdoors",
+      tags: ["Topic:Travel"],
+      extraData: "Invented group description.",
+      children: [
+        "gen_imgSunrise1",
+        "gen_galHiking1",
+        "gen_galMarket01",
+        "gen_imgBridge01",
+      ],
+    },
+    {
+      id: "grp_mockCooking1",
+      title: "Kitchen and garden",
+      tags: ["Topic:Cooking", "Series:Weeknight_Dinners"],
+      cover: "/media/Images/.covers/cover.kitchen-and-garden",
+      children: ["gen_vidPasta01", "gen_imgGarden01", "gen_galMarket01"],
+    },
+    { id: "grp_mockEmpty01", title: "Empty group", tags: [], children: [] },
+  ];
+  if (scenario === "stress")
+    seeds.push({
+      id: `grp_${"s".repeat(60)}`,
+      title: `${"A very long group title that has to wrap. ".repeat(4)}`,
+      tags: manyTags(40),
+      children: Object.keys(db.contents)
+        .filter((id) => id.startsWith("gen_stress"))
+        .slice(0, 12),
+    });
+  const now = BASE;
+  seeds.forEach((g, i) => {
+    db.groups[g.id] = {
+      id: g.id,
+      title: g.title,
+      extraData: g.extraData ?? "",
+      tags: g.tags,
+      cover: g.cover,
+      added: now - i * DAY * 3,
+      lastUpdated: now - i * DAY,
+    };
+    for (const id of g.children) {
+      const c = db.contents[id];
+      if (c) c.groups = [...(c.groups ?? []), g.id];
+    }
+  });
+  const optIn = db.contents.gen_imgBridge01;
+  if (optIn) optIn.tags = [...optIn.tags, VIEW_IN_LIBRARY_TAG];
+  const ghost = db.contents.gen_imgNoTags01;
+  if (ghost) ghost.groups = ["grp_mockGhost01"];
+}
+
+/** Tag -> number of items and groups using it, like DB/tags.json. */
 export function countTags(db: MockDb): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (const c of Object.values(db.contents))
-    for (const t of c.tags) counts[t] = (counts[t] ?? 0) + 1;
+  for (const t of [
+    ...Object.values(db.contents).flatMap((c) => c.tags),
+    ...Object.values(db.groups).flatMap((g) => g.tags),
+  ])
+    counts[t] = (counts[t] ?? 0) + 1;
   return counts;
 }
 

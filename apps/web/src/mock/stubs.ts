@@ -1,6 +1,20 @@
 // Fake TagAppVault server for the dev-only #/mock pages. A patched `fetch` answers the app's oRPC
 // calls (`/rpc/<router>/<procedure>`) and chapter text from memory, and cover/media URLs under
 // `/media/` are swapped for generated gradients so no image is ever requested.
+import {
+  addGroupItems,
+  changeGroupId,
+  createGroup,
+  deleteGroup,
+  disbandGroup,
+  fixGroups,
+  type GroupState,
+  mergeGroups,
+  newGroupId,
+  planDeleteGroup,
+  removeGroupItems,
+  updateGroup,
+} from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
 import {
   buildDb,
@@ -78,6 +92,21 @@ const doc = (id: string) => {
   const c = state.db.contents[id];
   if (!c) throw notFound(`Content with id ${id}`);
   return c;
+};
+
+/** Runs a pure group op from `@tagapp/utils` on the fake db; its errors become BAD_REQUEST like the server's. */
+const groupOp = <T>(fn: (s: GroupState, now: number) => T) => {
+  try {
+    // The ops mutate these two records in place, which are the fake db's own
+    const res = fn(
+      { contentData: state.db.contents, groups: state.db.groups },
+      Math.floor(Date.now() / 1000),
+    );
+    recount();
+    return res;
+  } catch (e) {
+    throw new MockError("BAD_REQUEST", 400, (e as Error).message);
+  }
 };
 
 const pending = (name: string, type: string) => {
@@ -306,6 +335,44 @@ const handlers: Record<string, Handler> = {
     recount();
     return state.db.contents;
   },
+  "groups/list": () => state.db.groups,
+  "groups/get": (i: { id: string }) => {
+    const g = state.db.groups[i.id];
+    if (!g) throw notFound(`Group ${i.id}`);
+    return g;
+  },
+  "groups/create": (i: Parameters<typeof createGroup>[1]) =>
+    groupOp((s, now) =>
+      createGroup(s, { ...i, id: i.id || newGroupId() }, now),
+    ),
+  "groups/update": (i: Parameters<typeof updateGroup>[1]) =>
+    groupOp((s, now) => updateGroup(s, i, now)),
+  "groups/addItems": (i: Parameters<typeof addGroupItems>[1]) =>
+    groupOp((s, now) => addGroupItems(s, i, now)),
+  "groups/removeItems": (i: Parameters<typeof removeGroupItems>[1]) =>
+    groupOp((s, now) => removeGroupItems(s, i, now)),
+  "groups/disband": (i: { id: string }) =>
+    groupOp((s, now) => disbandGroup(s, i, now)),
+  "groups/planDelete": (i: { id: string }) =>
+    groupOp((s) => {
+      const { remove, detach } = planDeleteGroup(s, { ...i, deleteIds: [] });
+      return { exclusive: remove, shared: detach };
+    }),
+  "groups/delete": (i: Parameters<typeof deleteGroup>[1]) =>
+    groupOp((s, now) => {
+      const { remove, detach, group } = deleteGroup(s, i, now);
+      return {
+        deleted: remove.map((c) => c.id),
+        detached: detach.map((c) => c.id),
+        group,
+      };
+    }),
+  "groups/fix": (i: Parameters<typeof fixGroups>[1]) =>
+    groupOp((s, now) => fixGroups(s, i, now)),
+  "groups/merge": (i: Parameters<typeof mergeGroups>[1]) =>
+    groupOp((s, now) => mergeGroups(s, i, now)),
+  "groups/changeId": (i: Parameters<typeof changeGroupId>[1]) =>
+    groupOp((s, now) => changeGroupId(s, i, now)),
   "downloads/start": () => ({ started: startRun() }),
   "downloads/cancel": (i: { id?: string }) => ({ cancelled: cancelRun(i?.id) }),
   "downloads/getErrorLog": () => ({
