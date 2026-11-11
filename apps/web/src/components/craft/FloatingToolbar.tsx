@@ -1,4 +1,4 @@
-import { Check, Image, ListChecks, Trash2 } from "lucide-react";
+import { Check, Image, ListChecks, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type FileMode = "view" | "cover" | "delete";
@@ -15,6 +15,7 @@ export default function FloatingToolbar({
   total,
   onSelectAll,
   onDelete,
+  onEditTags,
   noun = "files",
 }: {
   mode: FileMode;
@@ -25,6 +26,8 @@ export default function FloatingToolbar({
   /** Selects everything, or clears the selection when everything is already selected. */
   onSelectAll: () => void;
   onDelete: () => void;
+  /** Adds an "Edit tags" button (selection mode) that acts on the selected files. */
+  onEditTags?: () => void;
   noun?: string;
 }) {
   const allSelected = total > 0 && selectedCount === total;
@@ -57,6 +60,22 @@ export default function FloatingToolbar({
             <Check />
             {allSelected ? "Select none" : "Select all"}
           </Button>
+          {onEditTags && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={selectedCount === 0}
+              onClick={onEditTags}
+              title={
+                selectedCount === 0
+                  ? `Select ${noun} first`
+                  : `Add or remove tags on every selected file`
+              }
+            >
+              <Pencil />
+              Edit tags
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
