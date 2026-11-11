@@ -1,16 +1,18 @@
 import { networkInterfaces } from "node:os";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
-import { router, setQueue, settingsDB } from "@tagapp/api";
+import {
+  downloadsSetSchema,
+  groupsDB,
+  router,
+  setDownloads,
+  settingsDB,
+} from "@tagapp/api";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { trimTrailingSlash } from "hono/trailing-slash";
-import {
-  type ContentWebType,
-  contentWebSchema,
-} from "../../../packages/utils/src/types/web.js";
 import createAppDirs from "./lib/createAppDirs.js";
 
 function getLocalIP(): string {
@@ -31,6 +33,7 @@ const activePort = settingsDB.data.port;
 const activePrefix = settingsDB.data.prefix;
 
 createAppDirs();
+await groupsDB.write(); // DB/groups.json exists from the first start
 
 const app = new Hono();
 app.use(logger());
@@ -51,14 +54,9 @@ app.use(
   }),
 );
 
-app.post("/downloads/set", async (c) => {
-  const body = (await c.req.json()) as ContentWebType[];
-
-  // const res = contentWebSchema.array().safeParse(body);
-  const res = contentWebSchema.array().parse(body);
-
-  return c.json(await setQueue(res));
-});
+app.post("/downloads/set", async (c) =>
+  c.json(await setDownloads(downloadsSetSchema.parse(await c.req.json()))),
+);
 
 // oRPC hides a procedure's exception behind a bare 500: print it
 const handler = new RPCHandler(router, {

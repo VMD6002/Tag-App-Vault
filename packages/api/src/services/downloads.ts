@@ -20,12 +20,15 @@ import {
   type ContentWebType,
   type CType,
   contentWebSchema,
+  GroupSchema,
 } from "@tagapp/utils/types";
 import YTDlpWrapModule from "yt-dlp-wrap-plus";
+import z from "zod";
 import { contentDataDB } from "../db/contentData.js";
 import { pathExists } from "../lib/fsBaseNameFunctions.js";
 import { createLock, withSyncLock } from "../lib/syncLock.js";
 import { SYNC } from "./getSyncData.js";
+import { registerGroups } from "./groups.js";
 import { syncContent } from "./syncContent.js";
 
 // A CJS package: the bundled server gets `{ default: class }` instead of the class (source runs get the class)
@@ -322,6 +325,21 @@ export const setQueue = (items: ContentWebType[]) =>
     changed(true);
     return next;
   });
+
+/** Body of `POST /downloads/set`: no bare array. */
+export const downloadsSetSchema = z.object({
+  items: contentWebSchema.array(),
+  groups: GroupSchema.array(),
+});
+
+/** Registers the groups the items point to that the Vault does not know yet (it wins: known ids and the incoming covers are ignored), then sets the queue. */
+export async function setDownloads({
+  items,
+  groups,
+}: z.infer<typeof downloadsSetSchema>) {
+  await registerGroups(groups);
+  return setQueue(items);
+}
 
 /** Drops completed records from the history (all, or the given ids). The library and media are never touched. Returns how many. */
 export async function clearFinished(ids?: string[]) {

@@ -1,9 +1,11 @@
 import { rename } from "node:fs/promises";
 import { CTypeDir } from "@tagapp/utils";
 import { contentDataDB } from "../db/contentData.js";
+import { groupsDB } from "../db/groups.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
 import { withSyncLock } from "../lib/syncLock.js";
 import { SYNC } from "./getSyncData.js";
+import { addMissingGroups, dropGroups, stubsFor } from "./groups.js";
 import { prepareSync } from "./prepareSync.js";
 
 /** Syncs every ready item of `dir` (./Sync, or a download staging folder) into the library. */
@@ -32,6 +34,7 @@ export const syncContent = (dir = SYNC) =>
 
       const moved: [string, string][] = [];
       let recorded = false;
+      let newGroups: ReturnType<typeof addMissingGroups> = [];
       try {
         for (const [from, to] of moves) {
           const move: [string, string] = [`${dir}/${from}`, `${dest}/${to}`];
@@ -44,8 +47,14 @@ export const syncContent = (dir = SYNC) =>
           ...contentDataDB.data,
         };
         IncrementTagCount(tags);
+        // a group id the Vault doesn't know gets a record (title = id)
+        newGroups = addMissingGroups(stubsFor(data.groups));
         recorded = true;
-        await Promise.all([contentDataDB.write(), tagDB.write()]);
+        await Promise.all([
+          contentDataDB.write(),
+          tagDB.write(),
+          newGroups.length && groupsDB.write(),
+        ]);
 
         // The sidecar goes last: it is the only copy of the metadata until the DB is on disk.
         await Bun.file(`${dir}/${name}.json`)
@@ -59,6 +68,7 @@ export const syncContent = (dir = SYNC) =>
         if (recorded) {
           delete contentDataDB.data[id];
           DecrementTagCount(tags);
+          dropGroups(newGroups);
         }
         for (const [src, dst] of moved.reverse()) {
           await rename(dst, src).catch((rollbackError) =>
