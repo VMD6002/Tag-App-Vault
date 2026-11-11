@@ -49,11 +49,11 @@ Loose files in `Sync/` only sync as `img` or `video` (so loose `mp3 wav m4a opus
 
 ## Files the server generates
 
-| File                                  | Written by                  | Holds                                                                                       |
-| ------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
-| `Galleries/<name>/.gallery-data.json` | `gallery.*` routers         | Array of `entry` (`name`, `type`, `createdAt`, `modifiedAt`, `cover?`) plus per-file `tags` |
-| `Galleries/<name>/.tags.json`         | `gallery.updateContentTags` | `Record<fileName, string[]>` per-file tags                                                  |
-| `Texts/<name>/txt-data.json`          | `text.*` routers            | `{Texts: string[], Media: {name, type}[]}`                                                  |
-| `Audios/<name>/`                      | none                        | No cache file; `getAudioData` lists the folder every time                                   |
+| File                                  | Written by                                                   | Holds                                                                                       |
+| ------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `Galleries/<name>/.gallery-data.json` | `gallery.*` routers                                          | Array of `entry` (`name`, `type`, `createdAt`, `modifiedAt`, `cover?`) plus per-file `tags` |
+| `Galleries/<name>/.tags.json`         | `gallery.updateContentTags`, `gallery.bulkUpdateContentTags` | `Record<fileName, string[]>` per-file tags                                                  |
+| `Texts/<name>/txt-data.json`          | `text.*` routers                                             | `{Texts: string[], Media: {name, type}[]}`                                                  |
+| `Audios/<name>/`                      | none                                                         | No cache file; `getAudioData` lists the folder every time                                   |
 
 Regenerate with `gallery.refreshGalleryData` / `text.refreshTxtData`. Generation lists the folder (`generateGalleryData`, `generateTxtData`) and `generateGalleryData` deletes covers in `.gallery-covers` that match no file.
