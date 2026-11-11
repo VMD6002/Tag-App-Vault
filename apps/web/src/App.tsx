@@ -1,3 +1,4 @@
+import { withReservedTags } from "@tagapp/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "sonner";
@@ -28,7 +29,7 @@ function App() {
         const receivedTags = event.data.payload;
 
         if (Array.isArray(receivedTags)) {
-          setTags(receivedTags);
+          setTags(withReservedTags(receivedTags));
           console.log("Tags received and updated in React state.");
 
           // Send ACK back to content script to stop retries

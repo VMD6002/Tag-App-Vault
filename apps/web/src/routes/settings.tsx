@@ -1,4 +1,5 @@
 import { useAtom } from "jotai";
+import { Link } from "wouter";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,7 +34,16 @@ export default function SettingsPage() {
     <>
       <TitleHeader
         Title="Settings"
-        description="Defaults for gallery pages, kept in this browser only. A gallery you changed yourself keeps its own choice until you reset it there."
+        description={
+          <>
+            Defaults for gallery pages, kept in this browser only. A gallery
+            with a <code>view:</code> tag follows that tag, and one you changed
+            yourself keeps its own choice until you reset it there.{" "}
+            <Link href="/reference" className="underline underline-offset-4">
+              Tag shortcuts
+            </Link>
+          </>
+        }
       />
       <section className="mb-10 grid max-w-md gap-5">
         <div className="grid gap-1.5">

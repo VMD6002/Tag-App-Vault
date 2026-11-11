@@ -2,6 +2,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { RESET } from "jotai/utils";
 import { Funnel } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -119,6 +120,13 @@ export default function GalleryOptions({ filter }: { filter: GalleryFilter }) {
         >
           Reset
         </Button>
+        <Link
+          href="/reference"
+          className="pb-2 text-xs text-muted-foreground underline underline-offset-4"
+          title="Which tags set a gallery's sort, layout, width and autoplay, and what wins"
+        >
+          Tag shortcuts
+        </Link>
         <Button
           variant={filtersOpen ? "default" : "outline"}
           aria-pressed={filtersOpen}
