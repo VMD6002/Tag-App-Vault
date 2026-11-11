@@ -1,6 +1,6 @@
 import { sanitizeStringForFileName } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import constate from "constate";
 import { useAtomValue, useSetAtom } from "jotai";
 import { FileQuestion } from "lucide-react";
@@ -25,6 +25,7 @@ import {
 } from "@/components/craft/UpdateModal/atom";
 import { buttonVariants } from "@/components/ui/button";
 import { orpc } from "@/lib/orpc";
+import { ItemGroupsFieldView } from "../components/ItemGroupsField";
 
 const docPlaceholderData: ContentServerType = {
   id: "",
@@ -124,9 +125,21 @@ function useDocContext() {
     }),
   );
 
+  // Group edits in the modal: refresh groups and the doc, keeping what is typed in the modal
+  const groupsQ = useQuery(orpc.groups.list.queryOptions({ input: {} }));
+  const refreshGroups = useCallback(() => {
+    void groupsQ.refetch();
+    orpc.main.getContent
+      .call({ id })
+      .then(setDoc)
+      .catch(() => toast.error("Couldn't refresh the item"));
+  }, [id, groupsQ.refetch]);
+
   return {
     tags,
     doc,
+    groups: groupsQ.data ?? {},
+    refreshGroups,
     orpc,
     encodedTitle,
     getContentMutation,
@@ -140,7 +153,8 @@ function useDocContext() {
 export const [Provider, useDoc] = constate(useDocContext);
 
 export function Child({ children }: { children: React.ReactNode }) {
-  const { doc, getContentMutation, updateContentFunc } = useDoc();
+  const { doc, groups, refreshGroups, getContentMutation, updateContentFunc } =
+    useDoc();
   const { id } = useRoute("/:contentType/:id")[1] as { id: string };
 
   useEffect(() => {
@@ -185,7 +199,16 @@ export function Child({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <UpdateModal updateContentFunc={updateContentFunc} />
+      <UpdateModal
+        updateContentFunc={updateContentFunc}
+        extra={
+          <ItemGroupsFieldView
+            item={doc}
+            groups={groups}
+            onChanged={refreshGroups}
+          />
+        }
+      />
       {children}
     </>
   );

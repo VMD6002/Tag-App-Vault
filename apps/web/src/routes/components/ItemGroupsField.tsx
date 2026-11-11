@@ -1,4 +1,5 @@
 import { VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
+import type { GroupsDB } from "@tagapp/utils/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { X } from "lucide-react";
 import { Link } from "wouter";
@@ -18,16 +19,17 @@ import { allContentAtom, allGroupsAtom } from "../atom";
 /**
  * Item edit: the groups the item is in (link to the group, remove from it at once), a picker to add
  * it to more, and the `view:in-library` toggle, which only edits the tags box, saved with the item.
- * Group changes apply immediately; `onChanged` reloads the library.
+ * Group changes apply immediately; `onChanged` reloads the page's item and groups.
  */
-export default function ItemGroupsField({
+export function ItemGroupsFieldView({
+  item,
+  groups,
   onChanged,
 }: {
+  item?: { id: string; groups?: string[] };
+  groups: GroupsDB;
   onChanged: () => void;
 }) {
-  const id = useAtomValue(updateIdAtom);
-  const item = useAtomValue(allContentAtom).find((c) => c.id === id);
-  const groups = useAtomValue(allGroupsAtom);
   const [tags, setTags] = useAtom(updateTagsAtom);
   const setModalOpen = useSetAtom(updateModalOpenAtom);
   const clearFilter = useSetAtom(clearFilterForNavigationAtom);
@@ -106,5 +108,19 @@ export default function ItemGroupsField({
         </div>
       )}
     </div>
+  );
+}
+
+/** Library and group pages: the item and groups come from the library atoms. */
+export default function ItemGroupsField({
+  onChanged,
+}: {
+  onChanged: () => void;
+}) {
+  const id = useAtomValue(updateIdAtom);
+  const item = useAtomValue(allContentAtom).find((c) => c.id === id);
+  const groups = useAtomValue(allGroupsAtom);
+  return (
+    <ItemGroupsFieldView item={item} groups={groups} onChanged={onChanged} />
   );
 }
