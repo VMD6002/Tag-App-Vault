@@ -6,7 +6,11 @@ import {
   planDeleteGroup,
   type TagDelta,
 } from "@tagapp/utils";
-import type { GroupDeleteType, GroupType } from "@tagapp/utils/types";
+import type {
+  ContentServerType,
+  GroupDeleteType,
+  GroupType,
+} from "@tagapp/utils/types";
 import { contentDataDB } from "../db/contentData.js";
 import { groupsDB } from "../db/groups.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
@@ -16,7 +20,7 @@ import { deleteData } from "./deleteData.js";
 const nowSec = () => Math.floor(Date.now() / 1000);
 
 /** The live DB data. Never keep it across an `await`: sync swaps `contentDataDB.data` for a new object. */
-const state = (): GroupState => ({
+const state = (): GroupState<ContentServerType> => ({
   contentData: contentDataDB.data,
   groups: groupsDB.data,
 });
