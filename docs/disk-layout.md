@@ -7,7 +7,8 @@ Scope: the runtime directory tree, how each content type is shaped on disk, reco
 ```
 settings.json              {port, prefix}
 DB/contentData.json        Record<id, ContentServerType>
-DB/tags.json               Record<tag, count>
+DB/groups.json             Record<id, GroupType>  (created empty at startup)
+DB/tags.json               Record<tag, count>  (items and groups)
 Download/tmp.json          pending download queue
 Download/history.json      one record per download (status, dates, cover URL); completed ones are "history"
 Download/tmp/  done/<id>/  scratch downloads / staging until imported

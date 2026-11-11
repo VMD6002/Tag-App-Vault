@@ -26,6 +26,10 @@ Scope: how the server renames, deletes and edits library files and keeps the DB 
 - Rejects the whole call with `BAD_REQUEST` if any id is unknown. Then per item: rename cover (if present), media and caption to `.del`, remove them, `DecrementTagCount`, delete from memory. A failure rolls back that item and continues with the next.
 - Both DBs are written once at the end. Returns the ids that were deleted.
 
+## Group delete
+
+`groups.delete` (`services/groups.ts`, under `withSyncLock`) deletes through `deleteData`: it plans with `planDeleteGroup` (exclusive children plus the chosen shared `deleteIds`), calls `deleteData` on them (two-phase, per-item rollback, its own tag counts), and only if every one was deleted drops the group record, strips the id from the shared children that stay and decrements the group's tags, then writes the three DBs. If any item failed it throws `INTERNAL_SERVER_ERROR` and keeps the group (items already deleted stay deleted; retry). Other group operations only edit `DB/contentData.json` / `DB/groups.json` (no files move). Deleting or renaming a single item needs no group change: children are computed from the items' `groups`, and `setDoc` keeps `groups` (it merges over the stored item).
+
 ## Per-type routers
 
 - gallery: `getGalleryData` (cached `.gallery-data.json`, else generate), `refreshGalleryData`, `removeGalleryContents`, `setCoverGivenFile`, `updateContentTags` (per-file tags in `.tags.json`), `bulkUpdateContentTags` (`{ name, id, contents, add, remove }`: per selected file, tags = current minus `remove` plus `add`, `add` wins; rejects the whole call with `NOT_FOUND` if a file is not in the gallery data or not on disk, `NOT_ACCEPTABLE` on an empty selection; one `.tags.json` write then one `.gallery-data.json` write, and `.tags.json` is restored if the second fails; returns the full file list; gallery file tags do not count toward `DB/tags.json`), `renameGalleryContent` (keeps extension, rejects `/ \ ? % * : | " < >` and name conflicts, renames the cover and `.tags.json` key too). Files: [disk layout](./disk-layout.md#files-the-server-generates).

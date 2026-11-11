@@ -59,7 +59,8 @@ All server paths are relative to the server's working directory.
 ├── UnSyncable/             files moved here when sync can't make sense of them
 ├── DB/
 │   ├── contentData.json    Record<id, item>   (all synced content)
-│   └── tags.json           Record<tag, count> (usage counts)
+│   ├── groups.json         Record<id, group>  (group records; items carry the group ids)
+│   └── tags.json           Record<tag, count> (usage counts, items and groups)
 └── media/                  the library (next section)
 ```
 
@@ -319,7 +320,7 @@ Rebuild with the `refreshGalleryData` / `refreshTxtData` procedures.
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Change title** (`main.setContent`) | Files renamed `<oldTitle>.<id>` → `<newTitle>.<id>` (cover, media, caption, or the folder). Rolled back on error. Tag diffs update `DB/tags.json`. |
 | **Delete** (`main.removeContents`)   | Two phases: files are renamed to `*.del`, then removed. Rolled back if a step fails. Tag counts are decremented; the DB entry is deleted.          |
-| **Tag count repair**                 | `fix.hardResetTagCount` / `fix.softResetTagCount` recompute `DB/tags.json`.                                                                        |
+| **Tag count repair**                 | `fix.hardResetTagCount` / `fix.softResetTagCount` recompute `DB/tags.json` (the hard reset counts group tags too).                                 |
 
 ---
 

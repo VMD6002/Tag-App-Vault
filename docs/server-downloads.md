@@ -35,6 +35,7 @@ Shared helpers (`packages/utils/src/download`, entry `@tagapp/utils/download`, s
 
 ## Queue and `POST /downloads/set` during a run
 
+- The body is `{ items, groups }` ([server API](./server-api.md)). `setDownloads` first registers the groups whose id is not in `DB/groups.json` (the Vault wins: existing ids and the incoming `cover` are ignored), then sets the queue. Each queue item keeps its `groups`; the staging sidecar carries them into `syncContent`, which creates any id still unknown.
 - A run works on the queue it started with. Items posted later wait for the next `start`; nothing starts by itself.
 - `set` while a run is active keeps every item of the run whose record is `queued`, `downloading` or `importing` exactly as it is (never dropped), and ignores a posted copy of the same id; the rest is replaced by what was posted. Idle: it just writes the posted list. Either way ids are de-duplicated (first wins) and the written list is returned. It also keeps the history in line: every posted item gets a record (`queuedAt` = now, status `queued`); re-posting an unfinished one keeps its record and `queuedAt` (only title, scraper, url and cover are refreshed); re-posting a completed one replaces that record with a new queued one; unfinished records of items that are no longer in the queue are deleted.
 - Completed items are already gone from the queue; posting one again re-queues it. An item whose id is already in the library (and has no staged files) is never downloaded: the run drops it from the queue and marks it `completed`.

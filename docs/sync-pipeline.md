@@ -4,7 +4,7 @@ Scope: how an item travels from the download queue to the library, and the sync 
 
 ## Stages
 
-1. Queue: `POST /downloads/set` validates `ContentWebType[]` and writes `Download/tmp.json` ([server API](./server-api.md)).
+1. Queue: `POST /downloads/set` validates `{ items: ContentWebType[], groups: GroupType[] }`, registers the unknown groups and writes `Download/tmp.json` ([server API](./server-api.md)). Items keep their `groups` ids through the sidecar into the library.
 2. Download, two ways:
    - Server (primary): `downloads.start` downloads and moves each finished item into its own staging folder `Download/done/<id>/`, then runs `syncContent` on that folder and drops the item from the queue. No `Sync/`, no manual sync: [server downloads](./server-downloads.md).
    - CLI: moves finished files into `Sync/` and drops the item from the queue; then step 3.
@@ -42,9 +42,9 @@ Behind the web `/sync` preview ([web app](./web-app.md)). `main.editSyncItem` an
 
 - Wrapped in `withSyncLock` (`lib/syncLock.ts`, built with `createLock`, which the download queue file also uses), which queues calls so scans and syncs never overlap; `main.getSyncData` uses it too.
 - Per item: move files into `media/<Dir>/` (img/video covers to `.covers/`, captions to `.captions/`; folder items move whole), then prepend the item to `contentDataDB`, `IncrementTagCount`, write both DBs, and delete the `<name>.json` sidecar last (it is the only metadata copy until the DB is written).
-- A failure for one item rolls back that item (removes it from memory, decrements tags, moves files back) and the loop continues. Returns all content data.
+- Every group id of the item that has no record in `DB/groups.json` gets one (`title = id`, no tags, no cover; `services/groups.ts`, `groupsDB` is written with the other two) under the same lock; existing records are untouched. A failure for one item rolls back that item (removes it from memory, decrements tags, drops the records it created, moves files back) and the loop continues. Returns all content data.
 - Rollback pattern for other file operations: [file operations](./file-operations.md).
 
 ## Tests
 
-`packages/api/src/services/sync.test.ts` runs the services against a scratch directory (it `chdir`s there before importing the DB modules, since paths are cwd-relative). Needs Bun >= 1.4.2 for `Bun.Image`. Run: `bun test packages/api` ([development](./development.md)).
+`packages/api/src/services/groups.test.ts` covers the group router and services, group registration at `POST /downloads/set` and the sync auto-create. `packages/api/src/services/sync.test.ts` runs the services against a scratch directory (it `chdir`s there before importing the DB modules, since paths are cwd-relative). Needs Bun >= 1.4.2 for `Bun.Image`. Run: `bun test packages/api` ([development](./development.md)).
