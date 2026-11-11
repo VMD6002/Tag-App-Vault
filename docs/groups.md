@@ -68,6 +68,10 @@ Pure functions in `packages/utils/src/groups.ts`, `(state, input, now) => result
 - **Delete group dialog** (`components/craft/group/DeleteGroupModal.tsx`, shared): asks `groups.planDelete`; without shared items it is a plain confirm; with shared items (also in other groups) they are listed as selectable cards with "Delete only items exclusive to this group" and "Also delete the selected shared items"; shared items not deleted lose only this group id.
 - Mutating controls (edit, fix, disband, delete, merge, add to group) are hidden while `tagsAtom` is `null`, like the rest of the Vault ([web app](./web-app.md#extension-handshake-and-read-only-mode)). Stats and the lists stay.
 
+## UI parity with TagApp 6.0
+
+The group UI is meant to look the same as the TagApp 6.0 extension and its read-only web app; keep them in step when you change either (the TagApp6.0 repo's `docs/groups.md`, section "UI parity with the Vault", lists the copies and the differences that stay). Conventions: "title", "Fix Data", "Add to group…", "Remove from group", the "Group · N items" card badge, `referrerPolicy="no-referrer"` and an `ImageOff` fallback for covers, group page states "Group not found" / "This group is empty". The group edit modal's description uses the same markdown code editor as the item edit modal's notes.
+
 ## Limits
 
 - `shortcut:` the card and children computation per call (above).
