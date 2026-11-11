@@ -7,6 +7,7 @@ import {
   ListChecks,
   Merge,
   Pencil,
+  Plus,
   SearchX,
   Trash2,
   Unlink,
@@ -24,6 +25,7 @@ import {
 import DeleteGroupModal from "@/components/craft/group/DeleteGroupModal";
 import GroupEditModal from "@/components/craft/group/GroupEditModal";
 import MergeGroupsModal from "@/components/craft/group/MergeGroupsModal";
+import NewGroupModal from "@/components/craft/group/NewGroupModal";
 import GroupCard from "@/components/craft/library/GroupCard";
 import TitleHeader from "@/components/craft/TitleHeader";
 import { Button } from "@/components/ui/button";
@@ -68,6 +70,7 @@ export default function GroupsPage() {
   const [selectionOn, setSelectionOn] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
   const [mergeIds, setMergeIds] = useState<string[] | null>(null);
   const [deleteQueue, setDeleteQueue] = useState<string[]>([]);
   const [deleteTotal, setDeleteTotal] = useState(0);
@@ -147,12 +150,16 @@ export default function GroupsPage() {
         <>
           <GroupEditModal
             group={editing}
-            items={children[editId ?? ""] ?? NO_ITEMS}
             onClose={() => setEditId(null)}
             onSaved={() => {
               stopSelecting(); // an id change would leave a stale selection
               changed();
             }}
+          />
+          <NewGroupModal
+            open={newOpen}
+            onClose={() => setNewOpen(false)}
+            onCreated={changed}
           />
           <MergeGroupsModal
             groups={
@@ -196,6 +203,14 @@ export default function GroupsPage() {
       >
         {!!tags && (
           <>
+            <Button
+              size="sm"
+              onClick={() => setNewOpen(true)}
+              title="Create an empty group"
+            >
+              <Plus />
+              New group
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -323,7 +338,7 @@ export default function GroupsPage() {
           <EmptyState
             icon={FolderOpen}
             title="There are no groups yet"
-            description="Use “Add to group…” on library items to create one."
+            description="Use “New group” to create one, then add items with “Add to group…” in the library."
           />
         )
       ) : (
@@ -352,7 +367,7 @@ export default function GroupsPage() {
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        title="Edit the title, description, tags, cover and id"
+                        title="Edit the title, tags, cover, description and id"
                         aria-label={`Edit ${name}`}
                         onClick={() => setEditId(g.id)}
                       >

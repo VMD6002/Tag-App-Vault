@@ -14,11 +14,7 @@ export default function AddToGroupModal({
   addToGroups,
 }: {
   groups: GroupsDB;
-  addToGroups: (
-    itemIds: string[],
-    groupIds: string[],
-    newTitle: string,
-  ) => Promise<boolean>;
+  addToGroups: (itemIds: string[], groupIds: string[]) => Promise<boolean>;
 }) {
   const [ids, setIds] = useAtom(addToGroupAtom);
   const close = () => setIds(null);
@@ -38,8 +34,8 @@ export default function AddToGroupModal({
     >
       <GroupPicker
         groups={groups}
-        onSubmit={async (groupIds, newTitle) => {
-          const ok = await addToGroups(ids ?? [], groupIds, newTitle);
+        onSubmit={async (groupIds) => {
+          const ok = await addToGroups(ids ?? [], groupIds);
           if (ok) close();
           return ok;
         }}

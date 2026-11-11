@@ -1,4 +1,3 @@
-import { newGroupId } from "@tagapp/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -36,23 +35,13 @@ export function useGroupActions(onChanged: () => void) {
     };
     return {
       changed,
-      /** Puts items into existing groups and/or one new group (`newTitle`). */
-      async addToGroups(itemIds: string[], groupIds: string[], newTitle = "") {
-        const targets = [...groupIds];
-        const title = newTitle.trim();
-        if (title) {
-          const id = newGroupId();
-          const created = await run(
-            orpc.groups.create.call({ id, title, extraData: "", tags: [] }),
-          );
-          if (!created) return false;
-          targets.push(id);
-        }
+      /** Puts items into existing groups. */
+      async addToGroups(itemIds: string[], groupIds: string[]) {
         const results = await Promise.all(
-          targets.map((id) => run(orpc.groups.addItems.call({ id, itemIds }))),
+          groupIds.map((id) => run(orpc.groups.addItems.call({ id, itemIds }))),
         );
         const ok = results.every((r) => r !== undefined);
-        changed(); // a new group exists even when an add failed
+        changed(); // some adds may have worked even when one failed
         if (ok) toast.success("Added to the group");
         return ok;
       },

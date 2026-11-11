@@ -3,15 +3,14 @@ import { useMemo, useState } from "react";
 import type { MultiSelectOption } from "@/atom";
 import MultiSelect from "@/components/craft/MultiSelect";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const NONE: string[] = [];
 
 /**
- * Pick existing groups and/or name a new one. Presentational: `onSubmit` gets the picked group
- * ids and the new group's title ("" for none) and resolves to true when it worked (the form then
- * resets). Groups in `exclude` are not offered (the item is already in them).
+ * Pick existing groups (groups are created on `/group` only). Presentational: `onSubmit` gets the
+ * picked group ids and resolves to true when it worked (the form then resets). Groups in `exclude`
+ * are not offered (the item is already in them).
  */
 export default function GroupPicker({
   groups,
@@ -22,10 +21,9 @@ export default function GroupPicker({
   groups: GroupsDB;
   exclude?: string[];
   submitLabel?: string;
-  onSubmit: (groupIds: string[], newTitle: string) => Promise<boolean>;
+  onSubmit: (groupIds: string[]) => Promise<boolean>;
 }) {
   const [picked, setPicked] = useState<MultiSelectOption[]>([]);
-  const [newTitle, setNewTitle] = useState("");
   const [busy, setBusy] = useState(false);
 
   const options = useMemo(
@@ -36,19 +34,12 @@ export default function GroupPicker({
         .sort((a, b) => a.label.localeCompare(b.label)),
     [groups, exclude],
   );
-  const canSubmit = !busy && (picked.length > 0 || !!newTitle.trim());
+  const canSubmit = !busy && picked.length > 0;
 
   const submit = async () => {
     setBusy(true);
     try {
-      const ok = await onSubmit(
-        picked.map((o) => o.value),
-        newTitle,
-      );
-      if (ok) {
-        setPicked([]);
-        setNewTitle("");
-      }
+      if (await onSubmit(picked.map((o) => o.value))) setPicked([]);
     } finally {
       setBusy(false);
     }
@@ -57,25 +48,13 @@ export default function GroupPicker({
   return (
     <div className="grid gap-3">
       <div className="grid gap-2">
-        <Label>Existing groups</Label>
+        <Label>Groups</Label>
         <MultiSelect
           options={options}
           placeholder="Choose groups"
           label="Groups to add to"
           value={picked}
           onChange={setPicked}
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="group-picker-new">Or a new group</Label>
-        <Input
-          id="group-picker-new"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && canSubmit) void submit();
-          }}
-          placeholder="New group name"
         />
       </div>
       <Button

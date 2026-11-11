@@ -79,9 +79,7 @@ export function ItemGroupsFieldView({
       <GroupPicker
         groups={groups}
         exclude={ids}
-        onSubmit={(groupIds, newTitle) =>
-          addToGroups([item.id], groupIds, newTitle)
-        }
+        onSubmit={(groupIds) => addToGroups([item.id], groupIds)}
       />
       {ids.length > 0 && (
         <div className="flex items-center gap-2">
