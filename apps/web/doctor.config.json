@@ -13,7 +13,14 @@
         "rules": ["react-doctor/jotai-derived-atom-returns-fresh-object"]
       },
       {
-        "files": ["src/components/craft/library/ContentCard.tsx"],
+        "files": ["src/routes/contexts/Server.Context.ts"],
+        "rules": ["react-doctor/query-mutation-missing-invalidation"]
+      },
+      {
+        "files": [
+          "src/components/craft/library/ContentCard.tsx",
+          "src/components/craft/library/GroupCard.tsx"
+        ],
         "rules": [
           "react-doctor/click-events-have-key-events",
           "react-doctor/no-noninteractive-element-interactions"
