@@ -17,6 +17,7 @@ const Links = [
   { Name: "Tags", Path: "/tags" },
   { Name: "Generate JSON", Path: "/generateContentJson" },
   { Name: "Reference", Path: "/reference" },
+  { Name: "Settings", Path: "/settings" },
 ];
 
 export default function NavBarLinks() {

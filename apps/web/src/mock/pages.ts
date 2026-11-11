@@ -82,6 +82,13 @@ export const MOCK_PAGES: MockPage[] = [
     path: () => "/reference",
   },
   {
+    slug: "settings",
+    title: "Settings (/settings)",
+    note: "Real route: device-local gallery defaults (localStorage); needs no server.",
+    scenarios: ["normal"],
+    path: () => "/settings",
+  },
+  {
     slug: "not-found",
     title: "Page not found (404)",
     note: "Real catch-all route.",

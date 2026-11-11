@@ -16,6 +16,7 @@ const GalleryPage = lazy(() => import("./routes/gallery/[id]"));
 const TextPage = lazy(() => import("./routes/txt/[id]"));
 const AudioPage = lazy(() => import("./routes/audio/[id]"));
 const GenerateJSONPage = lazy(() => import("./routes/generateJSON"));
+const SettingsPage = lazy(() => import("./routes/settings"));
 const ReferencePage = lazy(() => import("./routes/reference"));
 
 export const queryClient = new QueryClient({
@@ -53,6 +54,9 @@ export default function AppLayout() {
               </Route>
               <Route path="/generateContentJson">
                 <GenerateJSONPage />
+              </Route>
+              <Route path="/settings">
+                <SettingsPage />
               </Route>
               <Route path="/reference">
                 <ReferencePage />
