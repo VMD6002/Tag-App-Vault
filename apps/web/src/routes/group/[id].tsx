@@ -30,11 +30,7 @@ import { run, useGroupActions } from "@/hooks/useGroupActions";
 import { orpc } from "@/lib/orpc";
 import TIMEOUTS from "@/lib/TIMEOUTS";
 import { allContentAtom, allGroupsAtom, filteredAtom } from "../atom";
-import {
-  coverModeAtom,
-  selectionEntriesAtom,
-  selectionOnAtom,
-} from "../atom.selection";
+import { coverModeAtom, selectionEntriesAtom } from "../atom.selection";
 import ExtendedCard from "../components/ExtendedCard";
 import Filters from "../components/Filters";
 import ItemGroupsField from "../components/ItemGroupsField";
@@ -70,7 +66,6 @@ function Child({ id }: { id: string }) {
   const { addToGroups, removeItems, disband, fix, changed } =
     useGroupActions(loadAllContent);
   const setSelection = useSetAtom(selectionEntriesAtom);
-  const setSelectionOn = useSetAtom(selectionOnAtom);
   const [coverMode, setCoverMode] = useAtom(coverModeAtom);
   const initializeFilterDataFromURL = useSetAtom(
     initializeFilterDataFromURLAtom,
@@ -113,10 +108,6 @@ function Child({ id }: { id: string }) {
     changed();
   };
 
-  const clearSelection = () => {
-    setSelection([]);
-    setSelectionOn(false);
-  };
   const resetAll = () => {
     reset();
     filterData();
@@ -170,7 +161,7 @@ function Child({ id }: { id: string }) {
             groups={groups}
             addToGroups={async (itemIds, groupIds) => {
               const ok = await addToGroups(itemIds, groupIds);
-              if (ok) clearSelection();
+              if (ok) setSelection([]); // selection mode stays on
               return ok;
             }}
           />
@@ -220,7 +211,14 @@ function Child({ id }: { id: string }) {
       />
       <Filters
         onRemoveFromGroup={(ids) =>
-          void removeItems(id, ids).then((ok) => ok && clearSelection())
+          void confirm({
+            title: "Remove from this group?",
+            description: `${ids.length} ${ids.length === 1 ? "item leaves" : "items leave"} this group. ${ids.length === 1 ? "It stays" : "They stay"} in the library.`,
+            confirmText: "Remove",
+          }).then(async (ok) => {
+            // the items leave this list; selection mode stays on
+            if (ok && (await removeItems(id, ids))) setSelection([]);
+          })
         }
       />
       {loadState.isError ? (

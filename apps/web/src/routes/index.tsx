@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { useGroupActions } from "@/hooks/useGroupActions";
 import TIMEOUTS from "@/lib/TIMEOUTS";
 import { allGroupsAtom, filteredAtom } from "./atom";
-import { selectionEntriesAtom, selectionOnAtom } from "./atom.selection";
+import { selectionEntriesAtom } from "./atom.selection";
 import ExtendedCard from "./components/ExtendedCard";
 import ExtendedGroupCard from "./components/ExtendedGroupCard";
 import Filters from "./components/Filters";
@@ -48,7 +48,6 @@ function Child() {
   const { addToGroups, disband } = useGroupActions(loadAllContent);
   const [editGroupId, setEditGroupId] = useState<string | null>(null);
   const setSelection = useSetAtom(selectionEntriesAtom);
-  const setSelectionOn = useSetAtom(selectionOnAtom);
 
   const initializeFilterDataFromURL = useSetAtom(
     initializeFilterDataFromURLAtom,
@@ -88,10 +87,7 @@ function Child() {
             groups={groups}
             addToGroups={async (itemIds, groupIds) => {
               const ok = await addToGroups(itemIds, groupIds);
-              if (ok) {
-                setSelection([]); // the items may have left the list
-                setSelectionOn(false);
-              }
+              if (ok) setSelection([]); // the items may have left the list; selection mode stays on
               return ok;
             }}
           />
