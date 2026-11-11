@@ -20,6 +20,7 @@ export default function SyncPage() {
     ...orpc.main.getSyncData.queryOptions(),
     refetchOnMount: "always",
   });
+  const groups = useQuery(orpc.groups.list.queryOptions({ input: {} })); // titles for the groups rows
   const contents = scan.data?.contents;
   const refresh = useCallback(() => void scan.refetch(), [scan.refetch]);
 
@@ -64,6 +65,7 @@ export default function SyncPage() {
       <SyncFilters filter={filter} contents={contents} />
       <SyncResults
         scan={scan}
+        groups={groups.data}
         filter={filter}
         onRetry={refresh}
         onEdit={tags ? openEdit : undefined}

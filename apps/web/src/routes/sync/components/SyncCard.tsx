@@ -1,6 +1,7 @@
-import type { ContentServerType } from "@tagapp/utils/types";
+import type { ContentServerType, GroupsDB } from "@tagapp/utils/types";
 import { memo, useState } from "react";
 import ContentCard from "@/components/craft/library/ContentCard";
+import ItemGroupLinks from "@/routes/components/ItemGroupLinks";
 
 export type SyncItem = ContentServerType & {
   name: string;
@@ -45,10 +46,13 @@ function syncMedia({ name, type, ext: [cover, file, caption] }: SyncItem) {
 const SyncCard = memo(
   ({
     Content,
+    groups,
     onEdit,
     onRemove,
   }: {
     Content: SyncItem;
+    /** `groups.list`; undefined while it loads (the Groups row waits for it). */
+    groups?: GroupsDB;
     onEdit?: (id: string) => void;
     onRemove?: (id: string) => void;
   }) => {
@@ -61,6 +65,12 @@ const SyncCard = memo(
         cover={coverFailed ? null : cover}
         onCoverError={() => setCoverFailed(true)}
         video={video}
+        extra={
+          groups &&
+          !!Content.groups?.length && (
+            <ItemGroupLinks ids={Content.groups} groups={groups} />
+          )
+        }
         onEdit={onEdit && (() => onEdit(Content.id))}
         onRemove={onRemove && (() => onRemove(Content.id))}
       />

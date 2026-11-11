@@ -11,7 +11,7 @@ import {
   SquarePlay,
   Trash2,
 } from "lucide-react";
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate } from "@/lib/formatDate";
@@ -43,6 +43,8 @@ type Props = {
   onRemove?: () => void;
   /** "Add to group…"; needs the browser extension like edit and remove. */
   onAddToGroup?: () => void;
+  /** Extra read-only rows under the tags (`/sync` shows the item's groups). */
+  extra?: ReactNode;
 };
 
 const ContentCard = memo(
@@ -57,6 +59,7 @@ const ContentCard = memo(
     onEdit,
     onRemove,
     onAddToGroup,
+    extra,
   }: Props) => {
     const selectionOn = !!selection?.on;
     const selected = !!selection?.selected;
@@ -155,6 +158,7 @@ const ContentCard = memo(
             </p>
           </div>
           <TagChips tags={content.tags} limit />
+          {extra}
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-2 border-t px-3 py-1.5">

@@ -1,3 +1,4 @@
+import type { GroupsDB } from "@tagapp/utils/types";
 import { Inbox, SearchX } from "lucide-react";
 import {
   EmptyState,
@@ -25,12 +26,14 @@ type Scan = {
 /** Results bar, the loading/error/empty states and the card grid. Edit and remove are omitted in read-only mode. */
 export default function SyncResults({
   scan,
+  groups,
   filter: { filtered, fields, setOrder, activeCount, clear },
   onRetry,
   onEdit,
   onRemove,
 }: {
   scan: Scan;
+  groups?: GroupsDB;
   filter: SyncFilter;
   onRetry: () => void;
   onEdit?: (id: string) => void;
@@ -97,6 +100,7 @@ export default function SyncResults({
             <SyncCard
               key={data.id}
               Content={scan.data?.contents[data.id] ?? (data as SyncItem)}
+              groups={groups}
               onEdit={onEdit}
               onRemove={onRemove}
             />
