@@ -1,34 +1,30 @@
-import type { ContentServerType, GroupType } from "@tagapp/utils/types";
+import type { GroupType } from "@tagapp/utils/types";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { type MultiSelectOption, tagsAtom } from "@/atom";
 import ModalShell from "@/components/craft/ModalShell";
 import MultiSelect from "@/components/craft/MultiSelect";
+import Field from "@/components/craft/UpdateModal/Field";
+import SeeMore from "@/components/craft/UpdateModal/SeeMore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { run } from "@/hooks/useGroupActions";
-import { getCoverUrl } from "@/lib/coverUrl";
 import { orpc } from "@/lib/orpc";
 
-const MAX_COVER_PICKS = 12;
-
 /**
- * Edit a group: title, tags, cover (the children's covers as quick picks, or any URL; empty clears
- * it and the card falls back to a child's cover), description (markdown) and id. Changing the id
- * rewrites it on every item; an id that already exists merges this group into it.
+ * Edit a group like the item edit modal: title and the group's OWN tags up top; cover URL (empty
+ * clears it and the card falls back to a child's cover), description (markdown) and id under
+ * "More fields". Changing the id rewrites it on every item; an id that already exists merges this
+ * group into it.
  */
 export default function GroupEditModal({
   group,
-  items,
   onClose,
   onSaved,
 }: {
   /** Mount with `null` while closed. */
   group: GroupType | null;
-  /** The group's children (cover quick picks). */
-  items: ContentServerType[];
   onClose: () => void;
   /** Runs after a save with the group's final id (it changes with the id). */
   onSaved: (id: string) => void;
@@ -59,16 +55,6 @@ export default function GroupEditModal({
         .map((t) => ({ label: t, value: t })),
     [extensionTags, group?.tags],
   );
-  // Stored covers are plain URLs, so a child's cover is saved with its leading slash
-  const coverPicks = useMemo(
-    () => [
-      ...new Set(
-        items.flatMap((c) => getCoverUrl(c) ?? []).map((u) => `/${u}`),
-      ),
-    ],
-    [items],
-  );
-
   const save = async () => {
     if (!group) return;
     const newId = id.trim() || group.id;
@@ -112,16 +98,14 @@ export default function GroupEditModal({
         </>
       }
     >
-      <div className="grid gap-2">
-        <Label htmlFor="group-title">Title</Label>
+      <Field label="Title" htmlFor="group-title">
         <Input
           id="group-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-      </div>
-      <div className="grid gap-2">
-        <Label>Tags</Label>
+      </Field>
+      <Field label="Tags">
         <MultiSelect
           options={options}
           placeholder="Choose tags"
@@ -129,64 +113,38 @@ export default function GroupEditModal({
           value={picked}
           onChange={setPicked}
         />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="group-cover">Cover URL</Label>
-        <Input
-          id="group-cover"
-          value={cover}
-          onChange={(e) => setCover(e.target.value)}
-          placeholder="Empty: use one of the items' covers"
-        />
-        {coverPicks.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Item covers">
-            {coverPicks.slice(0, MAX_COVER_PICKS).map((url) => (
-              <li key={url}>
-                <button
-                  type="button"
-                  onClick={() => setCover(url)}
-                  title="Use this cover"
-                  className={
-                    url === cover
-                      ? "block border border-foreground ring-1 ring-foreground"
-                      : "block border hover:border-foreground/50"
-                  }
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    loading="lazy"
-                    className="size-14 object-cover"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="group-description">Description</Label>
-        <Textarea
-          id="group-description"
-          value={extraData}
-          onChange={(e) => setExtraData(e.target.value)}
-          placeholder="Description (markdown)"
-          className="max-h-48 min-h-24 font-mono text-xs"
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="group-id">Id</Label>
-        <Input
-          id="group-id"
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-          className="font-mono"
-        />
-        <p className="text-xs text-muted-foreground">
-          Changing the id rewrites it on every item in the group. If a group
-          with the new id exists, this group merges into it.
-        </p>
-      </div>
+      </Field>
+      <SeeMore>
+        <Field label="Cover URL" htmlFor="group-cover">
+          <Input
+            id="group-cover"
+            value={cover}
+            onChange={(e) => setCover(e.target.value)}
+            placeholder="Empty: use one of the items' covers"
+          />
+        </Field>
+        <Field label="Description" htmlFor="group-description">
+          <Textarea
+            id="group-description"
+            value={extraData}
+            onChange={(e) => setExtraData(e.target.value)}
+            placeholder="Description (markdown)"
+            className="max-h-48 min-h-24 font-mono text-xs"
+          />
+        </Field>
+        <Field label="Id" htmlFor="group-id">
+          <Input
+            id="group-id"
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+            className="font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            Changing the id rewrites it on every item in the group. If a group
+            with the new id exists, this group merges into it.
+          </p>
+        </Field>
+      </SeeMore>
     </ModalShell>
   );
 }

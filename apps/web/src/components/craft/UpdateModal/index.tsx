@@ -1,6 +1,5 @@
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtom, useAtomValue } from "jotai";
-import { Redo2 } from "lucide-react";
 import { type ReactNode, useCallback } from "react";
 import { tagsAtom } from "@/atom";
 import ModalShell from "@/components/craft/ModalShell";
@@ -8,7 +7,6 @@ import MultiSelect from "@/components/craft/MultiSelect";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   updateContentUrlAtom,
   updateCoverAtom,
@@ -20,40 +18,8 @@ import {
   updateTagsAtom,
   updateTitleAtom,
 } from "./atom";
+import Field from "./Field";
 import SeeMore from "./SeeMore";
-
-/** Label row with the optional "reset to the original value" button. */
-function Field({
-  label,
-  htmlFor,
-  onReset,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  onReset?: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="grid gap-2">
-      <div className="flex min-h-6 items-center justify-between">
-        <Label htmlFor={htmlFor}>{label}</Label>
-        {onReset && (
-          <Button
-            onClick={onReset}
-            size="icon-xs"
-            variant="ghost"
-            aria-label={`Reset ${label.toLowerCase()}`}
-            title="Reset to the original value"
-          >
-            <Redo2 />
-          </Button>
-        )}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 export default function UpdateModal({
   className = "",
