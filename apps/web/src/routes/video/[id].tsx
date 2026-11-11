@@ -1,3 +1,4 @@
+import { CAPTION_TAG } from "@tagapp/utils";
 import { useMutation } from "@tanstack/react-query";
 import { Image } from "lucide-react";
 import { useCallback, useRef } from "react";
@@ -15,7 +16,7 @@ export default function VideoPage() {
   const videoUrl = `/media/Videos/${encodedTitle}`;
   const posterUrl = `/media/Videos/.covers/cover.${encodedTitle}`;
   const captionUrl =
-    doc.tags.includes("meta:caption") &&
+    doc.tags.includes(CAPTION_TAG) &&
     `/media/Videos/.captions/caption.${encodedTitle}.vtt`;
 
   const videoRef = useRef<HTMLVideoElement>(null);

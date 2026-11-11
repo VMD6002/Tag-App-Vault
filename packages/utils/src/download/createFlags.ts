@@ -1,4 +1,5 @@
 import type { ContentWebType } from "@tagapp/utils/types";
+import { DIFFERENT_COVER_TAG, YT_COOKIE_TAG } from "../reservedTags";
 import { downloadContent } from "./downloadContent";
 import { fileBase } from "./files";
 import { getImageExtensionFromURL } from "./getImageExtensionFromURL";
@@ -41,7 +42,7 @@ export async function createFlag(
   )
     flags.push("--user-agent", userAgent);
 
-  if (item.tags.includes("meta:yt-cookie")) {
+  if (item.tags.includes(YT_COOKIE_TAG)) {
     const site = item.tags
       .find((t) => t.startsWith("Site:"))
       ?.slice("Site:".length);
@@ -52,7 +53,7 @@ export async function createFlag(
     flags.push("--cookies", cookies);
   }
 
-  if (item.tags.includes("meta:different-cover")) {
+  if (item.tags.includes(DIFFERENT_COVER_TAG)) {
     if (!item.cover) throw new Error("No cover found");
     await downloadContent(
       item.cover,

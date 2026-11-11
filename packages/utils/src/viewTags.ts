@@ -26,7 +26,7 @@ export type ViewTagValues = Partial<{
 }>;
 
 /** Single source of truth for `view:` tags (documented in docs/domain-model.md). */
-const VIEW_TAGS: Record<string, ViewTagValues> = {
+export const VIEW_TAGS: Record<string, ViewTagValues> = {
   "view:sort-a-z": { sortMode: "name-asc" },
   "view:sort-z-a": { sortMode: "name-desc" },
   "view:sort-newest": { sortMode: "created-date-desc" },
@@ -40,8 +40,6 @@ const VIEW_TAGS: Record<string, ViewTagValues> = {
   "view:grid-4": { viewMode: "grid-4" },
   "view:autoplay": { autoPlay: true },
   "view:no-autoplay": { autoPlay: false },
-  // Deprecated alias of view:autoplay, kept for existing libraries.
-  "meta:autoplay": { autoPlay: true },
 };
 
 const WIDTH = /^view:width-(\d{2,3})$/;

@@ -1,4 +1,5 @@
 import { readdir } from "node:fs/promises";
+import { CAPTION_TAG } from "@tagapp/utils";
 import {
   ContentJsonSchema,
   type ContentJsonType,
@@ -20,7 +21,6 @@ export interface NewContentType extends ContentJsonType {
 }
 
 export const SYNC = "./Sync";
-const CAPTIONS_TAG = "meta:caption";
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   10,
@@ -169,8 +169,8 @@ export async function getSyncData(dir = SYNC) {
 
     // The caption tag always mirrors whether a caption file actually exists
     const tags = new Set(loaded.tags.map((t) => t.trim()).filter(Boolean));
-    tags.delete(CAPTIONS_TAG);
-    if (ext[2]) tags.add(CAPTIONS_TAG);
+    tags.delete(CAPTION_TAG);
+    if (ext[2]) tags.add(CAPTION_TAG);
 
     consume();
     contents[loaded.id] = { ...loaded, tags: [...tags], type, ext, name };

@@ -43,10 +43,3 @@ test("first conflicting tag wins", () => {
     sortMode: "name-desc",
   });
 });
-
-test("meta:autoplay is an alias of view:autoplay", () => {
-  expect(parseViewTags(["meta:autoplay"])).toEqual({ autoPlay: true });
-  expect(parseViewTags(["view:no-autoplay", "meta:autoplay"])).toEqual({
-    autoPlay: false,
-  });
-});

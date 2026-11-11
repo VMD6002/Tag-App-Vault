@@ -1,6 +1,6 @@
 import { rename } from "node:fs/promises";
 import { ORPCError } from "@orpc/server";
-import { CTypeDir, eqSet, SetDifferenceES6 } from "@tagapp/utils";
+import { CAPTION_TAG, CTypeDir, eqSet, SetDifferenceES6 } from "@tagapp/utils";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, IncrementTagCount, tagDB } from "../db/tags.js";
 import { hasBasename, renameByBasename } from "../lib/fsBaseNameFunctions.js";
@@ -39,7 +39,7 @@ export async function setDoc(input: DocType) {
             newPath: `cover.${NewData.title}.${OldData.id}`,
           });
 
-        if (OldData.type === "video" && OldData.tags.includes("meta:caption"))
+        if (OldData.type === "video" && OldData.tags.includes(CAPTION_TAG))
           mvOperationData.push({
             baseDir: `./media/${CTypeDir[OldData.type]}/.captions`,
             oldPath: `caption.${OldData.title}.${OldData.id}.vtt`,

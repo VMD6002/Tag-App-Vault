@@ -1,6 +1,6 @@
 import { rename, rm } from "node:fs/promises";
 import { ORPCError } from "@orpc/server";
-import { CTypeDir } from "@tagapp/utils";
+import { CAPTION_TAG, CTypeDir } from "@tagapp/utils";
 import type { ContentServerType } from "@tagapp/utils/types";
 import { contentDataDB } from "../db/contentData.js";
 import { DecrementTagCount, tagDB } from "../db/tags.js";
@@ -65,7 +65,7 @@ export async function deleteData(IdList: string[]) {
             `${ContentDeleted.title}.${ContentDeleted.id}`,
             `${ContentDeleted.title}.${ContentDeleted.id}.del`,
           );
-          if (ContentDeleted.tags.includes("meta:caption"))
+          if (ContentDeleted.tags.includes(CAPTION_TAG))
             await safeRenameExact(
               `./media/${CTypeDir[ContentDeleted.type]}/.captions/caption.${ContentDeleted.title}.${ContentDeleted.id}.vtt`,
               `./media/${CTypeDir[ContentDeleted.type]}/.captions/caption.${ContentDeleted.title}.${ContentDeleted.id}.vtt.del`,
