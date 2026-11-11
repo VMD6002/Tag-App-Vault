@@ -1,4 +1,4 @@
-import { Check, Image, ListChecks, Pencil, Trash2 } from "lucide-react";
+import { Check, CheckSquare, Image, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type FileMode = "view" | "cover" | "delete";
@@ -113,8 +113,15 @@ export default function FloatingToolbar({
             : `Select ${noun} to delete them`
         }
       >
-        <ListChecks />
-        {mode === "delete" ? "Done selecting" : `Select ${noun}`}
+        {mode === "delete" ? (
+          <>
+            <X /> Done selecting
+          </>
+        ) : (
+          <>
+            <CheckSquare /> Select {noun}
+          </>
+        )}
       </Button>
     </div>
   );

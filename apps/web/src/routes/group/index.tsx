@@ -3,8 +3,8 @@ import type { GroupType } from "@tagapp/utils/types";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import {
+  CheckSquare,
   FolderOpen,
-  ListChecks,
   Merge,
   Pencil,
   Plus,
@@ -12,6 +12,7 @@ import {
   Trash2,
   Unlink,
   Wrench,
+  X,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -227,8 +228,15 @@ export default function GroupsPage() {
               }
               title="Pick several groups to merge, disband or delete them together"
             >
-              <ListChecks />
-              {selectionOn ? "Done selecting" : "Select groups"}
+              {selectionOn ? (
+                <>
+                  <X /> Done selecting
+                </>
+              ) : (
+                <>
+                  <CheckSquare /> Select groups
+                </>
+              )}
             </Button>
           </>
         )}

@@ -1,14 +1,15 @@
 import { contentTypes, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
+  CheckSquare,
   Eye,
   EyeOff,
   FolderMinus,
   FolderPlus,
   ImageIcon,
-  ListChecks,
   Pencil,
   Trash2,
+  X,
 } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import {
@@ -248,8 +249,15 @@ export default function Filters({
                     : "Pick several items to edit their tags or remove them together"
                 }
               >
-                <ListChecks />
-                {selectionOn ? "Done selecting" : "Select items"}
+                {selectionOn ? (
+                  <>
+                    <X /> Done selecting
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare /> Select items
+                  </>
+                )}
               </Button>
             )}
             {!!tags && inGroup && (
