@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 
 const MAX_GROUPS = 3;
 const MAX_PER_GROUP = 6;
@@ -8,13 +9,16 @@ const pretty = (s: string) => s.replaceAll("_", " ");
 /**
  * Tags grouped by parent (the part before the colon): a quiet label, then the values as chips.
  * Without `limit` every tag is shown; with it the list collapses behind "Show N more".
+ * Tags in `own` (a group's own tags among its children's) get a stronger outline.
  */
 export default function TagChips({
   tags,
   limit = false,
+  own,
 }: {
   tags: string[];
   limit?: boolean;
+  own?: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -27,7 +31,10 @@ export default function TagChips({
     return [...map.entries()].map(([parent, list]) => ({
       parent,
       // A tag without a colon is its own group; show it whole
-      values: list.map((t) => (t === parent ? t : t.slice(parent.length + 1))),
+      values: list.map((t) => ({
+        tag: t,
+        label: t === parent ? t : t.slice(parent.length + 1),
+      })),
     }));
   }, [tags]);
 
@@ -56,10 +63,15 @@ export default function TagChips({
           <ul className="flex min-w-0 flex-wrap gap-1">
             {g.values.map((v) => (
               <li
-                key={v}
-                className="max-w-full border bg-muted/50 px-1.5 py-0.5 text-[11px] leading-4 [overflow-wrap:anywhere]"
+                key={v.tag}
+                title={own?.includes(v.tag) ? "Group tag" : undefined}
+                className={cn(
+                  "max-w-full border bg-muted/50 px-1.5 py-0.5 text-[11px] leading-4 [overflow-wrap:anywhere]",
+                  own?.includes(v.tag) &&
+                    "border-foreground/70 bg-transparent font-medium",
+                )}
               >
-                {pretty(v)}
+                {pretty(v.label)}
               </li>
             ))}
           </ul>

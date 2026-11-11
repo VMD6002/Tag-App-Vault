@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { Library as LibraryIcon, RefreshCw, SearchX } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   filterActiveAtom,
   initializeFilterDataFromURLAtom,
@@ -15,6 +15,7 @@ import {
   ErrorState,
   LoadingState,
 } from "@/components/craft/EmptyState";
+import GroupEditModal from "@/components/craft/group/GroupEditModal";
 import TitleHeader from "@/components/craft/TitleHeader";
 import UpdateModal from "@/components/craft/UpdateModal";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ function Child() {
   const filterActive = useAtomValue(filterActiveAtom);
   const groups = useAtomValue(allGroupsAtom);
   const { addToGroups, disband } = useGroupActions(loadAllContent);
+  const [editGroupId, setEditGroupId] = useState<string | null>(null);
   const setSelection = useSetAtom(selectionEntriesAtom);
   const setSelectionOn = useSetAtom(selectionOnAtom);
 
@@ -84,8 +86,8 @@ function Child() {
           />
           <AddToGroupModal
             groups={groups}
-            addToGroups={async (itemIds, groupIds, newTitle) => {
-              const ok = await addToGroups(itemIds, groupIds, newTitle);
+            addToGroups={async (itemIds, groupIds) => {
+              const ok = await addToGroups(itemIds, groupIds);
               if (ok) {
                 setSelection([]); // the items may have left the list
                 setSelectionOn(false);
@@ -94,6 +96,11 @@ function Child() {
             }}
           />
           <BulkUpdateModal bulkUpdateContentFunc={bulkUpdateContentFunc} />
+          <GroupEditModal
+            group={groups[editGroupId ?? ""] ?? null}
+            onClose={() => setEditGroupId(null)}
+            onSaved={() => loadAllContent()}
+          />
         </>
       )}
       <TitleHeader
@@ -165,6 +172,7 @@ function Child() {
                 key={entry.group.id}
                 group={entry.group}
                 items={entry.children}
+                onEdit={setEditGroupId}
                 onDisband={disband}
               />
             ),

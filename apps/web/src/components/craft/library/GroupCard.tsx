@@ -16,13 +16,15 @@ type Props = {
   onOpen?: () => void;
   /** Group lists with selection: a click toggles instead of opening. */
   selection?: { on: boolean; selected: boolean; onToggle: () => void };
+  /** Tags of the group's children, shown after its own (own tags are outlined). */
+  childTags?: string[];
   /** Footer buttons; the footer only renders with some. */
   actions?: ReactNode;
 };
 
 /** Card of a group (library, `/group`): cover, title, item count, tags. Clicking opens `/group/:id`. */
 const GroupCard = memo(
-  ({ group, count, cover, onOpen, selection, actions }: Props) => {
+  ({ group, count, cover, childTags, onOpen, selection, actions }: Props) => {
     const selectionOn = !!selection?.on;
     const selected = !!selection?.selected;
     const href = `/group/${encodeURIComponent(group.id)}`;
@@ -100,7 +102,15 @@ const GroupCard = memo(
               {group.id}
             </p>
           </div>
-          <TagChips tags={group.tags} limit />
+          <TagChips
+            tags={
+              childTags
+                ? [...new Set([...group.tags, ...childTags])]
+                : group.tags
+            }
+            own={childTags ? group.tags : undefined}
+            limit
+          />
         </div>
 
         {actions && (
