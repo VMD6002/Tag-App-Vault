@@ -415,6 +415,13 @@ export function buildDb(scenario: Scenario): MockDb {
   return db;
 }
 
+/** Ids of the mock groups the group pages open (`pages.ts`). */
+export const GROUP_ID = {
+  normal: "grp_mockTravel1",
+  stress: `grp_${"s".repeat(60)}`,
+  empty: "grp_mockEmpty01",
+};
+
 type GroupSeed = {
   id: string;
   title: string;
@@ -432,7 +439,7 @@ type GroupSeed = {
 function addGroups(db: MockDb, scenario: Scenario) {
   const seeds: GroupSeed[] = [
     {
-      id: "grp_mockTravel1",
+      id: GROUP_ID.normal,
       title: "Travel and outdoors",
       tags: ["Topic:Travel"],
       extraData: "Invented group description.",
@@ -450,11 +457,11 @@ function addGroups(db: MockDb, scenario: Scenario) {
       cover: "/media/Images/.covers/cover.kitchen-and-garden",
       children: ["gen_vidPasta01", "gen_imgGarden01", "gen_galMarket01"],
     },
-    { id: "grp_mockEmpty01", title: "Empty group", tags: [], children: [] },
+    { id: GROUP_ID.empty, title: "Empty group", tags: [], children: [] },
   ];
   if (scenario === "stress")
     seeds.push({
-      id: `grp_${"s".repeat(60)}`,
+      id: GROUP_ID.stress,
       title: `${"A very long group title that has to wrap. ".repeat(4)}`,
       tags: manyTags(40),
       children: Object.keys(db.contents)

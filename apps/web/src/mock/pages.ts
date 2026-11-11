@@ -1,4 +1,4 @@
-import { SAMPLE_ID, type Scenario } from "./data";
+import { GROUP_ID, SAMPLE_ID, type Scenario } from "./data";
 
 const ALL: Scenario[] = [
   "normal",
@@ -42,6 +42,30 @@ export const MOCK_PAGES: MockPage[] = [
     path: () => "/",
     search: 'input[aria-label="Search titles"]',
     applySearch: true,
+  },
+  {
+    slug: "groups",
+    title: "Groups (/group)",
+    note: "Real route: every group incl. the empty one, search, Fix Data, edit, merge, disband and delete (shared items dialog) with 'extension connected'. Fake server, memory only.",
+    scenarios: ALL,
+    path: () => "/group",
+    search: 'input[aria-label="Search groups"]',
+  },
+  {
+    slug: "group",
+    title: "Group (/group/:id)",
+    note: "Real route: the library page scoped to one group, header actions (edit, Stats, Fix Data, disband, delete), Remove from group and Delete on selection. 'No results' = no item matches; 'empty' = group not found.",
+    scenarios: ALL,
+    path: (s) => `/group/${s === "stress" ? GROUP_ID.stress : GROUP_ID.normal}`,
+    search: 'input[aria-label="Search titles"]',
+    applySearch: true,
+  },
+  {
+    slug: "group-empty",
+    title: "Empty group (/group/:id)",
+    note: "Real route: a group without items.",
+    scenarios: ["normal"],
+    path: () => `/group/${GROUP_ID.empty}`,
   },
   {
     slug: "sync",
