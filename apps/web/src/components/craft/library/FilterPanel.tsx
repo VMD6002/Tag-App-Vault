@@ -46,24 +46,28 @@ export function FilterPanel({
   children: ReactNode;
 }) {
   return (
-    <section aria-label="Filters" className="grid gap-3 border bg-card/40 p-3">
-      <div className="flex items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onApply();
-            }}
-            placeholder="Search titles…"
-            aria-label="Search titles"
-            className="pl-8"
-          />
-        </div>
+    // Small screens: search, fields, then Realtime + Filter, then the clear row. From sm: actions sit right of the search.
+    <section
+      aria-label="Filters"
+      className="grid gap-3 border bg-card/40 p-3 sm:grid-cols-[1fr_auto]"
+    >
+      <div className="relative min-w-0 sm:row-start-1">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onApply();
+          }}
+          placeholder="Search titles…"
+          aria-label="Search titles"
+          className="pl-8"
+        />
+      </div>
+      <div className="order-3 flex items-center gap-2 sm:order-none sm:row-start-1 sm:justify-end">
         <Label htmlFor="realtime-filter-switch" className="text-sm">
           Realtime
         </Label>
@@ -72,13 +76,19 @@ export function FilterPanel({
           checked={realtime}
           onCheckedChange={onRealtimeChange}
         />
-        <Button onClick={onApply} title="Apply the search and tag filters">
+        <Button
+          onClick={onApply}
+          title="Apply the search and tag filters"
+          className="ml-auto sm:ml-0"
+        >
           Filter
         </Button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
+      <div className="order-2 grid gap-3 sm:order-none sm:col-span-2 sm:row-start-2 sm:grid-cols-2 lg:grid-cols-4">
+        {children}
+      </div>
       {activeCount > 0 && (
-        <div className="flex items-center justify-between gap-3 border-t pt-2 text-xs text-muted-foreground">
+        <div className="order-4 flex items-center justify-between gap-3 border-t pt-2 text-xs text-muted-foreground sm:order-none sm:col-span-2 sm:row-start-3">
           <span>
             {activeCount} {activeCount === 1 ? "filter" : "filters"} set.
             {realtime ? "" : " Press Filter to apply."}
