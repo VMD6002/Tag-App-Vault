@@ -35,6 +35,27 @@ const attachTagsToGalleryData = async (
   return items;
 };
 
+const readTagsData = async (tagsFilePath: string) => {
+  try {
+    return (await Bun.file(tagsFilePath).json()) as Record<string, string[]>;
+  } catch {
+    return {};
+  }
+};
+
+// Cached gallery data, regenerated when missing or unreadable
+const readGalleryItems = async (
+  galleryDataPath: string,
+  name: string,
+  id: string,
+): Promise<GalleryItem[]> => {
+  try {
+    return await Bun.file(galleryDataPath).json();
+  } catch {
+    return generateGalleryData(`${name}.${id}`);
+  }
+};
+
 export const getGalleryData = os
   .input(z.object({ name: z.string(), id: z.string() }))
   .handler(async ({ input }) => {
@@ -185,28 +206,12 @@ export const updateContentTags = os
     await galleryExistsCheck(name, id);
 
     const tagsFilePath = `${galleryPath}/.tags.json`;
-    let tagsData: Record<string, string[]> = {};
-    if (await pathExists(tagsFilePath)) {
-      try {
-        tagsData = await Bun.file(tagsFilePath).json();
-      } catch {
-        tagsData = {};
-      }
-    }
+    const tagsData = await readTagsData(tagsFilePath);
     tagsData[content] = tags;
     await Bun.write(tagsFilePath, JSON.stringify(tagsData, null, 2));
 
     const galleryDataPath = `${galleryPath}/.gallery-data.json`;
-    let galleryData = [];
-    if (await pathExists(galleryDataPath)) {
-      try {
-        galleryData = await Bun.file(galleryDataPath).json();
-      } catch {
-        galleryData = await generateGalleryData(`${name}.${id}`);
-      }
-    } else {
-      galleryData = await generateGalleryData(`${name}.${id}`);
-    }
+    const galleryData = await readGalleryItems(galleryDataPath, name, id);
 
     const updatedData = galleryData.map((item: GalleryItem) => ({
       ...item,
@@ -215,6 +220,75 @@ export const updateContentTags = os
     }));
 
     await Bun.write(galleryDataPath, JSON.stringify(updatedData, null, 2));
+    return updatedData;
+  });
+
+export const bulkUpdateContentTags = os
+  .input(
+    z.object({
+      name: z.string(),
+      id: z.string(),
+      contents: z.string().array(),
+      add: z.string().array(),
+      remove: z.string().array(),
+    }),
+  )
+  .handler(async ({ input }) => {
+    const { name, id, contents, add, remove } = input;
+    const galleryPath = `./media/Galleries/${name}.${id}`;
+
+    if (!name || !id || !contents.length) {
+      throw new ORPCError("NOT_ACCEPTABLE", {
+        message: `Blank Gallery Name or ID or Contents`,
+      });
+    }
+
+    await galleryExistsCheck(name, id);
+
+    const tagsFilePath = `${galleryPath}/.tags.json`;
+    const galleryDataPath = `${galleryPath}/.gallery-data.json`;
+    const galleryData = await readGalleryItems(galleryDataPath, name, id);
+
+    // Every file must be one this gallery lists and still be on disk; nothing is written otherwise
+    const known = new Set(galleryData.map((item) => item.name));
+    for (const content of contents) {
+      if (
+        !known.has(content) ||
+        !(await pathExists(`${galleryPath}/${content}`))
+      ) {
+        throw new ORPCError("NOT_FOUND", {
+          message: `File ${content} doesn't exist in this gallery`,
+        });
+      }
+    }
+
+    const previousTags = (await pathExists(tagsFilePath))
+      ? await Bun.file(tagsFilePath).text()
+      : null;
+    const tagsData = await readTagsData(tagsFilePath);
+    const selected = new Set(contents);
+    const updatedData = galleryData.map((item) => {
+      const current = tagsData[item.name] || item.tags || [];
+      if (!selected.has(item.name)) return { ...item, tags: current };
+      const tags = [
+        ...new Set([...current.filter((t) => !remove.includes(t)), ...add]),
+      ];
+      tagsData[item.name] = tags;
+      return { ...item, tags };
+    });
+
+    // .tags.json is the source of truth: written first, restored if the cache write fails
+    await Bun.write(tagsFilePath, JSON.stringify(tagsData, null, 2));
+    try {
+      await Bun.write(galleryDataPath, JSON.stringify(updatedData, null, 2));
+    } catch (err) {
+      if (previousTags === null) await rm(tagsFilePath, { force: true });
+      else await Bun.write(tagsFilePath, previousTags);
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        message: "Failed to save gallery data, tags were not changed",
+        cause: err,
+      });
+    }
     return updatedData;
   });
 
