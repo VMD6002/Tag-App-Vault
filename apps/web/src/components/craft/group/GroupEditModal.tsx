@@ -1,4 +1,5 @@
 import type { GroupType } from "@tagapp/utils/types";
+import CodeEditor from "@uiw/react-textarea-code-editor";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 import { type MultiSelectOption, tagsAtom } from "@/atom";
@@ -6,15 +7,15 @@ import ModalShell from "@/components/craft/ModalShell";
 import MultiSelect from "@/components/craft/MultiSelect";
 import Field from "@/components/craft/UpdateModal/Field";
 import SeeMore from "@/components/craft/UpdateModal/SeeMore";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { run } from "@/hooks/useGroupActions";
 import { orpc } from "@/lib/orpc";
 
 /**
  * Edit a group like the item edit modal: title and the group's OWN tags up top; cover URL (empty
- * clears it: the card shows black), description (markdown) and id under
+ * clears it: no cover), description (markdown) and id under
  * "More fields". Changing the id rewrites it on every item; an id that already exists merges this
  * group into it.
  */
@@ -29,6 +30,7 @@ export default function GroupEditModal({
   /** Runs after a save with the group's final id (it changes with the id). */
   onSaved: (id: string) => void;
 }) {
+  const { theme } = useTheme();
   const extensionTags = useAtomValue(tagsAtom);
   const [title, setTitle] = useState("");
   const [extraData, setExtraData] = useState("");
@@ -120,17 +122,25 @@ export default function GroupEditModal({
             id="group-cover"
             value={cover}
             onChange={(e) => setCover(e.target.value)}
-            placeholder="Empty: use one of the items' covers"
+            placeholder="Empty: no cover"
           />
         </Field>
-        <Field label="Description" htmlFor="group-description">
-          <Textarea
-            id="group-description"
-            value={extraData}
-            onChange={(e) => setExtraData(e.target.value)}
-            placeholder="Description (markdown)"
-            className="max-h-48 min-h-24 font-mono text-xs"
-          />
+        <Field label="Description">
+          <div className="max-h-40 overflow-y-auto border border-input">
+            <CodeEditor
+              value={extraData}
+              language="md"
+              placeholder="Description (markdown)"
+              onChange={(e) => setExtraData(e.target.value)}
+              padding={12}
+              className="bg-background/80"
+              style={{
+                fontFamily:
+                  "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+              }}
+              data-color-mode={theme === "system" ? "dark" : theme}
+            />
+          </div>
         </Field>
         <Field label="Id" htmlFor="group-id">
           <Input
