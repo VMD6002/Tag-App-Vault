@@ -3,6 +3,7 @@ import { useAtomValue } from "jotai";
 import {
   BarChart3,
   FolderOpen,
+  ImageOff,
   Pencil,
   Trash2,
   Unlink,
@@ -128,8 +129,8 @@ export default function GroupHeader({
               onError={() => setFailedCover(shownCover)}
             />
           ) : (
-            <div
-              className="h-24 w-full bg-black"
+            <ImageOff
+              className="size-6 text-muted-foreground/50"
               role="img"
               aria-label="No cover"
             />

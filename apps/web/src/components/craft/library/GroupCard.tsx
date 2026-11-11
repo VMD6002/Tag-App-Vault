@@ -1,5 +1,5 @@
 import type { GroupType } from "@tagapp/utils/types";
-import { Folder } from "lucide-react";
+import { Folder, ImageOff } from "lucide-react";
 import { memo, type ReactNode, useState } from "react";
 import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,8 +65,8 @@ const GroupCard = memo(
               onError={() => setFailedCover(shownCover)}
             />
           ) : (
-            <div
-              className="h-32 w-full bg-black"
+            <ImageOff
+              className="size-6 text-muted-foreground/50"
               role="img"
               aria-label="No cover"
             />
