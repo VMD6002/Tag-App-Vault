@@ -27,7 +27,7 @@ Touch each place that switches on type: `contentTypes` and `CTypeDir` (`constant
 | `contentWebSchema` / `ContentWebType`       | `types/web.ts`    | `ContentJsonSchema` plus `url`, `scraper`, `download?` (`{type, flags?: {label, value}}`), `contentUrl?`. The download queue item                                                          |
 | `GroupSchema` / `GroupType`                 | `types/group.ts`  | `id` (`grp_<nanoid10>`), `title`, `extraData` (markdown), `tags[]`, `cover?` (plain URL), `added`, `lastUpdated` (seconds). `GroupsDB = Record<id, GroupType>`, stored in `DB/groups.json` |
 
-- Zod validates every boundary. The web app's Generate JSON page validates with the shared `ContentJsonSchema` too.
+- Zod validates every boundary.
 
 ## Tags
 

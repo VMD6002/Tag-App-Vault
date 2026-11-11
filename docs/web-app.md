@@ -16,7 +16,6 @@ Scope: `apps/web` (`tag-app-web`), the React SPA that browses and edits the libr
 | `/sync`                                                        | `routes/sync/index.tsx`      | Sync preview (`main.getSyncData`): own filters, edit / remove pending items, Refresh (rescan only) and Sync                                                                                                     |
 | `/downloads`                                                   | `routes/downloads/index.tsx` | Server download queue and history as cards with live progress (`downloads.watch` plus the library lookup for finished covers); "Start downloads", cancel, remove, clear, error log dialog                       |
 | `/tags`                                                        | `routes/tags.tsx`            | Tag counts, `hardResetTagCount`, `softResetTagCount`                                                                                                                                                            |
-| `/generateContentJson`                                         | `routes/generateJSON.tsx`    | Builds a metadata JSON file to put in `Sync/` by hand; needs tags from the extension                                                                                                                            |
 | `/settings`                                                    | `routes/settings.tsx`        | Device-local gallery defaults (sort, layout, single-column width, autoplay) and group display (position in the library); nothing goes to the server                                                             |
 | `/group`                                                       | `routes/group/index.tsx`     | Every group incl. empty ones: search, Fix Data, per card edit / fix / disband / delete, select then merge / disband / delete. Fetches `main.getAllContent` and `groups.list` itself (`useQuery`, fresh on open) |
 | `/group/:id`                                                   | `routes/group/[id].tsx`      | A group: the library page scoped to its children, plus a header with cover, description, tags, Stats, Edit, Fix Data, Disband and Delete group. Unknown id: "Group not found"                                   |
@@ -49,7 +48,7 @@ Scope: `apps/web` (`tag-app-web`), the React SPA that browses and edits the libr
 ## Extension handshake and read-only mode
 
 - The TagApp browser extension (a separate project) posts `TAG_APP_INJECT_TAGS` with a string array via `window.postMessage`. `App.tsx` accepts it only when `event.source === window`, stores it in `tagsAtom` after appending the reserved tags (`withReservedTags`, [domain model](./domain-model.md#reserved-tags); extension order first, no duplicates, so the tag pickers always offer `meta:`/`view:` tags) and replies `TAG_APP_TAGS_RECEIVED`.
-- `tagsAtom` is `null` until then. While it is `null` the app is read-only: the library hides edit, remove and sync controls, item pages hide edit, remove and cover controls, and Generate JSON shows a waiting state.
+- `tagsAtom` is `null` until then. While it is `null` the app is read-only: the library hides edit, remove and sync controls, item pages hide edit, remove and cover controls.
 
 ## Rules
 

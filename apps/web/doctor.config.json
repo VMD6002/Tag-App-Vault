@@ -5,10 +5,6 @@
     "rules": ["react-doctor/js-set-map-lookups"],
     "overrides": [
       {
-        "files": ["src/lib/saveJsonFile.ts"],
-        "rules": ["react-doctor/no-create-object-url-without-revoke"]
-      },
-      {
         "files": ["src/atom.ts", "src/components/craft/UpdateModal/atom.ts"],
         "rules": ["react-doctor/jotai-derived-atom-returns-fresh-object"]
       },

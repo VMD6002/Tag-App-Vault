@@ -92,13 +92,6 @@ export const MOCK_PAGES: MockPage[] = [
     search: 'input[aria-label="Find a tag"]',
   },
   {
-    slug: "generate",
-    title: "Generate JSON (/generateContentJson)",
-    note: "Real route. Switch the extension off to see the waiting-for-tags state.",
-    scenarios: ["normal", "stress"],
-    path: () => "/generateContentJson",
-  },
-  {
     slug: "reference",
     title: "Reference (/reference)",
     note: "Real route: the Notes markdown rendered in the app.",

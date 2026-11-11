@@ -15,7 +15,6 @@ const VideoPage = lazy(() => import("./routes/video/[id]"));
 const GalleryPage = lazy(() => import("./routes/gallery/[id]"));
 const TextPage = lazy(() => import("./routes/txt/[id]"));
 const AudioPage = lazy(() => import("./routes/audio/[id]"));
-const GenerateJSONPage = lazy(() => import("./routes/generateJSON"));
 const SettingsPage = lazy(() => import("./routes/settings"));
 const GroupsPage = lazy(() => import("./routes/group"));
 const GroupPage = lazy(() => import("./routes/group/[id]"));
@@ -53,9 +52,6 @@ export default function AppLayout() {
               </Route>
               <Route path="/tags">
                 <TagPage />
-              </Route>
-              <Route path="/generateContentJson">
-                <GenerateJSONPage />
               </Route>
               <Route path="/settings">
                 <SettingsPage />
