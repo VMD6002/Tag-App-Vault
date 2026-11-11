@@ -335,7 +335,7 @@ A group collects related items (same topic or author). Items stay where they are
 - **`/group`** lists every group, including empty ones: Fix Data, merge several groups into one, disband (remove the group, keep its items) and delete. **`/group/:id`** is the library scoped to one group, with Stats, edit (title, description, tags, cover, id), Fix Data, disband and delete group.
 - **Delete group** deletes the group and the items only in it. Items that are also in other groups are listed; they only lose this group unless you tick them to be deleted too (same two-phase delete as any item).
 - **Fix Data** recreates missing group records for ids found on items (title = id) and clears an empty cover; nothing else. Sync does the first part automatically.
-- **Cover** is a URL (one of the items' covers or any other). Empty = the card shows a child's cover, picked by the cover setting on the Settings page (newest, oldest, first with a cover).
+- **Cover** is a URL (one of the items' covers or any other). It is set once, when the first items join an empty group (the first one with a cover); empty = the card shows a black box.
 - Editing controls need the extension, like the rest of the web app. Details: `docs/groups.md`.
 
 ---
