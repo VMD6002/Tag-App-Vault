@@ -12,11 +12,12 @@ import {
 } from "@/components/craft/UpdateModal/atom";
 import { Button } from "@/components/ui/button";
 import { useDoc } from "../contexts/Doc.Context";
+import ItemGroupLinks from "./ItemGroupLinks";
 
 export default function DocInfoSection() {
   const setUpdateModalOpen = useSetAtom(updateModalOpenAtom);
   const setUpdateGroups = useSetAtom(updateGroupsAtom);
-  const { tags, removeContent, doc } = useDoc();
+  const { tags, removeContent, doc, groups, groupsLoaded } = useDoc();
   const added = new Date(doc.added * 1000);
   return (
     <aside
@@ -86,6 +87,11 @@ export default function DocInfoSection() {
       <section aria-label="Tags" className="border-t pt-3">
         <TagChips tags={doc.tags} />
       </section>
+      {groupsLoaded && !!doc.groups?.length && (
+        <section aria-label="Groups" className="border-t pt-3">
+          <ItemGroupLinks ids={doc.groups} groups={groups} />
+        </section>
+      )}
       {doc.extraData.trim() && (
         <section aria-label="Notes" className="border-t pt-3">
           <div className="prose prose-sm dark:prose-invert max-w-none [overflow-wrap:anywhere]">

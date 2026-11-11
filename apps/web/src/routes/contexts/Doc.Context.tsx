@@ -135,6 +135,7 @@ function useDocContext() {
     tags,
     doc,
     groups: groupsQ.data ?? {},
+    groupsLoaded: groupsQ.isSuccess,
     orpc,
     encodedTitle,
     getContentMutation,

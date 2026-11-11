@@ -2,8 +2,6 @@ import { VIEW_HIDE_IN_LIBRARY_TAG, VIEW_IN_LIBRARY_TAG } from "@tagapp/utils";
 import type { GroupsDB } from "@tagapp/utils/types";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { X } from "lucide-react";
-import { Link } from "wouter";
-import { clearFilterForNavigationAtom } from "@/atom";
 import GroupPicker from "@/components/craft/GroupPicker";
 import {
   updateGroupsAtom,
@@ -14,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { allGroupsAtom } from "../atom";
+import { GroupLink } from "./ItemGroupLinks";
 
 /**
  * Item edit: the item's pending groups (`updateGroupsAtom`: link to the group, remove), a picker to
@@ -24,7 +23,6 @@ export function ItemGroupsFieldView({ groups }: { groups: GroupsDB }) {
   const [tags, setTags] = useAtom(updateTagsAtom);
   const [ids, setIds] = useAtom(updateGroupsAtom);
   const setModalOpen = useSetAtom(updateModalOpenAtom);
-  const clearFilter = useSetAtom(clearFilterForNavigationAtom);
 
   return (
     <div className="grid gap-3">
@@ -39,16 +37,11 @@ export function ItemGroupsFieldView({ groups }: { groups: GroupsDB }) {
                 key={gid}
                 className="flex items-center justify-between gap-2 border bg-muted/30 px-2 py-1 text-sm"
               >
-                <Link
-                  href={`/group/${encodeURIComponent(gid)}`}
-                  onClick={() => {
-                    setModalOpen(false); // the modal's open state outlives the page
-                    clearFilter();
-                  }}
-                  className="min-w-0 [overflow-wrap:anywhere] hover:underline"
-                >
-                  {groups[gid]?.title || gid}
-                </Link>
+                <GroupLink
+                  id={gid}
+                  groups={groups}
+                  onNavigate={() => setModalOpen(false)}
+                />
                 <Button
                   variant="ghost"
                   size="icon-xs"
