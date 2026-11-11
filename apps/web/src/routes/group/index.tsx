@@ -94,6 +94,17 @@ export default function GroupsPage() {
     [children],
   );
 
+  const childTags = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(children).map(([k, v]) => [
+          k,
+          [...new Set(v.flatMap((c) => c.tags))],
+        ]),
+      ),
+    [children],
+  );
+
   const toggle = (id: string) =>
     setSelected((old) =>
       old.includes(id) ? old.filter((o) => o !== id) : [...old, id],
@@ -344,7 +355,7 @@ export default function GroupsPage() {
           <EmptyState
             icon={FolderOpen}
             title="There are no groups yet"
-            description="Use “New group” to create one, then add items with “Add to group…” in the library."
+            description="Use “New group” to create one, then add items with “Add to group…” in the library’s selection bar or an item’s edit dialog."
           />
         )
       ) : (
@@ -358,6 +369,7 @@ export default function GroupsPage() {
                 group={g}
                 count={kids.length}
                 cover={g.cover || null}
+                childTags={childTags[g.id]}
                 selection={
                   tags
                     ? {
