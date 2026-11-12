@@ -1,4 +1,4 @@
-import { withReservedTags } from "@tagapp/utils";
+import { parseTagCovers, withReservedTags } from "@tagapp/utils";
 import { useAtomValue, useSetAtom } from "jotai";
 import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "sonner";
@@ -7,7 +7,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 import Spinner from "@/components/craft/Spinner";
 import { ThemeProvider } from "@/components/theme-provider";
 import AppLayout from "./AppLayout";
-import { tagsAtom, themeAtom } from "./atom";
+import { tagCoversAtom, tagsAtom, themeAtom } from "./atom";
 import { ConfirmProvider } from "./components/craft/confirm-dialog";
 
 // Dev-only mock pages (#/mock); absent from production builds.
@@ -19,6 +19,7 @@ const MESSAGE_TYPE_ACK_TAGS = "TAG_APP_TAGS_RECEIVED";
 function App() {
   const theme = useAtomValue(themeAtom);
   const setTags = useSetAtom(tagsAtom);
+  const setTagCovers = useSetAtom(tagCoversAtom);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -30,6 +31,7 @@ function App() {
 
         if (Array.isArray(receivedTags)) {
           setTags(withReservedTags(receivedTags));
+          setTagCovers(parseTagCovers(event.data.covers));
           console.log("Tags received and updated in React state.");
 
           // Send ACK back to content script to stop retries
@@ -43,7 +45,7 @@ function App() {
     return () => {
       window.removeEventListener("message", handleMessage);
     };
-  }, [setTags]);
+  }, [setTags, setTagCovers]);
 
   return (
     <Router hook={useHashLocation}>

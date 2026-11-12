@@ -1,5 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
+import { useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
+import { tagCoversAtom } from "@/atom";
 import { confirm } from "@/components/craft/confirm-dialog";
 import { ErrorState, LoadingState } from "@/components/craft/EmptyState";
 import TitleHeader from "@/components/craft/TitleHeader";
@@ -12,6 +14,7 @@ type ServerTagType = Record<string, number>;
 export default function ServerTags() {
   const [tags, setTags] = useState<ServerTagType>({});
   const [query, setQuery] = useState("");
+  const covers = useAtomValue(tagCoversAtom);
 
   const GetTagsFromServerMutation = useMutation(
     orpc.main.getServerTags.mutationOptions({
@@ -115,7 +118,7 @@ export default function ServerTags() {
       ) : loading && !tagCount ? (
         <LoadingState label="Loading tags…" />
       ) : (
-        <TagGroups tags={tags} query={query} />
+        <TagGroups tags={tags} query={query} covers={covers} />
       )}
     </>
   );

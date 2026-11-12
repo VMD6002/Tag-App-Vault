@@ -32,13 +32,17 @@ export function TagSearchInput({
 /**
  * Tags grouped by their parent (the part before the colon), one block per group.
  * `tags` is the server's tag -> item count map. `query` is a client-side filter only.
+ * `covers` (when the extension sent them) show above the tag row, like the extension's tags page.
  */
 export function TagGroups({
   tags,
   query,
+  covers,
 }: {
   tags: Record<string, number>;
   query: string;
+  /** Tag -> cover URL from the extension; tags without one look plain. */
+  covers?: Record<string, string>;
 }) {
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -82,25 +86,34 @@ export function TagGroups({
           <ul>
             {list.map((tag) => {
               const count = tags[tag] ?? 0;
+              const cover = covers?.[tag];
               return (
-                <li
-                  key={tag}
-                  className="flex items-center gap-2 py-0.5 hover:bg-muted/60"
-                >
-                  <span
-                    className="min-w-0 flex-1 truncate py-1 pl-2 text-sm"
-                    title={tag}
-                  >
-                    {pretty(
-                      tag === parent ? tag : tag.slice(parent.length + 1),
-                    )}
-                  </span>
-                  <span
-                    className={`pr-2 text-xs tabular-nums ${count ? "text-muted-foreground" : "text-destructive"}`}
-                    title={`${count} ${count === 1 ? "item" : "items"}${count ? "" : " (unused)"}`}
-                  >
-                    {count}
-                  </span>
+                <li key={tag} className="py-0.5">
+                  {cover && (
+                    <img
+                      alt={`${tag} cover`}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="mb-1 max-h-32 w-full border bg-muted/40 object-contain"
+                      src={cover}
+                    />
+                  )}
+                  <div className="flex items-center gap-2 hover:bg-muted/60">
+                    <span
+                      className="min-w-0 flex-1 truncate py-1 pl-2 text-sm"
+                      title={tag}
+                    >
+                      {pretty(
+                        tag === parent ? tag : tag.slice(parent.length + 1),
+                      )}
+                    </span>
+                    <span
+                      className={`pr-2 text-xs tabular-nums ${count ? "text-muted-foreground" : "text-destructive"}`}
+                      title={`${count} ${count === 1 ? "item" : "items"}${count ? "" : " (unused)"}`}
+                    >
+                      {count}
+                    </span>
+                  </div>
                 </li>
               );
             })}

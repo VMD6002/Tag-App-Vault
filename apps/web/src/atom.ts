@@ -173,3 +173,6 @@ export const clearFilterForNavigationAtom = atom(null, (_, set) => {
 });
 
 export const tagsAtom = atom<string[] | null>(null);
+
+/** Tag -> cover URL sent with the tags by the extension; empty without one (older extensions). */
+export const tagCoversAtom = atom<Record<string, string>>({});
