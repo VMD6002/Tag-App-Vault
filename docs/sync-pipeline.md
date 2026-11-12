@@ -32,11 +32,19 @@ The scan, prepare and sync services take the folder to work on (`dir`, default `
 
 ## Edit or remove before sync (`services/syncItem.ts`)
 
-Behind the web `/sync` preview ([web app](./web-app.md)). `main.editSyncItem` and `main.removeSyncItem` take the item's current disk `name` (as in `getSyncData().contents[id].name`) and `type`; the service runs under `withSyncLock`, calls `splitTData` and re-scans, and matches `name` + `type` against the scan (`NOT_FOUND` otherwise), so a client string never becomes a path. The router also rejects names containing `/` or `\`.
+Behind the web `/sync` preview ([web app](./web-app.md)). `main.editSyncItem` and `main.removeSyncItem` (and the bulk versions below) take the item's current disk `name` (as in `getSyncData().contents[id].name`) and `type`; the service runs under `withSyncLock`, calls `splitTData` and re-scans, and matches `name` + `type` against the scan (`NOT_FOUND` otherwise), so a client string never becomes a path. The router also rejects names containing `/` or `\`.
 
 - Splitting bundles first means an item from a `tdata.*.json` has its own `<name>.json` sidecar, so the edit wins over the bundle (which is gone). The split is what the next sync does anyway; other bundle items become plain sidecars.
 - Edit overwrites `<name>.json` with the scanned `id`, `added`, `lastUpdated` (and `cover`) plus the new title (trimmed, `sanitizeStringForFileName`; blank is `BAD_REQUEST`), tags and `extraData`. For an item without JSON this pins its generated `gen_` id. Files are not renamed here: prepareSync does that at sync. Tags are normalised by the next scan as always (trim, `meta:caption` mirrors the caption file).
 - Remove is non-destructive: it moves `filesOf(...)` and the sidecar (if any) into `UnSyncable/`, rolling back in reverse if a move fails. Unlike prepareSync (whose `rename` silently replaces), it refuses with `CONFLICT` when `UnSyncable/` already holds a file of that name. A bundled item has already been split, so no bundle entry is left behind.
+
+### Bulk (`bulkEditSyncItems`, `bulkRemoveSyncItems`)
+
+The `/sync` selection mode sends one call for the whole selection (`items: {name, type}[]`, at least one). Each runs under one `withSyncLock`, splits bundles and scans once, and matches every ref against the scan; one unknown item fails the whole call with `NOT_FOUND` before anything changes (a repeated ref counts once).
+
+- `bulkEditSyncItems({ items, added?, removed?, addGroups? })`: per item tags = current minus `removed` plus `added` (trimmed, added wins) and `addGroups` appended to its `groups`. Only `<name>.json` changes (an item without one gets a sidecar that pins its generated id); an item whose result is identical is not written. Returns the ids that changed. If a write fails, the sidecars already written are put back (previous text, or deleted when there was none) and it throws `INTERNAL_SERVER_ERROR`.
+- **Groups on a pending item** live in its sidecar `groups` (an array of group ids, `ContentJsonSchema`), exactly where `/downloads/set` and the CLI put them; nothing is written to `DB/groups.json` or `DB/tags.json` before the sync. `addGroups` ids must have a record (`BAD_REQUEST` otherwise, before any write); `editSyncItem`'s optional `groups` (the complete list, `[]` clears, absent keeps) checks only ids the item does not already carry, so an id that has no record yet (registered at sync) survives an edit. At sync, `syncContent` creates stubs for unknown ids, sets the set-once cover for a group without children and counts the item's tags, so group and tag counts end up as if the item had joined the group after the sync. The group's `lastUpdated` is not touched (sync never does).
+- `bulkRemoveSyncItems({ items })`: the single remove for many items: all files and sidecars move to `UnSyncable/`; a name already there is `CONFLICT` for the whole call (nothing moves), and a failed move puts every moved file back. Returns the removed ids. `removeSyncItem` is the one-item case.
 
 ## syncContent (`services/syncContent.ts`)
 
@@ -47,4 +55,4 @@ Behind the web `/sync` preview ([web app](./web-app.md)). `main.editSyncItem` an
 
 ## Tests
 
-`packages/api/src/services/groups.test.ts` covers the group router and services, group registration at `POST /downloads/set` and the sync auto-create and initial cover. `packages/api/src/services/sync.test.ts` runs the services against a scratch directory (it `chdir`s there before importing the DB modules, since paths are cwd-relative). Needs Bun >= 1.4.2 for `Bun.Image`. Run: `bun test packages/api` ([development](./development.md)).
+`packages/api/src/services/groups.test.ts` covers the group router and services, group registration at `POST /downloads/set` and the sync auto-create and initial cover. `packages/api/src/services/sync.test.ts` (also the edit, bulk edit, group and remove cases) runs the services against a scratch directory (it `chdir`s there before importing the DB modules, since paths are cwd-relative). Needs Bun >= 1.4.2 for `Bun.Image`. Run: `bun test packages/api` ([development](./development.md)).
