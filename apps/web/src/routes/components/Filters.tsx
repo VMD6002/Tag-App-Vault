@@ -4,17 +4,7 @@ import {
   VIEW_IN_LIBRARY_TAG,
 } from "@tagapp/utils";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import {
-  CheckSquare,
-  Eye,
-  EyeOff,
-  FolderMinus,
-  FolderPlus,
-  ImageIcon,
-  Pencil,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Eye, EyeOff, FolderMinus, ImageIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import {
   allAtom,
@@ -41,19 +31,21 @@ import {
   FilterPanel,
   ResultsBar,
 } from "@/components/craft/library/FilterPanel";
+import {
+  SelectionActions,
+  SelectionToggle,
+} from "@/components/craft/library/SelectionBar";
 import MultiSelect from "@/components/craft/MultiSelect";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { entryItems, filteredAtom, serverTagsAtom } from "../atom";
 import {
   coverModeAtom,
+  prefillSelectionTagsAtom,
   selectAllAtom,
   selectionEntriesAtom,
   selectionOnAtom,
-  selectionTagsAtom,
-  selectionTagsInitialAtom,
   toggleCoverModeAtom,
   toggleSelectionModeAtom,
   unSelectAllAtom,
@@ -127,24 +119,13 @@ export default function Filters({
     [selectedEntries, removeContents, inGroup],
   );
 
-  const setSelectionTagsInitial = useSetAtom(selectionTagsInitialAtom);
-  const setSelectionTags = useSetAtom(selectionTagsAtom);
-  const syncSelectedTags = useCallback(() => {
-    const TagsArray = filtered
-      .filter((o) => selectedEntries.includes(o.id))
-      .map((content) => content.tags);
-
-    const Data = TagsArray.reduce((a: string[], b: string[]) =>
-      a.filter((c) => b.includes(c)),
-    );
-    setSelectionTagsInitial(Data);
-    setSelectionTags(Data.map((o: string) => ({ label: o, value: o })));
-  }, [selectedEntries, filtered, setSelectionTagsInitial, setSelectionTags]);
-
+  const prefillSelectionTags = useSetAtom(prefillSelectionTagsAtom);
   const openBulkUpdateModal = useCallback(() => {
-    syncSelectedTags();
+    prefillSelectionTags(
+      filtered.filter((o) => selectedEntries.includes(o.id)).map((o) => o.tags),
+    );
     setBulkUpdateModalOpen(true);
-  }, [syncSelectedTags, setBulkUpdateModalOpen]);
+  }, [selectedEntries, filtered, prefillSelectionTags, setBulkUpdateModalOpen]);
 
   const tagsForMultiSelectComponent = useMemo(
     () =>
@@ -249,27 +230,10 @@ export default function Filters({
         left={
           <>
             {!!tags && (
-              <Button
-                size="sm"
-                variant={selectionOn ? "default" : "outline"}
-                aria-pressed={selectionOn}
-                onClick={toggleSelectionMode}
-                title={
-                  selectionOn
-                    ? "Stop selecting and clear the selection"
-                    : "Pick several items to edit their tags or remove them together"
-                }
-              >
-                {selectionOn ? (
-                  <>
-                    <X /> Done selecting
-                  </>
-                ) : (
-                  <>
-                    <CheckSquare /> Select items
-                  </>
-                )}
-              </Button>
+              <SelectionToggle
+                on={selectionOn}
+                onToggle={toggleSelectionMode}
+              />
             )}
             {!!tags && inGroup && (
               <Button
@@ -317,31 +281,16 @@ export default function Filters({
               )}
             </p>
             {!!tags && selectionOn && (
-              <>
-                <Label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={
-                      filtered.length > 0 &&
-                      selectedEntries.length === filtered.length
-                    }
-                    onCheckedChange={onSelectAllCheckedChange}
-                  />
-                  Select all
-                </Label>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={noneSelected}
-                  onClick={openBulkUpdateModal}
-                  title={
-                    noneSelected
-                      ? "Select items first"
-                      : "Add or remove tags on every selected item"
-                  }
-                >
-                  <Pencil />
-                  Edit tags
-                </Button>
+              <SelectionActions
+                total={filtered.length}
+                selected={selectedEntries.length}
+                onSelectAll={onSelectAllCheckedChange}
+                onEditTags={openBulkUpdateModal}
+                onAddToGroup={() => setAddToGroup(selectedEntries)}
+                onRemove={deleteSelected}
+                removeLabel={inGroup ? "Delete" : "Remove"}
+                removeTitle="Delete the selected items from the server"
+              >
                 {onRemoveFromGroup && (
                   <Button
                     size="sm"
@@ -395,36 +344,7 @@ export default function Filters({
                       </Button>
                     );
                   })}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={noneSelected}
-                  onClick={() => setAddToGroup(selectedEntries)}
-                  title={
-                    noneSelected
-                      ? "Select items first"
-                      : "Put the selected items in a group"
-                  }
-                >
-                  <FolderPlus />
-                  Add to group…
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={noneSelected}
-                  onClick={deleteSelected}
-                  title={
-                    noneSelected
-                      ? "Select items first"
-                      : "Delete the selected items from the server"
-                  }
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 />
-                  {inGroup ? "Delete" : "Remove"}
-                </Button>
-              </>
+              </SelectionActions>
             )}
           </>
         }

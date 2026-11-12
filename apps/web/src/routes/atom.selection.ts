@@ -40,3 +40,18 @@ export const selectAllAtom = atom(null, (_get, set, filtered: string[]) => {
 export const unSelectAllAtom = atom(null, (_get, set) => {
   set(selectionEntriesAtom, []);
 });
+
+/** Pre-fills `BulkUpdateModal` with the tags every selected item has; `lists` is the tags of each selected item. */
+export const prefillSelectionTagsAtom = atom(
+  null,
+  (_get, set, lists: string[][]) => {
+    const shared = lists
+      .slice(1)
+      .reduce((a, b) => a.filter((t) => b.includes(t)), lists[0] ?? []);
+    set(selectionTagsInitialAtom, shared);
+    set(
+      selectionTagsAtom,
+      shared.map((o) => ({ label: o, value: o })),
+    );
+  },
+);
