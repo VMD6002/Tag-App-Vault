@@ -9,17 +9,19 @@ They are separate repos with no shared package: everything shared is **copied**.
 
 ## Runtime connection
 
-The extension is the producer, the Vault the consumer. There are three touch points; the Vault never calls the extension.
+The extension is the producer, the Vault the consumer. There are four touch points; the Vault never calls the extension.
 
 1. **Queue push.** In the extension's library the "Send N to server" button (`apps/extension/src/components/craft/ServerAffix.tsx`, URL set in Settings > Connected pages) POSTs `{ items: ContentWebType[], groups: GroupType[] }` to the Vault's `POST /downloads/set` (`apps/server/src/index.ts`, body `downloadsSetSchema`, handler `setDownloads` in `packages/api/src/services/downloads.ts`). Shapes: [domain model](./domain-model.md#schemas); `groups` = `referencedGroups(items, groups)`, the records of every group id on the sent items. The items are the filtered library rows plus the children of shown group cards, deduped (`entryItems`), sent as stored (no constants applied). No bare array.
 2. **Host-page tag broadcast.** The Vault page origin is in the extension's `hostNames`; its content script posts `TAG_APP_INJECT_TAGS` (`payload: string[]`, the extension's tag list, plus `covers: Record<tag, url>`: only tags with a cover, `$Key` constants already expanded, because the Vault cannot expand them; the Vault validates it and shows the covers on `/tags`, an extension without `covers` still works) and the Vault replies `TAG_APP_TAGS_RECEIVED` and appends `RESERVED_TAGS` ([web app](./web-app.md#extension-handshake-and-read-only-mode)). Until then the Vault UI is read-only. Extension side: `TagApp6.0/docs/clip-flow.md`.
 3. **Ids.** Item ids and group ids chosen in the extension become Vault ids (items are named `<title>.<id>` on disk, [domain model](./domain-model.md#identity)). Group ids have the same shape on both sides (`grp_<nanoid10>`, `newGroupId` here); `groups.changeId` re-keys a Vault group (an existing target merges) to line a stub or an older group up with the extension's id.
+4. **Sync with server.** The extension's "Sync N with server" button (`ServerAffix.tsx`, its own URL `syncServerUrl`, Settings > Connected pages) POSTs `{ items: { id, title, tags, extraData }[] }` (a subset of `ContentWebType`, the same filtered items, no groups) to `POST /content/sync` (`apps/server/src/index.ts`, body `contentSyncSchema`, handler `overwriteContent` in `packages/api/src/services/overwriteContent.ts`). Answer `{ updated, missing, failed }`. Rules: [file operations](./file-operations.md#overwritecontent-post-contentsync).
 
 Conflict rules (all on the Vault side, [groups](./groups.md#downloads-and-sync)):
 
 - **The Vault wins for groups.** `registerGroups` adds only ids it does not know (tags counted); known records are never overwritten and the incoming `cover` is dropped (the Vault sets covers itself, set once from the first synced child).
 - **Items**: the queue de-duplicates by id (first wins); an id already in the library is dropped without downloading; a run in progress keeps its running items ([server downloads](./server-downloads.md)). Items keep their `groups` ids through the staging sidecar into the library; sync creates a stub (`title = id`) for any group id still unknown.
-- **No reverse sync.** Edits made in the Vault (group titles, tags, merges) never travel back to the extension, and re-posting does not update them.
+- **Sync with server: the extension wins** for title, tags and extraData of items already in the library (the opposite of groups); ids it does not know are skipped, never created. Group records are not sent, so group edits still do not travel either way.
+- **No reverse sync.** Edits made in the Vault (group titles, tags, merges) never travel back to the extension, and re-posting to `/downloads/set` does not update them; only `/content/sync` overwrites existing items.
 
 ## What is copied, not shared
 

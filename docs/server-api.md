@@ -4,7 +4,7 @@ Scope: the Hono server entry (`apps/server/src/index.ts`) and the oRPC routers i
 
 ## Routers (mounted at `/rpc`)
 
-`packages/api/src/index.ts` exports `router = {fix, main, video, gallery, text, audio, downloads, groups}`, the `router` type, `settingsDB`, `groupsDB`, and `setDownloads` / `downloadsSetSchema` (used by `POST /downloads/set`; `setQueue` is exported too). Files are in `routers/`.
+`packages/api/src/index.ts` exports `router = {fix, main, video, gallery, text, audio, downloads, groups}`, the `router` type, `settingsDB`, `groupsDB`, and `setDownloads` / `downloadsSetSchema` (used by `POST /downloads/set`; `setQueue` is exported too) and `overwriteContent` / `contentSyncSchema` (used by `POST /content/sync`). Files are in `routers/`.
 
 | Router      | Procedures                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -18,6 +18,7 @@ Scope: the Hono server entry (`apps/server/src/index.ts`) and the oRPC routers i
 | `downloads` | `start`, `cancel`, `remove`, `clearFinished`, `getErrorLog`, `clearErrorLog`, `watch` (event stream of snapshots: queue + history + live progress): [server downloads](./server-downloads.md)                                                                                                                                                                                                                                                                          |
 
 - Behaviour: sync [sync pipeline](./sync-pipeline.md); rename, delete and per-type routers [file operations](./file-operations.md); filtering and tags [domain model](./domain-model.md).
+- `POST /content/sync` (in `index.ts`, plain route like `/downloads/set`) lets the extension overwrite the title, tags and extraData of existing items. It parses `{ items: { id, title, tags, extraData }[] }` with `contentSyncSchema` (a failed parse throws) and calls `overwriteContent`, which returns `{ updated, missing, failed }`. Rules, reserved tags and rename: [file operations](./file-operations.md#overwritecontent-post-contentsync).
 - The download queue is written only by `POST /downloads/set` (in `index.ts`), not by an oRPC procedure. It parses the body `{ items: ContentWebType[], groups: GroupType[] }` with `downloadsSetSchema` (a failed parse throws; the bare-array body is gone) and calls `setDownloads`: it registers the groups the Vault does not know yet at once (the Vault wins: known ids are never overwritten, the incoming `cover` is dropped, tags are counted in `DB/tags.json`), then `setQueue`, which writes `./Download/tmp.json` (and the matching `Download/history.json` records) and returns the written list. While a download run is active it keeps the unfinished items: [server downloads](./server-downloads.md#queue-and-post-downloadsset-during-a-run).
 
 ## Groups router
@@ -60,7 +61,7 @@ Scope: the Hono server entry (`apps/server/src/index.ts`) and the oRPC routers i
 ## Startup, port and prefix
 
 - `index.ts` calls `createAppDirs()`, then builds Hono with `logger`, `trimTrailingSlash` and CORS `origin: "*"` (methods POST/GET/PUT/DELETE/OPTIONS), and binds `0.0.0.0` on `settings.port`. It logs local and LAN URLs.
-- Route order: `POST /downloads/set`, `/rpc/*`, `/assets/*` (from `./WebUI`), `/favicon.ico`, static files under the prefix, then the SPA fallback (`index.html`) for the prefix and `<prefix>/*`.
+- Route order: `POST /content/sync`, `POST /downloads/set`, `/rpc/*`, `/assets/*` (from `./WebUI`), `/favicon.ico`, static files under the prefix, then the SPA fallback (`index.html`) for the prefix and `<prefix>/*`.
 - The prefix is used as written (no normalisation) and only affects the static UI and fallback. The Vite build uses the default `base`, so asset URLs are root-absolute and `/assets/*` and `/favicon.ico` are always at the root, as is `/rpc`.
 - The server expects `./WebUI` in its cwd; `bun dev:server` runs it in `apps/server`, the build in `dist`: [deployment](./deployment.md).
 
