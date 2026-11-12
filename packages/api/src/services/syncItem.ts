@@ -2,36 +2,53 @@ import { rename } from "node:fs/promises";
 import { ORPCError } from "@orpc/server";
 import { sanitizeStringForFileName } from "@tagapp/utils";
 import type { CType } from "@tagapp/utils/types";
+import { groupsDB } from "../db/groups.js";
 import { pathExists } from "../lib/fsBaseNameFunctions.js";
 import { withSyncLock } from "../lib/syncLock.js";
 import { filesOf, getSyncData, SYNC } from "./getSyncData.js";
 import { splitTData } from "./prepareSync.js";
 
+type Ref = { name: string; type: CType };
+
 /**
- * Re-scans ./Sync and finds the item by its current disk name. Bundles are split first
- * (as prepareSync would) so the item's own sidecar is the only metadata copy and wins.
+ * Re-scans ./Sync and finds the items by their current disk name. Bundles are split first
+ * (as prepareSync would) so an item's own sidecar is the only metadata copy and wins.
  * The match is against scanned entries, so a client-supplied name never reaches a path unchecked.
+ * One missing item fails the whole call (`NOT_FOUND`) before anything is written; repeats count once.
  */
-async function findItem(name: string, type: CType) {
+async function findItems(refs: Ref[]) {
   await splitTData();
   const { contents } = await getSyncData();
-  const item = Object.values(contents).find(
-    (c) => c.name === name && c.type === type,
-  );
-  if (!item)
-    throw new ORPCError("NOT_FOUND", {
-      message: `"${name}" is not waiting in Sync`,
-    });
-  return item;
+  const all = Object.values(contents);
+  const found = new Map<string, (typeof all)[number]>();
+  for (const { name, type } of refs) {
+    const item = all.find((c) => c.name === name && c.type === type);
+    if (!item)
+      throw new ORPCError("NOT_FOUND", {
+        message: `"${name}" is not waiting in Sync`,
+      });
+    found.set(`${type}/${name}`, item);
+  }
+  return [...found.values()];
 }
 
-/** Overwrites the item's sidecar (also pins a generated id); prepareSync renames the files to the new title. */
+/** Groups new to an item must have a record; ids it already carries (e.g. not registered yet) are kept as they are. */
+function checkNewGroups(ids: string[], current: string[] = []) {
+  const unknown = ids.filter((g) => !current.includes(g) && !groupsDB.data[g]);
+  if (unknown.length)
+    throw new ORPCError("BAD_REQUEST", {
+      message: `Unknown group: ${unknown.join(", ")}`,
+    });
+}
+
+/** Overwrites the item's sidecar (also pins a generated id); prepareSync renames the files to the new title. `groups` (the complete list, `[]` clears) is left alone when absent. */
 export const editSyncItem = (input: {
   name: string;
   type: CType;
   title: string;
   tags: string[];
   extraData: string;
+  groups?: string[];
 }) =>
   withSyncLock(async () => {
     // the sanitizer turns a blank title into "-", so check before it
@@ -39,8 +56,11 @@ export const editSyncItem = (input: {
       throw new ORPCError("BAD_REQUEST", {
         message: "Title must not be blank",
       });
-    const { name, type, ext, ...rest } = await findItem(input.name, input.type);
+    const [found] = await findItems([input]);
+    const { name, type, ext, ...rest } = found as NonNullable<typeof found>;
     const title = sanitizeStringForFileName(input.title.trim());
+    const groups = input.groups && [...new Set(input.groups)];
+    if (groups) checkNewGroups(groups, rest.groups);
     await Bun.write(
       `${SYNC}/${name}.json`,
       JSON.stringify({
@@ -48,17 +68,94 @@ export const editSyncItem = (input: {
         title,
         tags: input.tags,
         extraData: input.extraData,
+        ...(groups && { groups: groups.length ? groups : undefined }),
       }),
     );
   });
 
-/** Moves the item's files and sidecar to ./UnSyncable (nothing is deleted); rolls back on failure. */
-export const removeSyncItem = (input: { name: string; type: CType }) =>
+/**
+ * Tags and groups of several pending items in one call: per item tags = current minus `removed`
+ * plus `added` (added wins) and `addGroups` joined. Only the sidecars change; groups are applied
+ * (record stub, set-once cover) by the next sync, tag counts too. Items whose result is
+ * identical are not written. A failed write restores the sidecars already written.
+ * Returns the ids of the items that changed.
+ */
+export const bulkEditSyncItems = (input: {
+  items: Ref[];
+  added?: string[];
+  removed?: string[];
+  addGroups?: string[];
+}) =>
   withSyncLock(async () => {
-    const { name, type, ext } = await findItem(input.name, input.type);
-    const sidecar = `${name}.json`;
-    const names = filesOf(name, type, ext);
-    if (await pathExists(`${SYNC}/${sidecar}`)) names.push(sidecar);
+    const added = [...new Set((input.added ?? []).map((t) => t.trim()))].filter(
+      Boolean,
+    );
+    const removed = input.removed ?? [];
+    const addGroups = [...new Set(input.addGroups ?? [])];
+    checkNewGroups(addGroups);
+    const items = await findItems(input.items);
+
+    const writes = items.flatMap(({ name, type: _t, ext: _e, ...rest }) => {
+      const tags = [
+        ...new Set([
+          ...rest.tags.filter((t) => !removed.includes(t)),
+          ...added,
+        ]),
+      ];
+      const groups = [...new Set([...(rest.groups ?? []), ...addGroups])];
+      const same =
+        tags.length === rest.tags.length &&
+        tags.every((t, i) => t === rest.tags[i]) &&
+        groups.length === (rest.groups ?? []).length;
+      if (same) return [];
+      return [
+        {
+          id: rest.id,
+          path: `${SYNC}/${name}.json`,
+          next: JSON.stringify({
+            ...rest,
+            tags,
+            groups: groups.length ? groups : undefined,
+          }),
+        },
+      ];
+    });
+
+    // sidecar text before the write (null: there was none), to put back on failure
+    const before: [string, string | null][] = [];
+    try {
+      for (const { path, next } of writes) {
+        const file = Bun.file(path);
+        before.push([path, (await file.exists()) ? await file.text() : null]);
+        await Bun.write(path, next);
+      }
+    } catch (error) {
+      for (const [path, text] of before.reverse())
+        await (text === null
+          ? Bun.file(path).delete()
+          : Bun.write(path, text)
+        ).catch((e) => console.error(`Failed to rollback ${path}:`, e));
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        message: `Could not update the sidecars: ${error}`,
+      });
+    }
+    return writes.map((w) => w.id);
+  });
+
+/**
+ * Moves the files and sidecars of the items to ./UnSyncable (nothing is deleted). A name already in
+ * UnSyncable is a `CONFLICT` for the whole call; a failed move puts every moved file back.
+ * Returns the ids of the removed items.
+ */
+export const bulkRemoveSyncItems = (refs: Ref[]) =>
+  withSyncLock(async () => {
+    const items = await findItems(refs);
+    const names: string[] = [];
+    for (const { name, type, ext } of items) {
+      const sidecar = `${name}.json`;
+      names.push(...filesOf(name, type, ext));
+      if (await pathExists(`${SYNC}/${sidecar}`)) names.push(sidecar);
+    }
 
     // rename would silently replace an earlier leftover of the same name
     for (const f of names)
@@ -79,7 +176,10 @@ export const removeSyncItem = (input: { name: string; type: CType }) =>
           console.error(`Failed to rollback ${f}:`, e),
         );
       throw new ORPCError("INTERNAL_SERVER_ERROR", {
-        message: `Could not move "${name}": ${error}`,
+        message: `Could not move "${items.map((i) => i.name).join('", "')}": ${error}`,
       });
     }
+    return items.map((i) => i.id);
   });
+
+export const removeSyncItem = (input: Ref) => bulkRemoveSyncItems([input]);

@@ -11,6 +11,8 @@ import { getSyncData as gtSyncData } from "../services/getSyncData.js";
 import { setDoc as set } from "../services/setDoc.js";
 import { syncContent } from "../services/syncContent.js";
 import {
+  bulkEditSyncItems as bulkEditSync,
+  bulkRemoveSyncItems as bulkRemoveSync,
   editSyncItem as editSync,
   removeSyncItem as removeSync,
 } from "../services/syncItem.js";
@@ -33,9 +35,26 @@ export const editSyncItem = os
       title: z.string(),
       tags: z.string().array(),
       extraData: z.string(),
+      groups: z.string().array().optional(),
     }),
   )
   .handler(({ input }) => editSync(input));
+
+// Tags (`added` / `removed`) and group ids (`addGroups`, existing groups only) on several pending items at once
+export const bulkEditSyncItems = os
+  .input(
+    z.object({
+      items: syncItemRef.array().min(1),
+      added: z.string().array().optional(),
+      removed: z.string().array().optional(),
+      addGroups: z.string().array().optional(),
+    }),
+  )
+  .handler(({ input }) => bulkEditSync(input));
+
+export const bulkRemoveSyncItems = os
+  .input(z.object({ items: syncItemRef.array().min(1) }))
+  .handler(({ input }) => bulkRemoveSync(input.items));
 
 export const removeSyncItem = os
   .input(syncItemRef)

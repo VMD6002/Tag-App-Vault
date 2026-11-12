@@ -18,11 +18,13 @@ process.chdir(root);
 mkdirSync("DB");
 const { contentDataDB } = await import("../db/contentData.js");
 const { tagDB } = await import("../db/tags.js");
+const { groupsDB } = await import("../db/groups.js");
 const { getSyncData } = await import("./getSyncData.js");
 const { syncContent } = await import("./syncContent.js");
 const { setDoc } = await import("./setDoc.js");
 const { deleteData } = await import("./deleteData.js");
-const { editSyncItem, removeSyncItem } = await import("./syncItem.js");
+const { editSyncItem, removeSyncItem, bulkEditSyncItems, bulkRemoveSyncItems } =
+  await import("./syncItem.js");
 const {
   startDownloads,
   setQueue,
@@ -65,6 +67,7 @@ beforeEach(() => {
   }
   contentDataDB.data = {};
   tagDB.data = {};
+  groupsDB.data = {};
 });
 afterAll(() => {
   process.chdir(tmpdir());
@@ -382,6 +385,161 @@ test("remove: a bundled folder item leaves no entry behind, a name clash changes
   await removeSyncItem({ name: "g.3", type: "gallery" });
   expect(ls("Sync")).toEqual([]);
   expect(ls("UnSyncable")).toEqual(["g.3.gallery", "g.3.json"]);
+});
+
+const group = (id: string, cover = "") => ({
+  id,
+  title: id,
+  extraData: "",
+  tags: [],
+  cover,
+  added: 1,
+  lastUpdated: 1,
+});
+
+test("bulk edit: tags and groups of several pending items, synced into the library with the right counts", async () => {
+  groupsDB.data = { grp_a: group("grp_a"), grp_b: group("grp_b") };
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a", ["x", "y"]));
+  await Bun.write("Sync/b.2.png", png);
+  await Bun.write("Sync/b.2.json", json("2", "b", ["y"]));
+  await Bun.write("Sync/pic.png", png); // no sidecar: gets one that pins its id
+  await Bun.write("Sync/untouched.4.png", png);
+  const ids = await bulkEditSyncItems({
+    items: [
+      { name: "a.1", type: "img" },
+      { name: "b.2", type: "img" },
+      { name: "b.2", type: "img" }, // a repeat counts once
+      { name: "pic", type: "img" },
+    ],
+    added: [" new ", "y"],
+    removed: ["x"],
+    addGroups: ["grp_a", "grp_b", "grp_a"],
+  });
+  expect(ids).toHaveLength(3);
+  const { contents } = await getSyncData();
+  const by = (name: string) =>
+    Object.values(contents).find((c) => c.name === name);
+  expect(by("a.1")).toMatchObject({
+    tags: ["y", "new"],
+    groups: ["grp_a", "grp_b"],
+  });
+  expect(by("b.2")?.tags).toEqual(["y", "new"]);
+  expect(by("pic")).toMatchObject({
+    tags: ["new", "y"],
+    extraData: "Generated Data",
+  });
+  expect(by("untouched.4")?.groups).toBeUndefined();
+  expect(ls("Sync")).toContain("pic.json");
+  expect(ls("Sync")).not.toContain("untouched.4.json");
+
+  await syncContent();
+  expect(tagDB.data).toEqual({ y: 3, new: 3 });
+  expect(contentDataDB.data["1"]?.groups).toEqual(["grp_a", "grp_b"]);
+  // the first child sets the empty group's cover (once), no stubs are created
+  expect(Object.keys(groupsDB.data).sort()).toEqual(["grp_a", "grp_b"]);
+  expect(groupsDB.data.grp_a?.cover).toMatch(/^\/media\/Images\/\.covers\//);
+});
+
+test("bulk edit: nothing changes when the result is identical; unknown groups and items are rejected before any write", async () => {
+  groupsDB.data = { grp_a: group("grp_a") };
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
+  const before = await Bun.file("Sync/a.1.json").text();
+  const ref = { name: "a.1", type: "img" as const };
+  expect(await bulkEditSyncItems({ items: [ref], added: ["x"] })).toEqual([]);
+  expect(await Bun.file("Sync/a.1.json").text()).toBe(before);
+  await expect(
+    bulkEditSyncItems({ items: [ref], added: ["z"], addGroups: ["grp_nope"] }),
+  ).rejects.toThrow();
+  await expect(
+    bulkEditSyncItems({
+      items: [ref, { name: "gone", type: "img" }],
+      added: ["z"],
+    }),
+  ).rejects.toThrow();
+  await expect(
+    bulkEditSyncItems({ items: [{ name: "../x", type: "img" }], added: ["z"] }),
+  ).rejects.toThrow();
+  expect(await Bun.file("Sync/a.1.json").text()).toBe(before);
+});
+
+test("bulk edit: a failed write restores the sidecars already written", async () => {
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a"));
+  await Bun.write("Sync/b.2.png", png);
+  await Bun.write("Sync/b.2.json", json("2", "b"));
+  const before = await Bun.file("Sync/a.1.json").text();
+  const write = Bun.write;
+  let calls = 0;
+  // the second sidecar write fails
+  Bun.write = ((...args: Parameters<typeof Bun.write>) =>
+    ++calls === 2
+      ? Promise.reject(new Error("disk full"))
+      : write(...args)) as typeof Bun.write;
+  try {
+    await expect(
+      bulkEditSyncItems({
+        items: [
+          { name: "a.1", type: "img" },
+          { name: "b.2", type: "img" },
+        ],
+        added: ["t"],
+      }),
+    ).rejects.toThrow();
+  } finally {
+    Bun.write = write;
+  }
+  expect(await Bun.file("Sync/a.1.json").text()).toBe(before);
+});
+
+test("edit: groups replace the list, [] clears it, absent keeps it; an id the item already has may be unknown", async () => {
+  groupsDB.data = { grp_a: group("grp_a") };
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write(
+    "Sync/a.1.json",
+    JSON.stringify({ ...JSON.parse(json("1", "a")), groups: ["grp_later"] }),
+  );
+  const input = {
+    name: "a.1",
+    type: "img" as const,
+    title: "a",
+    tags: [],
+    extraData: "",
+  };
+  const groups = async () =>
+    Object.values((await getSyncData()).contents)[0]?.groups;
+  await editSyncItem(input);
+  expect(await groups()).toEqual(["grp_later"]);
+  await editSyncItem({ ...input, groups: ["grp_later", "grp_a", "grp_a"] });
+  expect(await groups()).toEqual(["grp_later", "grp_a"]);
+  await expect(
+    editSyncItem({ ...input, groups: ["grp_nope"] }),
+  ).rejects.toThrow();
+  expect(await groups()).toEqual(["grp_later", "grp_a"]);
+  await editSyncItem({ ...input, groups: [] });
+  expect(await groups()).toBeUndefined();
+});
+
+test("bulk remove: several items move to UnSyncable together, a clash or a missing item changes nothing", async () => {
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a"));
+  await Bun.write("Sync/b.2.png", png);
+  await Bun.write("Sync/keep.3.png", png);
+  const refs = [
+    { name: "a.1", type: "img" as const },
+    { name: "b.2", type: "img" as const },
+  ];
+  await Bun.write("UnSyncable/b.2.png", "earlier");
+  await expect(bulkRemoveSyncItems(refs)).rejects.toThrow();
+  await expect(
+    bulkRemoveSyncItems([...refs, { name: "gone", type: "img" }]),
+  ).rejects.toThrow();
+  expect(ls("Sync")).toEqual(["a.1.json", "a.1.png", "b.2.png", "keep.3.png"]);
+  await Bun.file("UnSyncable/b.2.png").delete();
+  expect(await bulkRemoveSyncItems(refs)).toHaveLength(2);
+  expect(ls("Sync")).toEqual(["keep.3.png"]);
+  expect(ls("UnSyncable")).toEqual(["a.1.json", "a.1.png", "b.2.png"]);
 });
 
 // --- direct download pipeline (downloads.ts); yt-dlp is replaced by a fake that writes files ---
