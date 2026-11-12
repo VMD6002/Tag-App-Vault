@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import { parseArgs } from "./args";
 
-test("parseArgs: no args", () => {
+test("parseArgs: defaults and help", () => {
   expect(parseArgs([])).toEqual({ help: false, retries: 0 });
+  expect(parseArgs(["-h"]).help).toBe(true);
+  expect(parseArgs(["--help"]).help).toBe(true);
 });
 
 test("parseArgs: retry forms", () => {
@@ -10,11 +12,6 @@ test("parseArgs: retry forms", () => {
   expect(parseArgs(["-r"]).retries).toBe(Infinity);
   expect(parseArgs(["--retry", "10"]).retries).toBe(10);
   expect(parseArgs(["-r", "3"]).retries).toBe(3);
-});
-
-test("parseArgs: help", () => {
-  expect(parseArgs(["-h"]).help).toBe(true);
-  expect(parseArgs(["--help"]).help).toBe(true);
 });
 
 test("parseArgs: errors", () => {

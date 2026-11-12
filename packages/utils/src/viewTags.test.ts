@@ -22,9 +22,11 @@ test("maps each kind of view tag", () => {
   });
 });
 
-test("ignores unknown view tags and out-of-range widths", () => {
+test("ignores unknown view tags, out-of-range widths and the library display tags", () => {
   expect(
     parseViewTags([
+      VIEW_IN_LIBRARY_TAG,
+      VIEW_HIDE_IN_LIBRARY_TAG,
       "view:nope",
       "view:width-5",
       "view:width-101",
@@ -46,9 +48,4 @@ test("first conflicting tag wins", () => {
     viewMode: "list",
     sortMode: "name-desc",
   });
-});
-
-test("view:in-library is a display no-op (filterLibrary reads it)", () => {
-  expect(parseViewTags([VIEW_IN_LIBRARY_TAG])).toEqual({});
-  expect(parseViewTags([VIEW_HIDE_IN_LIBRARY_TAG])).toEqual({});
 });

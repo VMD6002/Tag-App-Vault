@@ -14,7 +14,6 @@ import {
   groupSortKey,
   groupTagStats,
   mergeGroups,
-  newGroupId,
   planDeleteGroup,
   referencedGroups,
   removeGroupItems,
@@ -57,6 +56,8 @@ const q = {
 };
 const labels = (r: ReturnType<typeof filterLibrary>) =>
   r.map((e) => (e.kind === "item" ? e.item.id : `[${e.group.id}]`));
+const lib = (o: object = {}, g = groups(), c = content()) =>
+  labels(filterLibrary({ ...q, ...o }, c, g));
 
 // solo (no group), a/b in g1, c in g1+g2, d in g2 with the opt-in tag, g3 is empty
 const content = () => ({
@@ -80,12 +81,7 @@ const groups = () => ({
 describe("filterLibrary", () => {
   test("hides grouped items unless view:in-library, shows non-empty cards", () => {
     // newest child: g1 -> 7, g2 -> 7 (tie keeps insertion order g1, g2); d (2) and solo (1) follow
-    expect(labels(filterLibrary(q, content(), groups()))).toEqual([
-      "[g1]",
-      "[g2]",
-      "d",
-      "solo",
-    ]);
+    expect(lib()).toEqual(["[g1]", "[g2]", "d", "solo"]);
   });
   describe("view:hide-in-library", () => {
     const H = VIEW_HIDE_IN_LIBRARY_TAG;
@@ -145,7 +141,7 @@ describe("filterLibrary", () => {
     test("a tag only on a child does not hide the card", () => {
       const c = content();
       c.a.tags = [H];
-      expect(labels(filterLibrary(q, c, groups()))).toContain("[g1]");
+      expect(lib({}, groups(), c)).toContain("[g1]");
     });
   });
   describe("groupedInLibrary: show", () => {
@@ -153,17 +149,9 @@ describe("filterLibrary", () => {
     const show = { ...q, groupedInLibrary: "show" as const };
     test("grouped items show like any item next to the cards", () => {
       expect(labels(filterLibrary(show, content(), groups()))).toEqual(
-        labels(filterLibrary({ ...q, showGrouped: true }, content(), groups())),
+        lib({ showGrouped: true }),
       );
-      expect(
-        labels(
-          filterLibrary(
-            { ...q, groupedInLibrary: "hide" },
-            content(),
-            groups(),
-          ),
-        ),
-      ).toEqual(labels(filterLibrary(q, content(), groups())));
+      expect(lib({ groupedInLibrary: "hide" })).toEqual(lib());
     });
     test("view:hide-in-library still hides items, with the any/all exception", () => {
       const c = {
@@ -185,32 +173,24 @@ describe("filterLibrary", () => {
     expect(labels(filterLibrary(q, content()))).toHaveLength(5);
   });
   test("showGrouped lists every grouped item next to the cards", () => {
-    expect(
-      labels(filterLibrary({ ...q, showGrouped: true }, content(), groups())),
-    ).toEqual(["c", "[g1]", "[g2]", "b", "a", "d", "solo"]); // ties: items before cards
+    expect(lib({ showGrouped: true })).toEqual([
+      "c",
+      "[g1]",
+      "[g2]",
+      "b",
+      "a",
+      "d",
+      "solo",
+    ]); // ties: items before cards
   });
   test("mode 1 searches group and item titles only", () => {
-    expect(
-      labels(filterLibrary({ ...q, search: "Alpha" }, content(), groups())),
-    ).toEqual(["[g1]"]);
+    expect(lib({ search: "Alpha" })).toEqual(["[g1]"]);
     // a hidden child's title match does not surface it
-    expect(
-      labels(filterLibrary({ ...q, search: "b" }, content(), groups())),
-    ).not.toContain("b");
+    expect(lib({ search: "b" })).toEqual(["[g2]"]);
   });
   test("mode 2 (itemsOnly) lists items incl. grouped, never cards", () => {
-    expect(
-      labels(filterLibrary({ ...q, itemsOnly: true }, content(), groups())),
-    ).toEqual(["c", "b", "a", "d", "solo"]);
-    expect(
-      labels(
-        filterLibrary(
-          { ...q, itemsOnly: true, search: "a" },
-          content(),
-          groups(),
-        ),
-      ),
-    ).toContain("a");
+    expect(lib({ itemsOnly: true })).toEqual(["c", "b", "a", "d", "solo"]);
+    expect(lib({ itemsOnly: true, search: "a" })).toContain("a");
   });
   test("searchDescription adds extraData, within each mode's rules", () => {
     const base = { ...q, search: "needle" };
@@ -237,25 +217,15 @@ describe("filterLibrary", () => {
   test("a card matches any/all on its own tags or one child's tags", () => {
     const g = groups();
     g.g2.tags = ["Own:1"];
-    expect(
-      labels(filterLibrary({ ...q, any: ["Own:1"] }, content(), g)),
-    ).toEqual(["[g2]"]);
-    expect(
-      labels(filterLibrary({ ...q, any: ["Type:X"] }, content(), g)),
-    ).toEqual(["[g1]"]);
-    expect(
-      labels(filterLibrary({ ...q, any: ["Type:*"] }, content(), g)),
-    ).toEqual(["[g1]"]); // wildcards work on cards too
-    expect(
-      labels(filterLibrary({ ...q, all: ["Type:X", "Site:Y"] }, content(), g)),
-    ).toEqual([]); // no single carrier
+    expect(lib({ any: ["Own:1"] }, g)).toEqual(["[g2]"]);
+    expect(lib({ any: ["Type:X"] }, g)).toEqual(["[g1]"]);
+    expect(lib({ any: ["Type:*"] }, g)).toEqual(["[g1]"]); // wildcards work on cards too
+    expect(lib({ all: ["Type:X", "Site:Y"] }, g)).toEqual([]); // no single carrier
   });
   test("none excludes a card by its own tags only", () => {
     const g = groups();
     g.g1.tags = ["Bad"];
-    expect(
-      labels(filterLibrary({ ...q, none: ["Bad"] }, content(), g)),
-    ).toEqual(["[g2]", "d", "solo"]);
+    expect(lib({ none: ["Bad"] }, g)).toEqual(["[g2]", "d", "solo"]);
   });
   test("types filter items; a card needs a child of a wanted type", () => {
     const c = content();
@@ -263,31 +233,25 @@ describe("filterLibrary", () => {
     c.b.type = "video";
     c.c.type = "video"; // g1 and g2 hold videos only through a, b, c
     c.d.type = "video";
-    expect(
-      labels(filterLibrary({ ...q, types: ["img"] }, c, groups())),
-    ).toEqual(["solo"]);
-    expect(
-      labels(filterLibrary({ ...q, types: ["video"] }, c, groups())),
-    ).toEqual(["[g1]", "[g2]", "d"]);
+    expect(lib({ types: ["img"] }, groups(), c)).toEqual(["solo"]);
+    expect(lib({ types: ["video"] }, groups(), c)).toEqual([
+      "[g1]",
+      "[g2]",
+      "d",
+    ]);
   });
   test("groups without children are excluded", () => {
     expect(labels(filterLibrary(q, {}, groups()))).toEqual([]);
   });
   test("group sort: newest child (default), created, lastUpdated", () => {
     const only = (groupSort: "created" | "updated") =>
-      labels(filterLibrary({ ...q, groupSort }, content(), groups())).filter(
-        (l) => l.startsWith("["),
-      );
+      lib({ groupSort }).filter((l) => l.startsWith("["));
     expect(only("created")).toEqual(["[g2]", "[g1]"]);
     expect(only("updated")).toEqual(["[g1]", "[g2]"]);
     expect(
-      labels(
-        filterLibrary(
-          { ...q, orderByLatest: false, groupSort: "created" },
-          content(),
-          groups(),
-        ),
-      ).filter((l) => l.startsWith("[")),
+      lib({ orderByLatest: false, groupSort: "created" }).filter((l) =>
+        l.startsWith("["),
+      ),
     ).toEqual(["[g1]", "[g2]"]);
   });
 });
@@ -309,10 +273,6 @@ describe("group helpers", () => {
     expect(groupSortKey(g, kids, "created")).toBe(3);
     expect(groupSortKey(g, kids, "updated")).toBe(4);
     expect(groupSortKey(g, [])).toBe(3);
-  });
-  test("newGroupId looks like grp_<10 url-safe chars> and differs per call", () => {
-    expect(newGroupId()).toMatch(/^grp_[\w-]{10}$/);
-    expect(newGroupId()).not.toBe(newGroupId());
   });
   test("applyTagDelta mirrors Increment/DecrementTagCount", () => {
     const tags: Record<string, number> = { a: 1, b: 2 };

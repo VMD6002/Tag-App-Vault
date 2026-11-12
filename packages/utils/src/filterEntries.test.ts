@@ -28,6 +28,6 @@ test("type, any (with wildcard), none and all", () => {
 });
 
 test("search matches the file name; untagged entries have no tags", () => {
-  expect(names({ search: "b.mp4" })[0]).toBe("b.mp4");
+  expect(names({ search: "b.mp4" })).toEqual(["b.mp4"]);
   expect(names({ none: ["fav"], types: ["img"] })).toEqual(["c.jpg"]);
 });
