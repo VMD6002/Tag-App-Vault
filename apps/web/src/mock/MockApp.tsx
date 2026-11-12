@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import AppLayout from "@/AppLayout";
-import { buildDb, countTags, mockTagCovers } from "./data";
+import { buildDb, countTags, mockInjectedGroups, mockTagCovers } from "./data";
 import MockShell from "./MockShell";
 import type { MockPage } from "./pages";
 import { configureMock } from "./stubs";
@@ -57,6 +57,7 @@ export default function MockApp({ page }: { page: MockPage }) {
                   ),
                 ),
                 covers: mockTagCovers(),
+                groups: mockInjectedGroups(),
               },
               "*",
             ),

@@ -1,4 +1,8 @@
-import type { GroupedInLibraryType, GroupSortType } from "@tagapp/utils/types";
+import type {
+  GroupedInLibraryType,
+  GroupSortType,
+  GroupType,
+} from "@tagapp/utils/types";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
@@ -176,3 +180,6 @@ export const tagsAtom = atom<string[] | null>(null);
 
 /** Tag -> cover URL sent with the tags by the extension; empty without one (older extensions). */
 export const tagCoversAtom = atom<Record<string, string>>({});
+
+/** Group records (by id) sent with the tags by the extension, validated (`parseInjectedGroups`); empty without one (older extensions). Only `/sync` offers them, next to the server's groups. */
+export const injectedGroupsAtom = atom<Record<string, GroupType>>({});

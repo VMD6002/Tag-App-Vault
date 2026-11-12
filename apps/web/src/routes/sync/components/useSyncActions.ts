@@ -1,7 +1,9 @@
+import type { GroupsDB } from "@tagapp/utils/types";
 import { useMutation } from "@tanstack/react-query";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { injectedGroupsAtom } from "@/atom";
 import { addToGroupAtom } from "@/components/craft/AddToGroupModal.atom";
 import { bulkUpdateModalOpenAtom } from "@/components/craft/BulkUpdateModal";
 import { confirm } from "@/components/craft/confirm-dialog";
@@ -41,6 +43,8 @@ export type SyncBulk = {
 export function useSyncActions(
   contents: Record<string, SyncItem> | undefined,
   refresh: () => void,
+  /** `groups.list`: injected groups it lacks are sent along with the call, so the server registers them. */
+  serverGroups: GroupsDB | undefined,
 ) {
   const setInputDisabled = useSetAtom(updateInputDisabledAtom);
   const setModalOpen = useSetAtom(updateModalOpenAtom);
@@ -56,6 +60,13 @@ export function useSyncActions(
   const prefillSelectionTags = useSetAtom(prefillSelectionTagsAtom);
   const setBulkOpen = useSetAtom(bulkUpdateModalOpenAtom);
   const setAddToGroup = useSetAtom(addToGroupAtom);
+  const injected = useAtomValue(injectedGroupsAtom);
+  const newGroupsFor = (ids: string[]) => {
+    const records = ids.flatMap((id) =>
+      !serverGroups?.[id] && injected[id] ? [injected[id]] : [],
+    );
+    return records.length ? records : undefined;
+  };
 
   const editMutation = useMutation(
     orpc.main.editSyncItem.mutationOptions({
@@ -130,6 +141,7 @@ export function useSyncActions(
       tags: updateData.tags,
       extraData: updateData.extraData,
       groups: updateData.groups,
+      newGroups: newGroupsFor(updateData.groups),
     });
   };
   const remove = useCallback(
@@ -181,6 +193,7 @@ export function useSyncActions(
       bulkEditMutation.mutateAsync({
         items: refsOf(keys),
         addGroups: groupIds,
+        newGroups: newGroupsFor(groupIds),
       }),
       `Added to ${groupIds.length === 1 ? "the group" : "the groups"}`,
     );

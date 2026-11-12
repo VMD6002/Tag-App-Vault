@@ -15,7 +15,7 @@ import {
   removeGroupItems,
   updateGroup,
 } from "@tagapp/utils";
-import type { ContentServerType } from "@tagapp/utils/types";
+import type { ContentServerType, GroupType } from "@tagapp/utils/types";
 import {
   buildDb,
   buildDownloads,
@@ -119,10 +119,29 @@ const pending = (name: string, type: string) => {
   return c;
 };
 
-/** Like the server: a group an item newly gets must have a record. */
-const checkNewGroups = (ids: string[], current: string[] = []) => {
-  const bad = ids.find((g) => !current.includes(g) && !state.db.groups[g]);
+/** Like the server: a group an item newly gets must have a record, on the server or in `records` (injected). */
+const checkNewGroups = (
+  ids: string[],
+  current: string[] = [],
+  records: GroupType[] = [],
+) => {
+  const bad = ids.find(
+    (g) =>
+      !current.includes(g) &&
+      !state.db.groups[g] &&
+      !records.some((r) => r.id === g),
+  );
   if (bad) throw new MockError("BAD_REQUEST", 400, `Unknown group: ${bad}`);
+};
+
+/** Like `addMissingGroups`: unknown ids among `ids` get their record (never overwrite, no cover). */
+const registerGroups = (ids: string[], records: GroupType[] = []) => {
+  for (const r of records) {
+    if (!ids.includes(r.id) || state.db.groups[r.id]) continue;
+    const { cover: _cover, ...rest } = r;
+    state.db.groups[r.id] = { ...rest, tags: [...new Set(r.tags)] };
+  }
+  recount();
 };
 
 // ── Downloads: "Start downloads" replays one fake run, pushed to the open watch streams ──────────
@@ -343,9 +362,13 @@ const handlers: Record<string, Handler> = {
     tags: string[];
     extraData: string;
     groups?: string[];
+    newGroups?: GroupType[];
   }) => {
     const c = pending(i.name, i.type);
-    if (i.groups) checkNewGroups(i.groups, c.groups);
+    if (i.groups) {
+      checkNewGroups(i.groups, c.groups, i.newGroups);
+      registerGroups(i.groups, i.newGroups);
+    }
     Object.assign(c, {
       title: i.title,
       tags: i.tags,
@@ -358,9 +381,11 @@ const handlers: Record<string, Handler> = {
     added?: string[];
     removed?: string[];
     addGroups?: string[];
+    newGroups?: GroupType[];
   }) => {
-    checkNewGroups(i.addGroups ?? []);
+    checkNewGroups(i.addGroups ?? [], [], i.newGroups);
     const items = i.items.map((r) => pending(r.name, r.type));
+    registerGroups(i.addGroups ?? [], i.newGroups);
     for (const c of items) {
       c.tags = [
         ...new Set([

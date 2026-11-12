@@ -5,7 +5,12 @@ import {
   VIEW_HIDE_IN_LIBRARY_TAG,
   VIEW_IN_LIBRARY_TAG,
 } from "@tagapp/utils";
-import type { ContentServerType, CType, GroupsDB } from "@tagapp/utils/types";
+import type {
+  ContentServerType,
+  CType,
+  GroupsDB,
+  GroupType,
+} from "@tagapp/utils/types";
 
 export type Scenario =
   | "normal"
@@ -520,6 +525,29 @@ export const mockTagCovers = (): Record<string, string> => ({
   "Type:Video": `${location.origin}/media/Tags/cover.Video`,
   "Site:YouTube": "https://example.invalid/youtube.png",
 });
+
+/**
+ * Group records the mock extension sends with the tags (`groups`): one the server has under another
+ * title (the server's wins), one a pending item already carries without a record, and a new one
+ * (picking it on `/sync` registers it on the fake server). Covers: http(s) only survives the parser.
+ */
+export const mockInjectedGroups = (): GroupType[] => {
+  const g = (id: string, title: string, tags: string[], cover?: string) => ({
+    id,
+    title,
+    extraData: "Sent by the extension",
+    tags,
+    cover,
+    added: 1_700_000_000,
+    lastUpdated: 1_700_000_000,
+  });
+  return [
+    g("grp_mockCooking1", "Extension title (the server's wins)", []),
+    g("grp_notYetKnown", "Injected: not on the server yet", ["Topic:Travel"]),
+    g("grp_mockInjected1", "Injected: Weekend project", ["Topic:Cooking"]),
+    g("grp_mockInjected2", "Injected: bad cover dropped", [], "javascript:0"),
+  ];
+};
 
 /** Tag -> number of items and groups using it, like DB/tags.json. */
 export function countTags(db: MockDb): Record<string, number> {

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useMemo } from "react";
-import { tagsAtom } from "@/atom";
+import { injectedGroupsAtom, tagsAtom } from "@/atom";
 import AddToGroupModal from "@/components/craft/AddToGroupModal";
 import BulkUpdateModal from "@/components/craft/BulkUpdateModal";
 import TitleHeader from "@/components/craft/TitleHeader";
@@ -25,9 +25,19 @@ export default function SyncPage() {
     ...orpc.main.getSyncData.queryOptions(),
     refetchOnMount: "always",
   });
-  const groups = useQuery(orpc.groups.list.queryOptions({ input: {} })); // titles for the groups rows
+  const serverGroups = useQuery(orpc.groups.list.queryOptions({ input: {} }));
+  const injected = useAtomValue(injectedGroupsAtom);
+  // The groups to show and pick: the server's plus the ones the extension injected (the server's record wins)
+  const groups = useMemo(
+    () => serverGroups.data && { ...injected, ...serverGroups.data },
+    [injected, serverGroups.data],
+  );
   const contents = scan.data?.contents;
-  const refresh = useCallback(() => void scan.refetch(), [scan.refetch]);
+  // also reloads the groups: a pick may have registered an injected one on the server
+  const refresh = useCallback(() => {
+    void scan.refetch();
+    void serverGroups.refetch();
+  }, [scan.refetch, serverGroups.refetch]);
 
   const filter = useSyncFilter(contents);
   const visibleKeys = useMemo(
@@ -45,7 +55,7 @@ export default function SyncPage() {
     saveBulkTags,
     savingBulkTags,
     addToGroups,
-  } = useSyncActions(contents, refresh);
+  } = useSyncActions(contents, refresh, serverGroups.data);
 
   return (
     <>
@@ -53,12 +63,9 @@ export default function SyncPage() {
         <>
           <UpdateModal
             updateContentFunc={saveEdit}
-            extra={<ItemGroupsFieldView groups={groups.data ?? {}} />}
+            extra={<ItemGroupsFieldView groups={groups ?? {}} />}
           />
-          <AddToGroupModal
-            groups={groups.data ?? {}}
-            addToGroups={addToGroups}
-          />
+          <AddToGroupModal groups={groups ?? {}} addToGroups={addToGroups} />
           <BulkUpdateModal
             bulkUpdateContentFunc={saveBulkTags}
             pending={savingBulkTags}
@@ -97,7 +104,7 @@ export default function SyncPage() {
       <SyncFilters filter={filter} contents={contents} />
       <SyncResults
         scan={scan}
-        groups={groups.data}
+        groups={groups}
         filter={filter}
         onRetry={refresh}
         onEdit={tags ? openEdit : undefined}
