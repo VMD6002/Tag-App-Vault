@@ -29,7 +29,7 @@ const badRequest = (e: unknown) =>
   new ORPCError("BAD_REQUEST", { message: (e as Error).message });
 
 /** Writes the DBs; a memory change the disk never got is undone by re-reading the files. */
-async function persist(w: {
+export async function persist(w: {
   content?: boolean;
   groups?: boolean;
   tags?: boolean;

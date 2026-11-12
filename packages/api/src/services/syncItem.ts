@@ -1,11 +1,12 @@
 import { rename } from "node:fs/promises";
 import { ORPCError } from "@orpc/server";
 import { sanitizeStringForFileName } from "@tagapp/utils";
-import type { CType } from "@tagapp/utils/types";
+import type { CType, GroupType } from "@tagapp/utils/types";
 import { groupsDB } from "../db/groups.js";
 import { pathExists } from "../lib/fsBaseNameFunctions.js";
 import { withSyncLock } from "../lib/syncLock.js";
 import { filesOf, getSyncData, SYNC } from "./getSyncData.js";
+import { addMissingGroups, dropGroups, persist } from "./groups.js";
 import { splitTData } from "./prepareSync.js";
 
 type Ref = { name: string; type: CType };
@@ -32,13 +33,51 @@ async function findItems(refs: Ref[]) {
   return [...found.values()];
 }
 
-/** Groups new to an item must have a record; ids it already carries (e.g. not registered yet) are kept as they are. */
-function checkNewGroups(ids: string[], current: string[] = []) {
-  const unknown = ids.filter((g) => !current.includes(g) && !groupsDB.data[g]);
+/**
+ * Groups new to an item must have a record, on the server or in `records` (what the extension
+ * injected into the page); ids it already carries (e.g. not registered yet) are kept as they are.
+ * Returns the records to register: ids the server has none for.
+ */
+function newGroupRecords(
+  ids: string[],
+  current: string[] = [],
+  records: GroupType[] = [],
+) {
+  const byId = new Map(records.map((r) => [r.id, r]));
+  const unknown = ids.filter(
+    (g) => !current.includes(g) && !groupsDB.data[g] && !byId.has(g),
+  );
   if (unknown.length)
     throw new ORPCError("BAD_REQUEST", {
       message: `Unknown group: ${unknown.join(", ")}`,
     });
+  return ids.flatMap((id) => {
+    const record = byId.get(id);
+    return record && !groupsDB.data[id] ? [record] : [];
+  });
+}
+
+/**
+ * Registers `records` like `POST /downloads/set` does (`addMissingGroups`: the Vault wins, the incoming
+ * cover is dropped, tags counted) and writes the DBs, then runs `write`; if that fails the groups are
+ * dropped again. Call under `withSyncLock`.
+ */
+async function withRegistered<T>(
+  records: GroupType[],
+  write: () => Promise<T>,
+) {
+  const added = addMissingGroups(records);
+  if (!added.length) return write();
+  await persist({ groups: true, tags: true });
+  try {
+    return await write();
+  } catch (error) {
+    dropGroups(added);
+    await persist({ groups: true, tags: true }).catch((e) =>
+      console.error("Could not undo the group registration:", e),
+    );
+    throw error;
+  }
 }
 
 /** Overwrites the item's sidecar (also pins a generated id); prepareSync renames the files to the new title. `groups` (the complete list, `[]` clears) is left alone when absent. */
@@ -49,6 +88,8 @@ export const editSyncItem = (input: {
   tags: string[];
   extraData: string;
   groups?: string[];
+  /** Records for `groups` ids the server has none for (registered like `/downloads/set`). */
+  newGroups?: GroupType[];
 }) =>
   withSyncLock(async () => {
     // the sanitizer turns a blank title into "-", so check before it
@@ -60,16 +101,20 @@ export const editSyncItem = (input: {
     const { name, type, ext, ...rest } = found as NonNullable<typeof found>;
     const title = sanitizeStringForFileName(input.title.trim());
     const groups = input.groups && [...new Set(input.groups)];
-    if (groups) checkNewGroups(groups, rest.groups);
-    await Bun.write(
-      `${SYNC}/${name}.json`,
-      JSON.stringify({
-        ...rest,
-        title,
-        tags: input.tags,
-        extraData: input.extraData,
-        ...(groups && { groups: groups.length ? groups : undefined }),
-      }),
+    const records = groups
+      ? newGroupRecords(groups, rest.groups, input.newGroups)
+      : [];
+    await withRegistered(records, () =>
+      Bun.write(
+        `${SYNC}/${name}.json`,
+        JSON.stringify({
+          ...rest,
+          title,
+          tags: input.tags,
+          extraData: input.extraData,
+          ...(groups && { groups: groups.length ? groups : undefined }),
+        }),
+      ),
     );
   });
 
@@ -77,7 +122,8 @@ export const editSyncItem = (input: {
  * Tags and groups of several pending items in one call: per item tags = current minus `removed`
  * plus `added` (added wins) and `addGroups` joined. Only the sidecars change; groups are applied
  * (record stub, set-once cover) by the next sync, tag counts too. Items whose result is
- * identical are not written. A failed write restores the sidecars already written.
+ * identical are not written. A failed write restores the sidecars already written. `newGroups`
+ * records for ids the server does not know are registered first (only when something is written).
  * Returns the ids of the items that changed.
  */
 export const bulkEditSyncItems = (input: {
@@ -85,6 +131,8 @@ export const bulkEditSyncItems = (input: {
   added?: string[];
   removed?: string[];
   addGroups?: string[];
+  /** Records for `addGroups` ids the server has none for (registered like `/downloads/set`). */
+  newGroups?: GroupType[];
 }) =>
   withSyncLock(async () => {
     const added = [...new Set((input.added ?? []).map((t) => t.trim()))].filter(
@@ -92,7 +140,7 @@ export const bulkEditSyncItems = (input: {
     );
     const removed = input.removed ?? [];
     const addGroups = [...new Set(input.addGroups ?? [])];
-    checkNewGroups(addGroups);
+    const records = newGroupRecords(addGroups, [], input.newGroups);
     const items = await findItems(input.items);
 
     const writes = items.flatMap(({ name, type: _t, ext: _e, ...rest }) => {
@@ -121,24 +169,26 @@ export const bulkEditSyncItems = (input: {
       ];
     });
 
-    // sidecar text before the write (null: there was none), to put back on failure
-    const before: [string, string | null][] = [];
-    try {
-      for (const { path, next } of writes) {
-        const file = Bun.file(path);
-        before.push([path, (await file.exists()) ? await file.text() : null]);
-        await Bun.write(path, next);
+    await withRegistered(writes.length ? records : [], async () => {
+      // sidecar text before the write (null: there was none), to put back on failure
+      const before: [string, string | null][] = [];
+      try {
+        for (const { path, next } of writes) {
+          const file = Bun.file(path);
+          before.push([path, (await file.exists()) ? await file.text() : null]);
+          await Bun.write(path, next);
+        }
+      } catch (error) {
+        for (const [path, text] of before.reverse())
+          await (text === null
+            ? Bun.file(path).delete()
+            : Bun.write(path, text)
+          ).catch((e) => console.error(`Failed to rollback ${path}:`, e));
+        throw new ORPCError("INTERNAL_SERVER_ERROR", {
+          message: `Could not update the sidecars: ${error}`,
+        });
       }
-    } catch (error) {
-      for (const [path, text] of before.reverse())
-        await (text === null
-          ? Bun.file(path).delete()
-          : Bun.write(path, text)
-        ).catch((e) => console.error(`Failed to rollback ${path}:`, e));
-      throw new ORPCError("INTERNAL_SERVER_ERROR", {
-        message: `Could not update the sidecars: ${error}`,
-      });
-    }
+    });
     return writes.map((w) => w.id);
   });
 

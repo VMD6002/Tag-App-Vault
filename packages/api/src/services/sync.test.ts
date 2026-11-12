@@ -521,6 +521,129 @@ test("edit: groups replace the list, [] clears it, absent keeps it; an id the it
   expect(await groups()).toBeUndefined();
 });
 
+const injected = (id: string, tags: string[] = [], cover?: string) => ({
+  ...group(id, cover),
+  title: `Injected ${id}`,
+  tags,
+});
+
+test("bulk edit: an injected group the server does not know is registered like /downloads/set, then synced with the right counts", async () => {
+  groupsDB.data = { grp_a: group("grp_a") };
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
+  const ref = { name: "a.1", type: "img" as const };
+  await bulkEditSyncItems({
+    items: [ref],
+    addGroups: ["grp_inj", "grp_a"],
+    newGroups: [
+      injected("grp_inj", ["t", "t"], "https://x.test/c.png"),
+      // known id: the Vault wins, nothing is overwritten
+      { ...injected("grp_a", ["zzz"]), title: "Other title" },
+      // not picked: never registered
+      injected("grp_unused", ["u"]),
+    ],
+  });
+  expect(Object.keys(groupsDB.data).sort()).toEqual(["grp_a", "grp_inj"]);
+  expect(groupsDB.data.grp_a).toEqual(group("grp_a"));
+  expect(groupsDB.data.grp_inj).toMatchObject({
+    title: "Injected grp_inj",
+    tags: ["t"],
+  });
+  expect(groupsDB.data.grp_inj?.cover).toBeUndefined();
+  expect(tagDB.data).toEqual({ t: 1 });
+  const group_ids = Object.values((await getSyncData()).contents)[0]?.groups;
+  expect(group_ids).toEqual(["grp_inj", "grp_a"]);
+
+  await syncContent();
+  expect(tagDB.data).toEqual({ t: 1, x: 1 });
+  expect(Object.keys(groupsDB.data).sort()).toEqual(["grp_a", "grp_inj"]);
+  expect(groupsDB.data.grp_inj?.cover).toMatch(/^\/media\/Images\/\.covers\//);
+});
+
+test("bulk edit: an id with no record anywhere is rejected, and nothing is registered when nothing is written", async () => {
+  groupsDB.data = { grp_a: group("grp_a") };
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write(
+    "Sync/a.1.json",
+    JSON.stringify({ ...JSON.parse(json("1", "a")), groups: ["grp_inj"] }),
+  );
+  const ref = { name: "a.1", type: "img" as const };
+  await expect(
+    bulkEditSyncItems({
+      items: [ref],
+      addGroups: ["grp_inj", "grp_nope"],
+      newGroups: [injected("grp_inj", ["t"])],
+    }),
+  ).rejects.toThrow("grp_nope");
+  expect(Object.keys(groupsDB.data)).toEqual(["grp_a"]);
+  // the item already has grp_inj: the result is identical, so no write and no registration
+  expect(
+    await bulkEditSyncItems({
+      items: [ref],
+      addGroups: ["grp_inj"],
+      newGroups: [injected("grp_inj", ["t"])],
+    }),
+  ).toEqual([]);
+  expect(Object.keys(groupsDB.data)).toEqual(["grp_a"]);
+  expect(tagDB.data).toEqual({});
+});
+
+test("bulk edit: a failed sidecar write drops the registered group and its tag counts again", async () => {
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a"));
+  const write = Bun.write;
+  let calls = 0;
+  // the sidecar write fails (the rollback write after it works)
+  Bun.write = ((...args: Parameters<typeof Bun.write>) =>
+    ++calls === 1
+      ? Promise.reject(new Error("disk full"))
+      : write(...args)) as typeof Bun.write;
+  try {
+    await expect(
+      bulkEditSyncItems({
+        items: [{ name: "a.1", type: "img" }],
+        addGroups: ["grp_inj"],
+        newGroups: [injected("grp_inj", ["t"])],
+      }),
+    ).rejects.toThrow();
+  } finally {
+    Bun.write = write;
+  }
+  expect(groupsDB.data).toEqual({});
+  expect(tagDB.data).toEqual({});
+});
+
+test("edit: groups may carry injected records; known ids keep the Vault's record", async () => {
+  groupsDB.data = { grp_a: group("grp_a") };
+  await Bun.write("Sync/a.1.png", png);
+  await Bun.write("Sync/a.1.json", json("1", "a"));
+  const input = {
+    name: "a.1",
+    type: "img" as const,
+    title: "a",
+    tags: [],
+    extraData: "",
+  };
+  await expect(
+    editSyncItem({ ...input, groups: ["grp_inj"] }),
+  ).rejects.toThrow();
+  await editSyncItem({
+    ...input,
+    groups: ["grp_a", "grp_inj"],
+    newGroups: [
+      { ...injected("grp_a"), title: "Other" },
+      injected("grp_inj", ["t"]),
+    ],
+  });
+  expect(groupsDB.data.grp_a).toEqual(group("grp_a"));
+  expect(groupsDB.data.grp_inj?.title).toBe("Injected grp_inj");
+  expect(tagDB.data).toEqual({ t: 1 });
+  expect(Object.values((await getSyncData()).contents)[0]?.groups).toEqual([
+    "grp_a",
+    "grp_inj",
+  ]);
+});
+
 test("bulk remove: several items move to UnSyncable together, a clash or a missing item changes nothing", async () => {
   await Bun.write("Sync/a.1.png", png);
   await Bun.write("Sync/a.1.json", json("1", "a"));

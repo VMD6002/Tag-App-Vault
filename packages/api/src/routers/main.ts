@@ -1,6 +1,6 @@
 import { ORPCError, os } from "@orpc/server";
 import { SetDifferenceES6 } from "@tagapp/utils";
-import { CtypeSchema } from "@tagapp/utils/types";
+import { CtypeSchema, GroupSchema } from "@tagapp/utils/types";
 import z from "zod";
 import { contentDataDB } from "../db/contentData.js";
 import { settingsDB } from "../db/settings.js";
@@ -36,11 +36,12 @@ export const editSyncItem = os
       tags: z.string().array(),
       extraData: z.string(),
       groups: z.string().array().optional(),
+      newGroups: GroupSchema.array().optional(),
     }),
   )
   .handler(({ input }) => editSync(input));
 
-// Tags (`added` / `removed`) and group ids (`addGroups`, existing groups only) on several pending items at once
+// Tags (`added` / `removed`) and group ids (`addGroups`; ids the server lacks need a record in `newGroups`) on several pending items at once
 export const bulkEditSyncItems = os
   .input(
     z.object({
@@ -48,6 +49,7 @@ export const bulkEditSyncItems = os
       added: z.string().array().optional(),
       removed: z.string().array().optional(),
       addGroups: z.string().array().optional(),
+      newGroups: GroupSchema.array().optional(),
     }),
   )
   .handler(({ input }) => bulkEditSync(input));
