@@ -29,5 +29,9 @@ export {
   setDownloads,
   setQueue,
 } from "./services/downloads.js";
+export {
+  contentSyncSchema,
+  overwriteContent,
+} from "./services/overwriteContent.js";
 
 export type router = typeof router;

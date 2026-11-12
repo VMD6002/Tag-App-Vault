@@ -2,8 +2,10 @@ import { networkInterfaces } from "node:os";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import {
+  contentSyncSchema,
   downloadsSetSchema,
   groupsDB,
+  overwriteContent,
   router,
   setDownloads,
   settingsDB,
@@ -52,6 +54,10 @@ app.use(
     credentials: true,
     maxAge: 3600,
   }),
+);
+
+app.post("/content/sync", async (c) =>
+  c.json(await overwriteContent(contentSyncSchema.parse(await c.req.json()))),
 );
 
 app.post("/downloads/set", async (c) =>
