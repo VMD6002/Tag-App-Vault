@@ -1,4 +1,5 @@
 import type { GroupsDB } from "@tagapp/utils/types";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Inbox, SearchX } from "lucide-react";
 import {
   EmptyState,
@@ -6,10 +7,22 @@ import {
   LoadingState,
 } from "@/components/craft/EmptyState";
 import { ResultsBar } from "@/components/craft/library/FilterPanel";
+import {
+  SelectionActions,
+  SelectionToggle,
+} from "@/components/craft/library/SelectionBar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import SyncCard, { type SyncItem } from "./SyncCard";
+import {
+  selectAllAtom,
+  selectionEntriesAtom,
+  selectionOnAtom,
+  toggleSelectionModeAtom,
+  unSelectAllAtom,
+} from "@/routes/atom.selection";
+import SyncCard, { type SyncItem, syncKey } from "./SyncCard";
+import type { SyncBulk } from "./useSyncActions";
 import type { SyncFilter } from "./useSyncFilter";
 
 type Scan = {
@@ -23,7 +36,7 @@ type Scan = {
   error: Error | null;
 };
 
-/** Results bar, the loading/error/empty states and the card grid. Edit and remove are omitted in read-only mode. */
+/** Results bar (with the selection controls), the loading/error/empty states and the card grid. Edit, remove and selection are omitted in read-only mode. */
 export default function SyncResults({
   scan,
   groups,
@@ -31,6 +44,7 @@ export default function SyncResults({
   onRetry,
   onEdit,
   onRemove,
+  bulk,
 }: {
   scan: Scan;
   groups?: GroupsDB;
@@ -38,7 +52,13 @@ export default function SyncResults({
   onRetry: () => void;
   onEdit?: (id: string) => void;
   onRemove?: (id: string) => void;
+  bulk?: SyncBulk;
 }) {
+  const selectionOn = useAtomValue(selectionOnAtom);
+  const selected = useAtomValue(selectionEntriesAtom);
+  const toggleSelection = useSetAtom(toggleSelectionModeAtom);
+  const selectAll = useSetAtom(selectAllAtom);
+  const unSelectAll = useSetAtom(unSelectAllAtom);
   const unsyncable = scan.data?.unsyncable.length ?? 0;
   const orphans = scan.data?.orphanJsons.length ?? 0;
 
@@ -46,14 +66,46 @@ export default function SyncResults({
     <>
       <ResultsBar
         left={
-          <p aria-live="polite" className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground tabular-nums">
-              {filtered.length}
-            </span>{" "}
-            {filtered.length === 1 ? "item" : "items"}
-            {(unsyncable > 0 || orphans > 0) &&
-              ` · ${unsyncable} unreadable ${unsyncable === 1 ? "file moves" : "files move"} to UnSyncable on sync, ${orphans} JSON without an item`}
-          </p>
+          <>
+            {bulk && (
+              <SelectionToggle on={selectionOn} onToggle={toggleSelection} />
+            )}
+            <p aria-live="polite" className="text-sm text-muted-foreground">
+              {bulk && selectionOn ? (
+                <>
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {selected.length}
+                  </span>{" "}
+                  of <span className="tabular-nums">{filtered.length}</span>{" "}
+                  selected
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {filtered.length}
+                  </span>{" "}
+                  {filtered.length === 1 ? "item" : "items"}
+                  {(unsyncable > 0 || orphans > 0) &&
+                    ` · ${unsyncable} unreadable ${unsyncable === 1 ? "file moves" : "files move"} to UnSyncable on sync, ${orphans} JSON without an item`}
+                </>
+              )}
+            </p>
+            {bulk && selectionOn && (
+              <SelectionActions
+                total={filtered.length}
+                selected={selected.length}
+                onSelectAll={(on) =>
+                  on
+                    ? selectAll(filtered.map((c) => syncKey(c as SyncItem)))
+                    : unSelectAll()
+                }
+                onEditTags={bulk.editTags}
+                onAddToGroup={bulk.addToGroup}
+                onRemove={bulk.removeSelected}
+                removeTitle="Move the selected items to UnSyncable (nothing is deleted)"
+              />
+            )}
+          </>
         }
         right={
           <>

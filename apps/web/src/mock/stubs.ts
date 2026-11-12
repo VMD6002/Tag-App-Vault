@@ -119,6 +119,12 @@ const pending = (name: string, type: string) => {
   return c;
 };
 
+/** Like the server: a group an item newly gets must have a record. */
+const checkNewGroups = (ids: string[], current: string[] = []) => {
+  const bad = ids.find((g) => !current.includes(g) && !state.db.groups[g]);
+  if (bad) throw new MockError("BAD_REQUEST", 400, `Unknown group: ${bad}`);
+};
+
 // ── Downloads: "Start downloads" replays one fake run, pushed to the open watch streams ──────────
 const now = () => Math.floor(Date.now() / 1000);
 /** The whole list (queue + history); like the server, `completed` entries are history. */
@@ -336,16 +342,48 @@ const handlers: Record<string, Handler> = {
     title: string;
     tags: string[];
     extraData: string;
+    groups?: string[];
   }) => {
     const c = pending(i.name, i.type);
+    if (i.groups) checkNewGroups(i.groups, c.groups);
     Object.assign(c, {
       title: i.title,
       tags: i.tags,
       extraData: i.extraData,
+      ...(i.groups && { groups: i.groups.length ? i.groups : undefined }),
     });
+  },
+  "main/bulkEditSyncItems": (i: {
+    items: { name: string; type: string }[];
+    added?: string[];
+    removed?: string[];
+    addGroups?: string[];
+  }) => {
+    checkNewGroups(i.addGroups ?? []);
+    const items = i.items.map((r) => pending(r.name, r.type));
+    for (const c of items) {
+      c.tags = [
+        ...new Set([
+          ...c.tags.filter((t) => !i.removed?.includes(t)),
+          ...(i.added ?? []),
+        ]),
+      ];
+      const groups = [
+        ...new Set([...(c.groups ?? []), ...(i.addGroups ?? [])]),
+      ];
+      c.groups = groups.length ? groups : undefined;
+    }
+    return items.map((c) => c.id);
   },
   "main/removeSyncItem": (i: { name: string; type: string }) => {
     delete state.pending[pending(i.name, i.type).id];
+  },
+  "main/bulkRemoveSyncItems": (i: {
+    items: { name: string; type: string }[];
+  }) => {
+    const items = i.items.map((r) => pending(r.name, r.type));
+    for (const c of items) delete state.pending[c.id];
+    return items.map((c) => c.id);
   },
   "main/sync": () => {
     for (const { name: _n, ext: _e, ...c } of Object.values(state.pending))

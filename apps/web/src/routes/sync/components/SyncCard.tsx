@@ -1,12 +1,21 @@
 import type { ContentServerType, GroupsDB } from "@tagapp/utils/types";
-import { memo, useState } from "react";
+import { atom, useAtomValue, useSetAtom } from "jotai";
+import { memo, useMemo, useState } from "react";
 import ContentCard from "@/components/craft/library/ContentCard";
+import {
+  selectEntryAtom,
+  selectionEntriesAtom,
+  selectionOnAtom,
+} from "@/routes/atom.selection";
 import ItemGroupLinks from "@/routes/components/ItemGroupLinks";
 
 export type SyncItem = ContentServerType & {
   name: string;
   ext: (string | undefined)[];
 };
+
+/** Selection key: a pending item is addressed by disk name and type (generated ids change on every scan). */
+export const syncKey = ({ type, name }: SyncItem) => `${type}/${name}`;
 
 // Caddy serves ./Sync at /media/.sync/ (apps/Caddyfile)
 const syncUrl = (...parts: string[]) =>
@@ -58,6 +67,16 @@ const SyncCard = memo(
   }) => {
     const { cover, media, video } = syncMedia(Content);
     const [coverFailed, setCoverFailed] = useState(false);
+    const key = syncKey(Content);
+    const selectionOn = useAtomValue(selectionOnAtom);
+    // re-renders only when this card's own flag flips
+    const selected = useAtomValue(
+      useMemo(
+        () => atom((get) => get(selectionEntriesAtom).includes(key)),
+        [key],
+      ),
+    );
+    const selectEntry = useSetAtom(selectEntryAtom);
     return (
       <ContentCard
         content={Content}
@@ -65,6 +84,11 @@ const SyncCard = memo(
         cover={coverFailed ? null : cover}
         onCoverError={() => setCoverFailed(true)}
         video={video}
+        selection={{
+          on: selectionOn,
+          selected,
+          onToggle: () => selectEntry(key),
+        }}
         extra={
           groups &&
           !!Content.groups?.length && (
