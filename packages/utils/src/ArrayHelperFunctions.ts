@@ -19,7 +19,7 @@ export function ArrayHasAll(array: string[], Values: string[]) {
 }
 
 export const eqSet = (set1: Set<string>, set2: Set<string>) =>
-  set1.size === set2.size && [...set1].every((x) => set1.has(x));
+  set1.size === set2.size && [...set1].every((x) => set2.has(x));
 
 export const SetDifferenceES6 = (set1: Set<string>, set2: Set<string>) =>
   [...set1].filter((element) => !set2.has(element));
