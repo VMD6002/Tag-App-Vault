@@ -6,4 +6,5 @@ export * from "./filterEntries";
 export * from "./groups";
 export * from "./reservedTags";
 export * from "./StringHelperFunctions";
+export * from "./tagCovers";
 export * from "./viewTags";
