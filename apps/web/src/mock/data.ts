@@ -513,6 +513,14 @@ function addGroups(db: MockDb, scenario: Scenario) {
   if (ghost) ghost.groups = ["grp_mockGhost01"];
 }
 
+/** Tag -> cover URL the mock extension sends with the tags (`covers`). `/media/` ones become gradients; the last one is blocked by the mock CSP, so its broken image shows. */
+export const mockTagCovers = (): Record<string, string> => ({
+  "Topic:Travel": `${location.origin}/media/Tags/cover.Travel`,
+  "Topic:Cooking": `${location.origin}/media/Tags/cover.Cooking`,
+  "Type:Video": `${location.origin}/media/Tags/cover.Video`,
+  "Site:YouTube": "https://example.invalid/youtube.png",
+});
+
 /** Tag -> number of items and groups using it, like DB/tags.json. */
 export function countTags(db: MockDb): Record<string, number> {
   const counts: Record<string, number> = {};
