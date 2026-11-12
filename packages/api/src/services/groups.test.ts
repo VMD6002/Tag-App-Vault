@@ -132,18 +132,7 @@ test("disband drops the record and the id on every child, the items stay", async
   expectConsistent();
 });
 
-test("planDelete splits exclusive and shared children", async () => {
-  seed(
-    [item("1", [], ["a"]), item("2", [], ["a", "b"])],
-    [group("a"), group("b")],
-  );
-  const plan = await call(g.planDelete, { id: "a" });
-  expect(plan.exclusive.map((i) => i.id)).toEqual(["1"]);
-  expect(plan.shared.map((i) => i.id)).toEqual(["2"]);
-  expect(contentDataDB.data["1"]).toBeDefined(); // read-only
-});
-
-test("delete removes exclusive and chosen shared items through the delete path; other shared items lose the id", async () => {
+test("planDelete splits children; delete removes exclusive and chosen shared items through the delete path; other shared items lose the id", async () => {
   seed(
     [
       item("1", ["t", "u"], ["a"]),
@@ -153,6 +142,9 @@ test("delete removes exclusive and chosen shared items through the delete path; 
     ],
     [group("a", ["gx"]), group("b", ["gx"])],
   );
+  const plan = await call(g.planDelete, { id: "a" }); // read-only
+  expect(plan.exclusive.map((i) => i.id)).toEqual(["1"]);
+  expect(plan.shared.map((i) => i.id)).toEqual(["2", "3"]);
   const res = await call(g.delete, { id: "a", deleteIds: ["2"] });
   expect(res.deleted.sort()).toEqual(["1", "2"]);
   expect(res.detached).toEqual(["3"]);

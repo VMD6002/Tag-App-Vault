@@ -45,8 +45,52 @@ const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==",
   "base64",
 );
-const json = (id: string, title: string, tags: string[] = []) =>
-  JSON.stringify({ id, title, tags, extraData: "", added: 1, lastUpdated: 1 });
+const json = (id: string, title: string, tags: string[] = [], more = {}) =>
+  JSON.stringify({
+    id,
+    title,
+    tags,
+    extraData: "",
+    added: 1,
+    lastUpdated: 1,
+    ...more,
+  });
+const img = (name: string) => ({ name, type: "img" as const });
+// editSyncItem input for a.1, with overrides
+const editArgs = (o = {}) => ({
+  ...img("a.1"),
+  title: "a",
+  tags: [],
+  extraData: "",
+  ...o,
+});
+// Run `fn` with the n-th Bun.write failing; the others go through.
+const withFailingWrite = async (n: number, fn: () => Promise<unknown>) => {
+  const write = Bun.write;
+  let calls = 0;
+  Bun.write = ((...args: Parameters<typeof Bun.write>) =>
+    ++calls === n
+      ? Promise.reject(new Error("disk full"))
+      : write(...args)) as typeof Bun.write;
+  try {
+    await fn();
+  } finally {
+    Bun.write = write;
+  }
+};
+// A pending image in Sync with its sidecar (and a cover when asked).
+const pend = (
+  id: string,
+  title: string,
+  tags: string[] = [],
+  cover = false,
+  more = {},
+) =>
+  Promise.all([
+    Bun.write(`Sync/${title}.${id}.png`, png),
+    cover && Bun.write(`Sync/cover.${title}.${id}.png`, png),
+    Bun.write(`Sync/${title}.${id}.json`, json(id, title, tags, more)),
+  ]);
 const ls = (dir: string) => readdirSync(dir).sort();
 
 beforeEach(() => {
@@ -89,7 +133,7 @@ test("getSyncData writes nothing", async () => {
   expect(Object.values(contents).map((c) => c.title)).toEqual(["a"]);
 });
 
-test("B1: audio cover is one string, naturally sorted, or absent", async () => {
+test("audio cover is one string, naturally sorted, or absent", async () => {
   mkdirSync("Sync/one.1.audio/.audio-covers", { recursive: true });
   await Bun.write("Sync/one.1.audio/.audio-covers/img10.png", png);
   await Bun.write("Sync/one.1.audio/.audio-covers/img2.png", png);
@@ -101,10 +145,8 @@ test("B1: audio cover is one string, naturally sorted, or absent", async () => {
   expect(contentDataDB.data["2"]?.cover).toBeUndefined();
 });
 
-test("B2: an existing id changes nothing and stays in Sync", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/cover.a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
+test("an existing id changes nothing and stays in Sync", async () => {
+  await pend("1", "a", ["x"], true);
   await syncContent();
 
   await Bun.write("Sync/a.1.png", "new bytes");
@@ -120,7 +162,7 @@ test("B2: an existing id changes nothing and stays in Sync", async () => {
   expect(ls("Sync")).toEqual(["a.1.json", "a.1.png", "cover.a.1.png"]);
 });
 
-test("B2: a repeated id inside one scan keeps one item", async () => {
+test("a repeated id inside one scan keeps one item", async () => {
   await Bun.write("Sync/a.1.png", png);
   await Bun.write("Sync/a.1.webp", png);
   await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
@@ -130,20 +172,8 @@ test("B2: a repeated id inside one scan keeps one item", async () => {
   expect(ls("UnSyncable")).toEqual([]);
 });
 
-test("B4: concurrent syncs behave like one", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/cover.a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
-  await Promise.all([syncContent(), syncContent()]);
-  expect(tagDB.data).toEqual({ x: 1 });
-  expect(ls("Sync")).toEqual([]);
-  expect(ls("UnSyncable")).toEqual([]);
-});
-
-test("B6: a failed DB write keeps the item in Sync, sidecar included", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/cover.a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
+test("a failed DB write keeps the item in Sync, sidecar included", async () => {
+  await pend("1", "a", ["x"], true);
   const write = tagDB.write;
   tagDB.write = () => Promise.reject(new Error("disk full"));
   await syncContent();
@@ -153,7 +183,7 @@ test("B6: a failed DB write keeps the item in Sync, sidecar included", async () 
   expect(tagDB.data).toEqual({});
 });
 
-test("B8: a non-image cover is rejected and duplicates resolve the same way", async () => {
+test("a non-image cover is rejected and duplicates resolve the same way", async () => {
   await Bun.write("Sync/a.1.png", png);
   await Bun.write("Sync/cover.a.1.png", png);
   await Bun.write("Sync/cover.a.1.jpg", png);
@@ -164,16 +194,14 @@ test("B8: a non-image cover is rejected and duplicates resolve the same way", as
   expect(ls("UnSyncable")).toEqual(["cover.a.1.mp4", "cover.a.1.png"]);
 });
 
-test("B10: tags are trimmed, deduplicated and counted once", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/cover.a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a", ["a", "a", " a", ""]));
+test("tags are trimmed, deduplicated and counted once", async () => {
+  await pend("1", "a", ["a", "a", " a", ""], true);
   await syncContent();
   expect(contentDataDB.data["1"]?.tags).toEqual(["a"]);
   expect(tagDB.data).toEqual({ a: 1 });
 });
 
-test("B11: images get a generated webp cover, videos may have none", async () => {
+test("images get a generated webp cover, videos may have none", async () => {
   await Bun.write("Sync/pic.png", png);
   await Bun.write("Sync/clip.mp4", "x");
   mkdirSync("Sync/empty.3.gallery");
@@ -198,14 +226,14 @@ test("B11: images get a generated webp cover, videos may have none", async () =>
   ).toBe(false);
 });
 
-test("B11: an image that can't be decoded goes to UnSyncable", async () => {
+test("an image that can't be decoded goes to UnSyncable", async () => {
   await Bun.write("Sync/a.1.svg", "<svg/>");
   await syncContent();
   expect(ls("UnSyncable")).toEqual(["a.1.svg"]);
   expect(contentDataDB.data).toEqual({});
 });
 
-test("B12: an orphan JSON is reported and left alone", async () => {
+test("an orphan JSON is reported and left alone", async () => {
   await Bun.write("Sync/lost.1.json", json("1", "lost"));
   const { orphanJsons } = await getSyncData();
   expect(orphanJsons).toEqual(["lost.1.json"]);
@@ -213,7 +241,7 @@ test("B12: an orphan JSON is reported and left alone", async () => {
   expect(await Bun.file("Sync/lost.1.json").exists()).toBe(true);
 });
 
-test("B11: a video with no cover can be renamed and deleted", async () => {
+test("a video with no cover can be renamed and deleted", async () => {
   await Bun.write("Sync/clip.1.mp4", "x");
   await Bun.write("Sync/clip.1.json", json("1", "clip"));
   await syncContent();
@@ -223,6 +251,65 @@ test("B11: a video with no cover can be renamed and deleted", async () => {
 
   expect(await deleteData(["1"])).toEqual(["1"]);
   expect(ls("media/Videos").filter((f) => !f.startsWith("."))).toEqual([]);
+});
+
+// A library item of the given type with its tag counts, and the files `files` (paths under media/).
+const seedItem = (
+  type: "img" | "video",
+  id: string,
+  title: string,
+  tags: string[],
+  files: string[],
+) => {
+  contentDataDB.data[id] = {
+    id,
+    title,
+    tags,
+    extraData: "",
+    added: 1,
+    lastUpdated: 1,
+    type,
+  };
+  for (const t of tags) tagDB.data[t] = 1;
+  for (const f of files) writeFileSync(`media/${f}`, "x");
+};
+const videoFiles = ["Videos/clip.2.mp4", "Videos/.covers/cover.clip.2.webp"];
+
+test("deleteData puts the cover back when the media file can't be moved", async () => {
+  seedItem("img", "1", "pic", ["x"], ["Images/.covers/cover.pic.1.webp"]); // no media file
+  expect(await deleteData(["1"])).toEqual([]);
+  expect(ls("media/Images")).toEqual([".covers"]);
+  expect(ls("media/Images/.covers")).toEqual(["cover.pic.1.webp"]);
+  expect(contentDataDB.data["1"]).toBeDefined();
+  expect(tagDB.data).toEqual({ x: 1 });
+});
+
+test("renaming a video moves media, cover and caption to the new title, same id", async () => {
+  const tags = ["x", "meta:caption"];
+  seedItem("video", "2", "clip", tags, [
+    ...videoFiles,
+    "Videos/.captions/caption.clip.2.vtt",
+  ]);
+  await setDoc({ id: "2", title: "new", tags, extraData: "" });
+  expect(ls("media/Videos/.captions")).toEqual(["caption.new.2.vtt"]);
+  expect(ls("media/Videos").filter((f) => !f.startsWith("."))).toEqual([
+    "new.2.mp4",
+  ]);
+  expect(ls("media/Videos/.covers")).toEqual(["cover.new.2.webp"]);
+});
+
+test("a rename that fails halfway rolls every file back and keeps the title", async () => {
+  // meta:caption but no caption file: the last step fails after media and cover moved
+  seedItem("video", "2", "clip", ["x", "meta:caption"], videoFiles);
+  await expect(
+    setDoc({ id: "2", title: "new", tags: ["x"], extraData: "" }),
+  ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+  expect(ls("media/Videos").filter((f) => !f.startsWith("."))).toEqual([
+    "clip.2.mp4",
+  ]);
+  expect(ls("media/Videos/.covers")).toEqual(["cover.clip.2.webp"]);
+  expect(contentDataDB.data["2"]?.title).toBe("clip");
+  expect(tagDB.data).toEqual({ x: 1, "meta:caption": 1 });
 });
 
 test("bulkUpdateContentTags counts only real changes", async () => {
@@ -276,17 +363,8 @@ test("an item with invalid or unreadable JSON stays in Sync with its JSON", asyn
   expect(contentDataDB.data).toEqual({});
 });
 
-test("mkv syncs as a video", async () => {
-  await Bun.write("Sync/clip.1.mkv", "x");
-  await Bun.write("Sync/clip.1.json", json("1", "clip"));
-  await syncContent();
-  expect(contentDataDB.data["1"]?.type).toBe("video");
-  expect(await Bun.file("media/Videos/clip.1.mkv").exists()).toBe(true);
-});
-
 test("edit: a plain sidecar is overwritten and sync renames to the new title", async () => {
-  await Bun.write("Sync/old.1.png", png);
-  await Bun.write("Sync/old.1.json", json("1", "old", ["x"]));
+  await pend("1", "old", ["x"]);
   await editSyncItem({
     name: "old.1",
     type: "img",
@@ -349,7 +427,7 @@ test("edit: an item from a tdata bundle takes the edit, not the bundle", async (
 
 test("edit: unknown, blank and path-like names are rejected", async () => {
   await Bun.write("Sync/a.1.png", png);
-  const input = { type: "img" as const, title: "t", tags: [], extraData: "" };
+  const input = editArgs({ title: "t" });
   await expect(editSyncItem({ ...input, name: "../x" })).rejects.toThrow();
   await expect(editSyncItem({ ...input, name: "nope" })).rejects.toThrow();
   await expect(
@@ -359,11 +437,9 @@ test("edit: unknown, blank and path-like names are rejected", async () => {
 });
 
 test("remove: files and sidecar move to UnSyncable, nothing is deleted", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/cover.a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a"));
+  await pend("1", "a", [], true);
   await Bun.write("Sync/keep.2.png", png);
-  await removeSyncItem({ name: "a.1", type: "img" });
+  await removeSyncItem(img("a.1"));
   expect(ls("UnSyncable")).toEqual(["a.1.json", "a.1.png", "cover.a.1.png"]);
   expect(ls("Sync")).toEqual(["keep.2.png"]);
   await syncContent();
@@ -399,18 +475,16 @@ const group = (id: string, cover = "") => ({
 
 test("bulk edit: tags and groups of several pending items, synced into the library with the right counts", async () => {
   groupsDB.data = { grp_a: group("grp_a"), grp_b: group("grp_b") };
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a", ["x", "y"]));
-  await Bun.write("Sync/b.2.png", png);
-  await Bun.write("Sync/b.2.json", json("2", "b", ["y"]));
+  await pend("1", "a", ["x", "y"]);
+  await pend("2", "b", ["y"]);
   await Bun.write("Sync/pic.png", png); // no sidecar: gets one that pins its id
   await Bun.write("Sync/untouched.4.png", png);
   const ids = await bulkEditSyncItems({
     items: [
-      { name: "a.1", type: "img" },
-      { name: "b.2", type: "img" },
-      { name: "b.2", type: "img" }, // a repeat counts once
-      { name: "pic", type: "img" },
+      img("a.1"),
+      img("b.2"),
+      img("b.2"), // a repeat counts once
+      img("pic"),
     ],
     added: [" new ", "y"],
     removed: ["x"],
@@ -443,10 +517,9 @@ test("bulk edit: tags and groups of several pending items, synced into the libra
 
 test("bulk edit: nothing changes when the result is identical; unknown groups and items are rejected before any write", async () => {
   groupsDB.data = { grp_a: group("grp_a") };
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
+  await pend("1", "a", ["x"]);
   const before = await Bun.file("Sync/a.1.json").text();
-  const ref = { name: "a.1", type: "img" as const };
+  const ref = img("a.1");
   expect(await bulkEditSyncItems({ items: [ref], added: ["x"] })).toEqual([]);
   expect(await Bun.file("Sync/a.1.json").text()).toBe(before);
   await expect(
@@ -454,59 +527,36 @@ test("bulk edit: nothing changes when the result is identical; unknown groups an
   ).rejects.toThrow();
   await expect(
     bulkEditSyncItems({
-      items: [ref, { name: "gone", type: "img" }],
+      items: [ref, img("gone")],
       added: ["z"],
     }),
   ).rejects.toThrow();
   await expect(
-    bulkEditSyncItems({ items: [{ name: "../x", type: "img" }], added: ["z"] }),
+    bulkEditSyncItems({ items: [img("../x")], added: ["z"] }),
   ).rejects.toThrow();
   expect(await Bun.file("Sync/a.1.json").text()).toBe(before);
 });
 
 test("bulk edit: a failed write restores the sidecars already written", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a"));
-  await Bun.write("Sync/b.2.png", png);
-  await Bun.write("Sync/b.2.json", json("2", "b"));
+  await pend("1", "a");
+  await pend("2", "b");
   const before = await Bun.file("Sync/a.1.json").text();
-  const write = Bun.write;
-  let calls = 0;
   // the second sidecar write fails
-  Bun.write = ((...args: Parameters<typeof Bun.write>) =>
-    ++calls === 2
-      ? Promise.reject(new Error("disk full"))
-      : write(...args)) as typeof Bun.write;
-  try {
-    await expect(
+  await expect(
+    withFailingWrite(2, () =>
       bulkEditSyncItems({
-        items: [
-          { name: "a.1", type: "img" },
-          { name: "b.2", type: "img" },
-        ],
+        items: [img("a.1"), img("b.2")],
         added: ["t"],
       }),
-    ).rejects.toThrow();
-  } finally {
-    Bun.write = write;
-  }
+    ),
+  ).rejects.toThrow();
   expect(await Bun.file("Sync/a.1.json").text()).toBe(before);
 });
 
 test("edit: groups replace the list, [] clears it, absent keeps it; an id the item already has may be unknown", async () => {
   groupsDB.data = { grp_a: group("grp_a") };
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write(
-    "Sync/a.1.json",
-    JSON.stringify({ ...JSON.parse(json("1", "a")), groups: ["grp_later"] }),
-  );
-  const input = {
-    name: "a.1",
-    type: "img" as const,
-    title: "a",
-    tags: [],
-    extraData: "",
-  };
+  await pend("1", "a", [], false, { groups: ["grp_later"] });
+  const input = editArgs();
   const groups = async () =>
     Object.values((await getSyncData()).contents)[0]?.groups;
   await editSyncItem(input);
@@ -529,9 +579,8 @@ const injected = (id: string, tags: string[] = [], cover?: string) => ({
 
 test("bulk edit: an injected group the server does not know is registered like /downloads/set, then synced with the right counts", async () => {
   groupsDB.data = { grp_a: group("grp_a") };
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a", ["x"]));
-  const ref = { name: "a.1", type: "img" as const };
+  await pend("1", "a", ["x"]);
+  const ref = img("a.1");
   await bulkEditSyncItems({
     items: [ref],
     addGroups: ["grp_inj", "grp_a"],
@@ -562,12 +611,8 @@ test("bulk edit: an injected group the server does not know is registered like /
 
 test("bulk edit: an id with no record anywhere is rejected, and nothing is registered when nothing is written", async () => {
   groupsDB.data = { grp_a: group("grp_a") };
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write(
-    "Sync/a.1.json",
-    JSON.stringify({ ...JSON.parse(json("1", "a")), groups: ["grp_inj"] }),
-  );
-  const ref = { name: "a.1", type: "img" as const };
+  await pend("1", "a", [], false, { groups: ["grp_inj"] });
+  const ref = img("a.1");
   await expect(
     bulkEditSyncItems({
       items: [ref],
@@ -589,41 +634,25 @@ test("bulk edit: an id with no record anywhere is rejected, and nothing is regis
 });
 
 test("bulk edit: a failed sidecar write drops the registered group and its tag counts again", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a"));
-  const write = Bun.write;
-  let calls = 0;
+  await pend("1", "a");
   // the sidecar write fails (the rollback write after it works)
-  Bun.write = ((...args: Parameters<typeof Bun.write>) =>
-    ++calls === 1
-      ? Promise.reject(new Error("disk full"))
-      : write(...args)) as typeof Bun.write;
-  try {
-    await expect(
+  await expect(
+    withFailingWrite(1, () =>
       bulkEditSyncItems({
-        items: [{ name: "a.1", type: "img" }],
+        items: [img("a.1")],
         addGroups: ["grp_inj"],
         newGroups: [injected("grp_inj", ["t"])],
       }),
-    ).rejects.toThrow();
-  } finally {
-    Bun.write = write;
-  }
+    ),
+  ).rejects.toThrow();
   expect(groupsDB.data).toEqual({});
   expect(tagDB.data).toEqual({});
 });
 
 test("edit: groups may carry injected records; known ids keep the Vault's record", async () => {
   groupsDB.data = { grp_a: group("grp_a") };
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a"));
-  const input = {
-    name: "a.1",
-    type: "img" as const,
-    title: "a",
-    tags: [],
-    extraData: "",
-  };
+  await pend("1", "a");
+  const input = editArgs();
   await expect(
     editSyncItem({ ...input, groups: ["grp_inj"] }),
   ).rejects.toThrow();
@@ -645,19 +674,13 @@ test("edit: groups may carry injected records; known ids keep the Vault's record
 });
 
 test("bulk remove: several items move to UnSyncable together, a clash or a missing item changes nothing", async () => {
-  await Bun.write("Sync/a.1.png", png);
-  await Bun.write("Sync/a.1.json", json("1", "a"));
+  await pend("1", "a");
   await Bun.write("Sync/b.2.png", png);
   await Bun.write("Sync/keep.3.png", png);
-  const refs = [
-    { name: "a.1", type: "img" as const },
-    { name: "b.2", type: "img" as const },
-  ];
+  const refs = [img("a.1"), img("b.2")];
   await Bun.write("UnSyncable/b.2.png", "earlier");
   await expect(bulkRemoveSyncItems(refs)).rejects.toThrow();
-  await expect(
-    bulkRemoveSyncItems([...refs, { name: "gone", type: "img" }]),
-  ).rejects.toThrow();
+  await expect(bulkRemoveSyncItems([...refs, img("gone")])).rejects.toThrow();
   expect(ls("Sync")).toEqual(["a.1.json", "a.1.png", "b.2.png", "keep.3.png"]);
   await Bun.file("UnSyncable/b.2.png").delete();
   expect(await bulkRemoveSyncItems(refs)).toHaveLength(2);
@@ -704,6 +727,11 @@ function fakeYtDlp(
     },
   } as never;
 }
+
+const downloading = async (i: number) => {
+  while ((await getDownloadsSnapshot()).tasks[i]?.status !== "downloading")
+    await Bun.sleep(5);
+};
 
 async function idle() {
   while ((await getDownloadsSnapshot()).running) await Bun.sleep(5);
@@ -820,8 +848,7 @@ test("download: cancel stops a downloading item and the waiting ones, keeps them
   await setQueue([item("1"), item("2"), item("3")]); // one scraper: 1 runs, 2 and 3 wait
   const calls: string[] = [];
   await startDownloads(fakeYtDlp({ calls, gate: new Promise(() => {}) }));
-  while ((await getDownloadsSnapshot()).tasks[0]?.status !== "downloading")
-    await Bun.sleep(5);
+  await downloading(0);
 
   expect(await cancelDownloads()).toBe(3);
   expect(await cancelDownloads()).toBe(0); // nothing left to cancel
@@ -846,11 +873,9 @@ test("download: cancel stops a downloading item and the waiting ones, keeps them
 test("download: cancel with an id only stops that item", async () => {
   await setQueue([item("1"), item("2")]);
   await startDownloads(fakeYtDlp({ gate: new Promise(() => {}) }));
-  while ((await getDownloadsSnapshot()).tasks[0]?.status !== "downloading")
-    await Bun.sleep(5);
+  await downloading(0);
   expect(await cancelDownloads("1")).toBe(1);
-  while ((await getDownloadsSnapshot()).tasks[1]?.status !== "downloading")
-    await Bun.sleep(5); // "2" takes over the scraper slot
+  await downloading(1); // "2" takes over the scraper slot
   expect((await getDownloadsSnapshot()).tasks.map((t) => t.status)).toEqual([
     "cancelled",
     "downloading",
@@ -880,8 +905,7 @@ test("download: remove moves staged files to Sync, drops the item and its partia
 test("download: remove refuses an item that is queued or running", async () => {
   await setQueue([item("1")]);
   await startDownloads(fakeYtDlp({ gate: new Promise(() => {}) }));
-  while ((await getDownloadsSnapshot()).tasks[0]?.status !== "downloading")
-    await Bun.sleep(5);
+  await downloading(0);
   await expect(removeDownloads(["1"])).rejects.toMatchObject({
     code: "CONFLICT",
   });

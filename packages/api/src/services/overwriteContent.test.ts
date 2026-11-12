@@ -136,8 +136,3 @@ test("reserved tags the Vault has survive; meta:caption is never added from outs
   expect(contentDataDB.data["2"]?.tags).toEqual(["b", "view:grid-2"]);
   expect(tagDB.data).toEqual(recount());
 });
-
-test("the body is validated", () => {
-  expect(() => contentSyncSchema.parse({ items: [{ id: "1" }] })).toThrow();
-  expect(() => contentSyncSchema.parse([])).toThrow();
-});

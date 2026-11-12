@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "bun:test";
+import { afterAll, beforeEach, expect, test } from "bun:test";
 import {
   mkdirSync,
   mkdtempSync,
@@ -10,7 +10,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 // Paths are cwd-relative, so move to a scratch root first.
-process.chdir(mkdtempSync(join(tmpdir(), "tagapp-gallery-")));
+const root = mkdtempSync(join(tmpdir(), "tagapp-gallery-"));
+process.chdir(root);
 const { call } = await import("@orpc/server");
 const { bulkUpdateContentTags, updateContentTags } = await import(
   "./gallery.js"
@@ -21,6 +22,11 @@ const tagsPath = `${dir}/.tags.json`;
 const readTags = () => JSON.parse(readFileSync(tagsPath, "utf8"));
 const bulk = (contents: string[], add: string[], remove: string[]) =>
   call(bulkUpdateContentTags, { name: "G", id: "g1", contents, add, remove });
+
+afterAll(() => {
+  process.chdir(tmpdir());
+  rmSync(root, { recursive: true, force: true });
+});
 
 beforeEach(() => {
   rmSync("media", { recursive: true, force: true });
