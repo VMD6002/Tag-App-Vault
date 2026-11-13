@@ -15,7 +15,10 @@ const audioExistsCheck = async (name: string, id: string) => {
 /** Tracks of one audio item; a track's cover is the first file starting with `cover.<track name without extension>`. */
 const listAudio = async (name: string, id: string) => {
   const dir = `./media/Audios/${name}.${id}`;
-  const coverFiles = await readdir(`${dir}/.audio-covers`);
+  let coverFiles: string[] = [];
+  try {
+    coverFiles = await readdir(`${dir}/.audio-covers`);
+  } catch {}
 
   return (await readdir(dir))
     .filter((file) => file !== ".audio-covers")
